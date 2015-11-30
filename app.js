@@ -19,6 +19,7 @@ var GraphDashboard;
         function Controller(app) {
             var _this = this;
             this.app = app;
+            $('#UserDropdown').hide();
             $('#LoginToggle').click(function (e) {
                 _this.ToggleLogin();
             });
@@ -30,6 +31,7 @@ var GraphDashboard;
                     if (myApp.identity.isLoggedIn()) {
                         $('#LoginState').text("Logout");
                         $('#Username').text(myApp.identity.getIdToken()["name"]);
+                        $('#UserDropdown').show();
                         _this.LoadData();
                     }
                 });
@@ -37,6 +39,7 @@ var GraphDashboard;
             else {
                 this.app.identity.logOut();
                 $('#LoginState').text("Login");
+                $('#UserDropdown').hide();
             }
         };
         Controller.prototype.LoadData = function () {

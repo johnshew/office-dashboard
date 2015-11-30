@@ -25,6 +25,7 @@ module GraphDashboard {
         public constructor(app: App) {
             this.app = app;
 
+            $('#UserDropdown').hide();
             $('#LoginToggle').click((e) => {
                 this.ToggleLogin();
             });
@@ -37,12 +38,14 @@ module GraphDashboard {
                     if (myApp.identity.isLoggedIn()) {
                         $('#LoginState').text("Logout");
                         $('#Username').text(myApp.identity.getIdToken()["name"]);
+                        $('#UserDropdown').show();
                         this.LoadData();
                     }
                 });
             } else {
                 this.app.identity.logOut();
                 $('#LoginState').text("Login");
+                $('#UserDropdown').hide();
             }
         }
 
