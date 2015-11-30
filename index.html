@@ -22,21 +22,21 @@
         <div class="container-fluid">
             <div class="navbar-header">
                 <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-                    <span class="icon-bar">X</span>
-                    <span class="icon-bar">Y</span>
-                    <span class="icon-bar">Z</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
                 </button>
                 <a class="navbar-brand" href="#">Dashboard</a>
             </div>
             <div class="navbar-collapse collapse">
                 <ul class="nav navbar-nav navbar-right">
                     <li class="dropdown">
-                        <a class="dropdown-toggle" role="button" data-toggle="dropdown" href="#"><i class="glyphicon glyphicon-user"></i>Admin <span class="caret"></span></a>
+                        <a class="dropdown-toggle" role="button" data-toggle="dropdown" href="#"><i class="glyphicon glyphicon-user"></i> <span id="Username">Username</span> <span class="caret"></span></a>
                         <ul id="g-account-menu" class="dropdown-menu" role="menu">
-                            <li><a href="#">My Profile</a></li>
+                            <li><a href="#">Change Profile</a></li>
                         </ul>
                     </li>
-                    <li><a href="#"><i class="glyphicon glyphicon-lock"></i>Logout</a></li>
+                    <li ><a href="#" id="LoginToggle"><i class="glyphicon glyphicon-lock"></i> <span id="LoginState">Login</span></a></li>                    
                 </ul>
             </div>
         </div>
@@ -176,9 +176,7 @@
                 <a href="#"><strong><i class="glyphicon glyphicon-comment"></i> Mail</strong></a>
                 <div class="row">
                     <div class="col-md-12">
-                        <ul class="list-group">
-                            <li class="list-group-item"><a href="#"><i class="glyphicon glyphicon-none"></i> From: Paul (2 hrs ago)<br /> That document you posted yesterday doesn't seem to contain the over..</a></li>
-                            <li class="list-group-item"><a href="#"><i class="glyphicon glyphicon-heart"></i>  From: Margot (yesterday) <br />All done.</a></li>
+                        <ul id="MailList" class="list-group">
                         </ul>
                     </div>
                 </div>

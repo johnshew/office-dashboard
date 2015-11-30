@@ -28,3 +28,7 @@ node_modules
 /.vs/config
 /obj/Debug
 /.vs/GraphDashboard/v14
+/bin
+/web.Release.config
+/web.Debug.config
+/web.config
