@@ -1,12 +1,11 @@
 ﻿module AppModule {
 
     export class App {
-        public initialized = 0;
+        public  initialized = 0;
         constructor() {
-            initialized = 1;
+            this.initialized = 1;
         }
     }
 
     var myApp = new App();
-
 }
