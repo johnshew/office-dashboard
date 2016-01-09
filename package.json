@@ -1,0 +1,27 @@
+{
+  "name": "GraphDashboard",
+  "version": "0.0.0",
+  "description": "",
+  "main": "start.js",
+  "dependencies": {
+    "bootstrap": "^3.3.6",
+    "react": "^0.14.5",
+    "react-dom": "^0.14.3"
+  },
+  "devDependencies": {
+    "browserify": "^12.0.1",
+    "http-server": "^0.8.5",
+    "tsd": "^0.6.5",
+    "tsify": "^0.13.1",
+    "typescript": "^1.7.5",
+    "watchify": "^3.6.1"
+  },
+  "scripts": {
+    "start": "http-server public -o --cors -p 8000",
+    "build": "browserify -p tsify src/app.tsx typings/tsd.d.ts -o bundle.js ",
+    "watch": "watchify -p tsify src/app.tsx typings/tsd.d.ts -o bundle.js ",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "JohnShew",
+  "license": "MIT"
+}
