@@ -1,23 +1,28 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta charset="utf-8">
-    <title></title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="">
     <meta name="author" content="">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css">
-    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
-    <!--<link rel="stylesheet" href="">-->
-    <!--[if lt IE 9]>
-<script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.2/html5shiv.min.js"></script>
-<script src="//cdnjs.cloudflare.com/ajax/libs/respond.js/1.4.2/respond.min.js"></script>
-<![endif]-->
-    <!--<link rel="shortcut icon" href="">-->
-</head>
-<body>
 
+    <title>Tesla Console</title>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+</head>
+
+<body>
+    
     <div id="top-nav" class="navbar navbar-inverse navbar-static-top">
         <div class="container-fluid">
             <div class="navbar-header">
@@ -31,213 +36,28 @@
             <div class="navbar-collapse collapse">
                 <ul class="nav navbar-nav navbar-right">
                     <li class="dropdown">
-                        <a class="dropdown-toggle" role="button" data-toggle="dropdown" href="#"><i class="glyphicon glyphicon-user"></i>Admin <span class="caret"></span></a>
-                        <ul id="g-account-menu" class="dropdown-menu" role="menu">
-                            <li><a href="#">My Profile</a></li>
+                        <a class="dropdown-toggle" role="button" data-toggle="dropdown" href="#"><i class="glyphicon glyphicon-user">&nbsp;<span id="UsernameText"/></i>&nbsp;<span class="caret"></span></a>
+                        <ul id="account-menu" class="dropdown-menu" role="menu">
+                            <li><a id="LogoutButton" href="#">Logout</a></li>
+                            <li><a id="LoginButton" href="#">Login</a></li>
                         </ul>
                     </li>
-                    <li><a href="#"><i class="glyphicon glyphicon-lock"></i>Logout</a></li>
                 </ul>
             </div>
         </div>
         <!-- /container -->
     </div>
-    <!-- /Header -->
 
-    <!-- Main -->
     <div class="container-fluid">
         <div class="row">
-            <div class="col-sm-2">
-                <!-- Left column -->
-                <ul class="nav nav-stacked">
-                    <li class="nav-header"><a href="#" data-toggle="collapse" data-target="#userMenu"> Navigation <i class="glyphicon glyphicon-chevron-down"></i></a>
-                        <ul class="nav nav-stacked collapse in" id="userMenu">
-                            <li class="active"><a href="#"><i class="glyphicon glyphicon-home"></i> Home</a></li>
-                            <li><a href="#"><i class="glyphicon glyphicon-envelope"></i> Messages <span class="badge badge-info">4</span></a></li>
-                            <li><a href="#"><i class="glyphicon glyphicon-cog"></i> Options</a></li>
-                            <li><a href="#"><i class="glyphicon glyphicon-comment"></i> Send Message</a></li>
-                            <li><a href="#"><i class="glyphicon glyphicon-user"></i> People</a></li>
-                            <li><a href="#"><i class="glyphicon glyphicon-off"></i> Logout</a></li>
-                        </ul>
-                    </li>
-                </ul>
-                <hr>
+            <div class="col-lg-12" id="data">
+              
             </div>
-            <!-- /col-3 -->
-            <div class="col-sm-10">
-
-                <!-- Right Column (with two columns inside) -->
-                <ul class="list-inline pull-right">
-                    <li><a title="Settings" href="#"><i class="glyphicon glyphicon-cog"></i></a></li>
-                    <li class="dropdown"><a title="Notifications" href="#" class="dropdown-toggle" data-toggle="dropdown"><i class="glyphicon glyphicon-comment"></i><span class="count"> 3</span></a>
-                        <ul class="dropdown-menu" role="menu">
-                            <li><a href="#">1. Is there a way..</a></li>
-                            <li><a href="#">2. Hello, admin. I would..</a></li>
-                            <li><a href="#"><strong>All messages</strong></a></li>
-                        </ul>
-                    </li>
-                    <li><a title="User" href="#"><i class="glyphicon glyphicon-user"></i></a></li>
-                    <li><a title="Add Widget" data-toggle="modal" href="#addWidgetModal"><span class="glyphicon glyphicon-plus-sign"></span></a></li>
-                </ul>
-                <a href="#"><strong><i class="glyphicon glyphicon-dashboard"></i> My Dashboard</strong></a>
-                <hr>
-
-                <!-- Split Left Columns-->
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="panel panel-default">
-                            <div class="panel-heading">
-                                
-                                <h4>Notices <span class="badge pull-right">3</span></h4>                                
-                            </div>
-                            <div class="panel-body">
-                                <div class="alert alert-info">
-                                    <button type="button" class="close" data-dismiss="alert">�</button>
-                                    This is a dismissable alert.                           
-                                </div>
-                                <p>Information you want to remain on the screen goes here.</p>
-
-                            </div>
-                        </div>
-                        
-                        
-                    </div>
-
-
-                    <div class="col-md-6">
-          
-                        <div class="panel panel-default">
-                            <div class="panel-heading">
-                                <h4>Calender Items</h4>
-                            </div>
-                            <div class="panel-body">
-                                <div class="list-group">
-                                    <a href="#" class="list-group-item ">Appointment 1</a>
-                                    <a href="#" class="list-group-item">Appointment 2</a>
-                                    <a href="#" class="list-group-item">Appointment 3</a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="panel panel-default">
-                            <div class="panel-heading">
-                                <div class="panel-title">
-                                    <i class="glyphicon glyphicon-wrench pull-right"></i>
-                                    <h4>Post Request</h4>
-                                </div>
-                            </div>
-                            <div class="panel-body">
-                                <form class="form form-vertical">
-                                    <div class="control-group">
-                                        <label>Name</label>
-                                        <div class="controls">
-                                            <input type="text" class="form-control" placeholder="Enter Name">
-                                        </div>
-                                    </div>
-                                    <div class="control-group">
-                                        <label>Message</label>
-                                        <div class="controls">
-                                            <textarea class="form-control"></textarea>
-                                        </div>
-                                    </div>
-                                    <div class="control-group">
-                                        <label>Category</label>
-                                        <div class="controls">
-                                            <select class="form-control">
-                                                <option>options</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="control-group">
-                                        <label></label>
-                                        <div class="controls">
-                                            <button type="submit" class="btn btn-primary">
-                                                Post
-                                       
-                                            </button>
-                                        </div>
-                                    </div>
-                                </form>
-                            </div>
-                            <!--/panel content-->
-                        </div>
-                        
-                    </div>
-
-                    <!--/col-span-6-->
-
-                </div>
-                <!--/row-->
-
-                        
-
-                <a href="#"><strong><i class="glyphicon glyphicon-comment"></i> Mail</strong></a>
-                <div class="row">
-                    <div class="col-md-12">
-                        <ul class="list-group">
-                            <li class="list-group-item"><a href="#"><i class="glyphicon glyphicon-none"></i> From: Paul (2 hrs ago)<br /> That document you posted yesterday doesn't seem to contain the over..</a></li>
-                            <li class="list-group-item"><a href="#"><i class="glyphicon glyphicon-heart"></i>  From: Margot (yesterday) <br />All done.</a></li>
-                        </ul>
-                    </div>
-                </div>
-
-                        <div class="table-responsive">
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Visits</th>
-                                        <th>Last</th>
-                                        <th>Source</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>45</td>
-                                        <td>June 1</td>
-                                        <td>142.12.1.1</td>
-                                    </tr>
-                                    <tr>
-                                        <td>289</td>
-                                        <td>June 2</td>
-                                        <td>microsoft.com</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-
-            </div>
-            <!--/col-span-9-->
         </div>
     </div>
-    <!-- /Main -->
 
-    <footer class="text-center">Dashboard compliments of the <a href="https://github.com/MicrosoftDX/kurvejs">KurveJS team</a></footer>
-
-    <div class="modal" id="addWidgetModal">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">�</button>
-                    <h4 class="modal-title">Add Widget</h4>
-                </div>
-                <div class="modal-body">
-                    <p>Add a widget stuff here..</p>
-                </div>
-                <div class="modal-footer">
-                    <a href="#" data-dismiss="modal" class="btn">Close</a>
-                    <a href="#" class="btn btn-primary">Save changes</a>
-                </div>
-            </div>
-            <!-- /.modal-content -->
-        </div>
-        <!-- /.modal-dalog -->
-    </div>
-    <!-- /.modal -->
-
-    <script src="https://kurvejs.blob.core.windows.net/dist/kurve.min-0.2.0.js"></script>
-    <script src="bundle.js"></script>
-
+    <script src="https://kurvejs.blob.core.windows.net/dist/kurve.min-0.3.5.js"></script>
+    <script src="./bundle.js"></script>
+    
 </body>
 </html>
