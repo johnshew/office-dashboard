@@ -10,10 +10,10 @@ interface MailSummaryProps
 
 class MailSummary extends React.Component<MailSummaryProps, any> {
   render() {
-    return <div>
-       <h3>{this.props.message.data.sender.emailAddress.name} </h3>
-       <p>{this.props.message.data.subject}</p>
-       <p>{this.props.message.data.bodyPreview} </p>
+    return <div className="well tight">
+       <h3 className="tight">{this.props.message.data.sender.emailAddress.name}</h3>
+       <p className="tight">{this.props.message.data.subject}</p>
+       <p className="tight">{this.props.message.data.bodyPreview}</p>
     </div>;
   }
 }
@@ -28,7 +28,9 @@ class MailList extends React.Component<MailListProps,any> {
         var messageNodes = this.props.data.map((message) => {
             return (<MailSummary  key={message.data.id} message={message}/>); 
         });
-        return <div className="col-xs-12 col-sm-6 col-lg-4">{messageNodes}</div>;
+        return <div className="col-xs-12 col-sm-6 col-lg-4">
+            { messageNodes }
+        </div>;
     }
 }
 
