@@ -26,9 +26,9 @@ function interceptEvent(event) {
   }
 }
 
-export default React.createClass(
+export const SelectBox = React.createClass(
 {
-  displayName: 'exports',
+  displayName: 'SelectBox',
   
   getInitialState: function () {
     return {
@@ -102,7 +102,7 @@ export default React.createClass(
       } else {
         this.updatePendingValue(val, cb) || this.props.onChange(val)
         this.handleClose()
-        this.refs.button.getDOMNode().focus()
+        this.refs.button.focus()
       }
     }.bind(this)
   },
@@ -142,7 +142,7 @@ export default React.createClass(
   handleOpen: function (event) {
     interceptEvent(event)
     this.setState({open: true}, function () {
-      this.refs.menu.getDOMNode().focus()
+      this.refs.menu.focus()
     })
   },
 
