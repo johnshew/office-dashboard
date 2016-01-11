@@ -1,7 +1,7 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import { MailList } from './office';
-import { SelectBox } from './selectbox';
+import { Mail } from './office';
+
 
 class App {
     private identity: Kurve.Identity;
@@ -99,42 +99,6 @@ class App {
     
     private renderMessages() {
         this.ShowMail();
-    }
-}
-
-interface MailProps extends React.Props<any> {
-    data: Kurve.Message[];
-    mailboxes: string[];
-}
-
-class Mail extends React.Component<MailProps, any>
-{
-    private values: any[];
-    constructor(props, state) {
-        super(props, state);
-        this.state = { mailboxFilter: [] };
-    }
-
-    private handleMultiChange = (e) => {
-        console.log(JSON.stringify(e));
-        this.setState({
-            mailboxFilter: e
-        });
-    }
-
-    render() {
-        var options = this.props.mailboxes.map((mailboxName)=>{
-            return <option value={mailboxName}>{mailboxName}</option>
-        });
-        
-        return (
-          <div>
-            <SelectBox label="All Mailboxes" onChange={this.handleMultiChange} value={this.state.mailboxFilter} multiple={true}>
-                {options}
-            </SelectBox>
-            
-            <MailList data={ this.props.data } />
-          </div>);               
     }
 }
 
