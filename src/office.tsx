@@ -24,7 +24,9 @@ var tightStyle: React.CSSProperties = {
 var snugStyle: React.CSSProperties = {
     padding: 0,
     marginTop: 10,
-    marginBottom: 10
+    marginBottom: 10,
+    paddingRight: 15,
+    paddingLeft: 15
 };
 
 var emphasisStyle: React.CSSProperties = {
