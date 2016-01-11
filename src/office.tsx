@@ -7,7 +7,7 @@ const noOverflowStyle: React.CSSProperties = {
 };
 
 const bigStyle: React.CSSProperties = {
-    height: '15pt',
+    height: '16pt',
     fontSize: '13pt'
 }
 
@@ -38,6 +38,12 @@ const selectedSummaryStyle = Combine(summaryStyle, {
     backgroundColor: "LightBlue"  
 });
 
+const mailListStyle: React.CSSProperties = {
+    minHeight: "100vh",
+    borderRight: "thin solid",
+    paddingRight:0,
+    paddingLeft:0
+}
 
 function Combine(...styles: React.CSSProperties[]): React.CSSProperties 
 {  // Essentially Object.Assign(x,y,...)
@@ -101,6 +107,36 @@ export class MailList extends React.Component<MailListProps, any> {
     }
 }
 
+interface MessageViewProps extends React.Props<MessageView> 
+{
+    message: Kurve.Message;
+    style? : React.CSSProperties;
+}
+
+export class MessageView extends React.Component<MessageViewProps, any>
+{
+    private check(text:string)
+    {
+        return (text != null) ? text : "";
+    }
+    
+    render() {
+        var big = Combine(bigStyle, noOverflowStyle, this.props.style);
+        var small = Combine(smallStyle, noOverflowStyle, this.props.style);
+        var smallScrolling = Combine(smallStyle, this.props.style);
+        var subject = this.props.message && this.props.message.data.subject || "";
+        var from = this.props.message && this.props.message.data.sender.emailAddress.name || "";
+        var body = this.props.message && this.props.message.data.body["content"] || ""; //TODO Fix Kurve
+        return (
+            <div>
+                <p style={ big }>  {subject}</p>
+                <p style={ small }>{from}</p>
+                <div dangerouslySetInnerHTML={ { __html : body } }></div>  
+            </div>
+        );
+    }
+}
+
 interface MailProps extends React.Props<Mail> 
 {
     data: Kurve.Message[];
@@ -109,12 +145,11 @@ interface MailProps extends React.Props<Mail>
 
 interface MailState 
 {
-    mailboxFilter: string[];
-    selected: string;    
+    mailboxFilter?: string[];
+    selected?: string;    
 }
 
-
-export class Mail extends React.Component<MailProps, any>
+export class Mail extends React.Component<MailProps, MailState>
 {
     private values: any[];
     constructor(props, state) {
@@ -122,7 +157,7 @@ export class Mail extends React.Component<MailProps, any>
         this.state = { mailboxFilter: [], selected: null };
     }
 
-    private handleMultiChange = (e) => {
+    private handleMultiChange = (e : string[]) => {
         console.log(JSON.stringify(e));
         this.setState({
             mailboxFilter: e
@@ -132,6 +167,11 @@ export class Mail extends React.Component<MailProps, any>
     private handleSelection = (id : string) => {
         this.setState({selected: id});
     } 
+    
+    private selectedMessage() : Kurve.Message {
+        var found = this.props.data.filter((message) => (message.data.id === this.state.selected)); 
+        return (found.length > 0) ? found[0] : null;
+    }
 
     render() {
         var options = this.props.mailboxes.map((mailboxName)=>{
@@ -140,11 +180,21 @@ export class Mail extends React.Component<MailProps, any>
         
         return (
           <div>
-            <SelectBox label="All Mailboxes" onChange={this.handleMultiChange} value={this.state.mailboxFilter} multiple={true}>
-                {options}
-            </SelectBox>
-            
-            <MailList onSelection={ this.handleSelection } selected={this.state.selected } data={ this.props.data } />
-          </div>);               
+            <div className="col-xm-12 col-sm-6 col-lg-3" style={ mailListStyle }>
+                <div>
+                    <MailList onSelection={ this.handleSelection } selected={this.state.selected } data={ this.props.data } />
+                </div>
+            </div>
+            <div className="col-sm-12 col-sm-6 col-lg-9">
+                <MessageView message={this.selectedMessage()}/>
+            </div>
+          </div>
+          );               
     }
 }
+
+/*
+                    <SelectBox label="All Mailboxes" onChange={this.handleMultiChange} value={this.state.mailboxFilter} multiple={true}>
+                        {options}
+                    </SelectBox>                        
+*/
