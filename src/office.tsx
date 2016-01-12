@@ -24,8 +24,8 @@ const tightStyle: React.CSSProperties = {
 
 const summaryStyle: React.CSSProperties = {
     padding: 0,
-    marginTop: 10,
-    marginBottom: 10,
+    paddingTop: 10,
+    paddingBottom: 10,
     paddingRight: 15,
     paddingLeft: 15
 };
@@ -37,6 +37,11 @@ const emphasisStyle: React.CSSProperties = {
 const selectedSummaryStyle = Combine(summaryStyle, {
     backgroundColor: "LightBlue"  
 });
+
+const mailViewStyle: React.CSSProperties = {
+    paddingRight:0,
+    paddingLeft:0    
+}
 
 const mailListStyle: React.CSSProperties = {
     minHeight: "100vh",
@@ -120,18 +125,33 @@ export class MessageView extends React.Component<MessageViewProps, any>
         return (text != null) ? text : "";
     }
     
+    private toLine()
+    {
+        var x : any[] = this.props.message.data.toRecipients;
+        return x.reduce((p,c)=>{ 
+            var result =  ((p != null) ? p + '; ' : 'To: ') + c.emailAddress.name; 
+            return result; 
+        },null);
+    }
+    
     render() {
         var big = Combine(bigStyle, noOverflowStyle, this.props.style);
         var small = Combine(smallStyle, noOverflowStyle, this.props.style);
+        var smallEmphasis = Combine(smallStyle, emphasisStyle, noOverflowStyle, this.props.style);        
         var smallScrolling = Combine(smallStyle, this.props.style);
         var subject = this.props.message && this.props.message.data.subject || "";
         var from = this.props.message && this.props.message.data.sender.emailAddress.name || "";
+        var toRecipients = this.props.message && this.toLine() || "";
         var body = this.props.message && this.props.message.data.body["content"] || ""; //TODO Fix Kurve
         return (
             <div>
-                <p style={ big }>  {subject}</p>
-                <p style={ small }>{from}</p>
-                <div dangerouslySetInnerHTML={ { __html : body } }></div>  
+              <div className="well" style={  { paddingRight: 10, paddingLeft: 10 } }>
+                <p style={ big }>{from}</p>
+                <p style={ smallEmphasis }>{subject}</p>
+                <p style={ small }>{toRecipients}</p>
+              </div>
+              <div style={  { paddingRight: 10, paddingLeft: 10 } } dangerouslySetInnerHTML={ { __html : body } }>
+              </div>  
             </div>
         );
     }
@@ -185,7 +205,7 @@ export class Mail extends React.Component<MailProps, MailState>
                     <MailList onSelection={ this.handleSelection } selected={this.state.selected } data={ this.props.data } />
                 </div>
             </div>
-            <div className="col-sm-12 col-sm-6 col-lg-9">
+            <div className="col-sm-12 col-sm-6 col-lg-9" style={ mailViewStyle }>
                 <MessageView message={this.selectedMessage()}/>
             </div>
           </div>
