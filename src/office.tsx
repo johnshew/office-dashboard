@@ -118,6 +118,31 @@ interface MessageViewProps extends React.Props<MessageView>
     style? : React.CSSProperties;
 }
 
+function CleanUp(html : string)
+{
+    // strip html, head, body tag.
+    // replace <style> with <style scope>
+    
+    var doc = document.implementation.createHTMLDocument("example");
+    doc.documentElement.innerHTML = html;
+    var head = doc.getElementsByTagName("head");
+    var meta = doc.getElementsByTagName("meta");
+    var style = doc.getElementsByTagName("style");
+    var body = doc.body;
+        
+    for (var i=0; i < style.length; i++) {
+        style.item(i).setAttribute("scoped", "true");
+    }
+    if (head.length > 0) {
+        style = head.item(0).getElementsByTagName("style");
+        for (i=0; i < style.length; i++) {
+            body.insertBefore(style.item(i), body.firstElementChild);
+        }
+    }
+    
+    return { __html: doc.body.innerHTML }
+}
+
 export class MessageView extends React.Component<MessageViewProps, any>
 {
     private check(text:string)
@@ -145,12 +170,12 @@ export class MessageView extends React.Component<MessageViewProps, any>
         var body = this.props.message && this.props.message.data.body["content"] || ""; //TODO Fix Kurve
         return (
             <div>
-              <div className="well" style={  { paddingRight: 10, paddingLeft: 10 } }>
+              <div className="well" style={  { padding: 10 } }>
                 <p style={ big }>{from}</p>
                 <p style={ smallEmphasis }>{subject}</p>
                 <p style={ small }>{toRecipients}</p>
               </div>
-              <div style={  { paddingRight: 10, paddingLeft: 10 } } dangerouslySetInnerHTML={ { __html : body } }>
+              <div style={  { paddingRight: 10, paddingLeft: 10 } } dangerouslySetInnerHTML={ CleanUp(body) }>
               </div>  
             </div>
         );
