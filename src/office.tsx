@@ -122,8 +122,8 @@ function CleanUp(html: string) {
     for (var i = 0; i < style.length; i++) {
         style.item(i).setAttribute("scoped", "");
     }
-    document.getElementById("Temp").appendChild(doc); // force browsers to process innerHTML
-    var result = ScopeStyles(doc);
+    //document.getElementById("Temp").appendChild(doc); // force browsers to process innerHTML
+    //var result = ScopeStyles(doc);
     return { __html: doc.body.innerHTML }
 }
 
