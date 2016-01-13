@@ -3,14 +3,18 @@ import * as ReactDOM from 'react-dom';
 import { Mail } from './office';
 
 
+
+
 class App {
     private identity: Kurve.Identity;
     private graph: Kurve.Graph;
     private me: Kurve.User;
     private messages: Kurve.Messages;
-
+    
     constructor() {
-        this.identity = new Kurve.Identity("b8dd3290-662a-4f91-92b9-3e70fbabe04e", "http://localhost:8000/login.html");
+        var here = document.location;
+        this.identity = new Kurve.Identity("b8dd3290-662a-4f91-92b9-3e70fbabe04e", 
+            here.protocol + '//' + here.host + here.pathname.substring(0,here.pathname.lastIndexOf('/')+1) + 'login.html');          
         this.graph = new Kurve.Graph({ identity: this.identity });
         document.getElementById("DoLogin").onclick = (e) => app.Login();
         document.getElementById("DoLogout").onclick = (e) => app.Logout();
