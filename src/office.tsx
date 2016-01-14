@@ -75,9 +75,10 @@ export class MailSummary extends React.Component<MailSummaryProps, any> {
         var big = Combine(bigStyle, noOverflowStyle, tightStyle, this.props.style);
         var small = Combine(smallStyle, noOverflowStyle, tightStyle, this.props.style);
         var smallBold = Combine(small, emphasisStyle);
+        var d = this.props.message.data;
         return (
             <div onClick={ this.handleClick } style={ (this.props.selected) ? selectedSummaryStyle : summaryStyle } >
-                <p style={ big }>{this.props.message.data.sender.emailAddress.name}</p>
+                <p style={ big }>{(d.sender) ? d.sender.emailAddress.name : ""}</p>
                 <p style={ smallBold }>{this.props.message.data.subject}</p>
                 <p style={ small }>{this.props.message.data.bodyPreview}</p>
                 </div>
@@ -122,9 +123,11 @@ function CleanUp(html: string) {
     for (var i = 0; i < style.length; i++) {
         style.item(i).setAttribute("scoped", "");
     }
-    //document.getElementById("Temp").appendChild(doc); // force browsers to process innerHTML
-    //TODO should be: var result = ScopeStyles(doc);
-    return { __html: doc.body.innerHTML }
+    ScopeStyles(doc); //BUG: not working.  Updates the DOM but the inner HTML isn't working right.
+    return { __html: doc.body.innerHTML }  
+    //TODO: for now just grabbing body since the style scoping polyfill is not working on a disconnected document. This workaround eliminates some the style issues.
+    // Probabaly the best thing to do create a div that is a child of the body and then move all the other body children into the new div along with the style elements from the head.
+    // Then run ScopeStyles and pull the innerHTML from body (assuming ScopeStyles is working)   
 }
 
 
