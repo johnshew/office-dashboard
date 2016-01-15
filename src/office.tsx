@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { SelectBox } from './selectbox';
-import { ScopeStyles} from './scopedStylePolyfill';
+import * as ScopedStyles from './scopedStylePolyfill';
 
 const noOverflowStyle: React.CSSProperties = {
     overflow: 'hidden',
@@ -117,17 +117,41 @@ interface MessageViewProps extends React.Props<MessageView> {
 function CleanUp(html: string) {
     var doc = document.implementation.createHTMLDocument("example");
     doc.documentElement.innerHTML = html;
-    var style = doc.getElementsByTagName("style");
-    var body = doc.body;
-
-    for (var i = 0; i < style.length; i++) {
-        style.item(i).setAttribute("scoped", "");
+    
+    // Create a new <div/> in the body and move all existing body content to that the new div.
+    var resultElement = doc.createElement("div");
+    var nodeIndex = doc.body.childNodes.length;
+    while (nodeIndex--) {
+        var bodyNode = doc.body.childNodes.item(nodeIndex);
+        doc.body.removeChild(bodyNode);
+        resultElement.appendChild(bodyNode);
     }
-    ScopeStyles(doc); //BUG: not working.  Updates the DOM but the inner HTML isn't working right.
+    doc.body.appendChild(resultElement);
+    
+    // Move all styles in <head/> into the new <div/> 
+    var headList = doc.getElementsByTagName("head");
+    if (headList.length == 1) {
+        var head = headList.item(0);
+        var styles = head.getElementsByTagName("style");
+        var styleIndex = styles.length;
+        while (styleIndex--) {
+            var styleNode = styles.item(styleIndex);            
+            if (styleNode.parentNode === head) {
+                head.removeChild(styleNode);
+                resultElement.appendChild(styleNode);
+            }
+        }
+    }
+
+    // Make sure all styles are scoped
+    var styles = doc.getElementsByTagName("style");
+    var styleIndex = styles.length;
+    while (styleIndex--) {
+        styles.item(styleIndex).setAttribute("scoped", "");
+    }
+    ScopedStyles.ScopeStyles(doc.documentElement); // polyfill scoping if necessary
+    
     return { __html: doc.body.innerHTML }  
-    //TODO: for now just grabbing body since the style scoping polyfill is not working on a disconnected document. This workaround eliminates some the style issues.
-    // Probabaly the best thing to do create a div that is a child of the body and then move all the other body children into the new div along with the style elements from the head.
-    // Then run ScopeStyles and pull the innerHTML from body (assuming ScopeStyles is working)   
 }
 
 
