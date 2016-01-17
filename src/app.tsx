@@ -11,8 +11,8 @@ class App {
     private loginNewWindow: boolean
 
     constructor() {
-        var params = document.location.search && document.location.search.substring(1).split("&").map((kv) => kv.split('=')).reduce((prev, kva) => { prev[kva[0]] = kva[1]; return prev }, {});
-        this.loginNewWindow = params && !params["inplace"];
+        var params = document.location.search.length < 1 ? undefined : document.location.search.substring(1).split("&").map((kv) => kv.split('=')).reduce((prev, kva) => { prev[kva[0]] = kva[1]; return prev }, {});
+        this.loginNewWindow = !params ? true : !params["inplace"]; 
         var here = document.location;
         this.identity = new Kurve.Identity("b8dd3290-662a-4f91-92b9-3e70fbabe04e",
             here.protocol + '//' + here.host + here.pathname.substring(0, here.pathname.lastIndexOf('/') + 1) + 'login.html');
@@ -77,7 +77,10 @@ class App {
 
     public Login() {
         if (this.loginNewWindow) {
-            this.identity.loginAsync().then(() => this.LoggedIn);
+            this.identity.loginAsync()
+            .then(() => { 
+                this.LoggedIn();
+            });
         } else {
             this.identity.loginNoWindowAsync(); // no .then since it will be caught when the page reloads.
         }
@@ -114,3 +117,4 @@ class App {
 }
 
 var app = new App();
+window["MyApp"] = app;

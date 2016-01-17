@@ -296,7 +296,7 @@ var Kurve;
                 }
                 return params;
             }
-            var params = parseQueryString(window.location.href);
+            var params = parseQueryString();
             var idToken = token("#id_token=");
             var accessToken = token("#access_token");
             if (idToken) {
