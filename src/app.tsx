@@ -8,11 +8,14 @@ class App {
     private graph: Kurve.Graph;
     private me: Kurve.User;
     private messages: Kurve.Messages;
-    
+    private loginNewWindow: boolean
+
     constructor() {
+        var params = document.location.search && document.location.search.substring(1).split("&").map((kv) => kv.split('=')).reduce((prev, kva) => { prev[kva[0]] = kva[1]; return prev }, {});
+        this.loginNewWindow = params && !params["inplace"];
         var here = document.location;
-        this.identity = new Kurve.Identity("b8dd3290-662a-4f91-92b9-3e70fbabe04e", 
-            here.protocol + '//' + here.host + here.pathname.substring(0,here.pathname.lastIndexOf('/')+1) + 'login.html');          
+        this.identity = new Kurve.Identity("b8dd3290-662a-4f91-92b9-3e70fbabe04e",
+            here.protocol + '//' + here.host + here.pathname.substring(0, here.pathname.lastIndexOf('/') + 1) + 'login.html');
         this.graph = new Kurve.Graph({ identity: this.identity });
         document.getElementById("DoLogin").onclick = (e) => app.Login();
         document.getElementById("DoLogout").onclick = (e) => app.Logout();
@@ -20,7 +23,10 @@ class App {
         document.getElementById("ShowCalendar").onclick = (e) => app.ShowCalendar();
         document.getElementById("ShowContacts").onclick = (e) => app.ShowContacts();
         document.getElementById("ShowNotes").onclick = (e) => app.ShowNotes();
-        this.UpdateLoginState();  
+        if (this.identity.checkForIdentityRedirect()) {
+            this.LoggedIn()
+        }
+        this.UpdateLoginState();
     }
 
     public Me(): Kurve.Promise<Kurve.User, Kurve.Error> {
@@ -55,50 +61,53 @@ class App {
     }
 
     public UpdateLoginState() {
-      if (this.identity.isLoggedIn()) {
-          document.getElementById("DoLogin").style.display = "none";
-          document.getElementById("DoLogout").style.display = "inherit";
-      } else {
-          document.getElementById("DoLogin").style.display = "inherit";
-          document.getElementById("DoLogout").style.display = "none";
-      }
+        if (this.identity.isLoggedIn()) {
+            document.getElementById("DoLogin").style.display = "none";
+            document.getElementById("DoLogout").style.display = "inherit";
+        } else {
+            document.getElementById("DoLogin").style.display = "inherit";
+            document.getElementById("DoLogout").style.display = "none";
+        }
+    }
+
+    public LoggedIn() {
+        this.UpdateLoginState();
+        this.Messages();
     }
 
     public Login() {
-        this.identity.loginAsync().then(() => {
-            this.UpdateLoginState();
-            this.Messages();
-        });
+        if (this.loginNewWindow) {
+            this.identity.loginAsync().then(() => this.LoggedIn);
+        } else {
+            this.identity.loginNoWindowAsync(); // no .then since it will be caught when the page reloads.
+        }
     }
-    public Logout() { 
+    
+    public Logout() {
         this.identity.logOut();
-        this.UpdateLoginState();  
+        this.UpdateLoginState();
     };
 
     private handleMultiChange = (e) => {
         console.log(JSON.stringify(e));
     }
 
-    private ShowMail()
-    {
-            ReactDOM.render(<Mail data={ this.messages.data } mailboxes={["inbox","sent items"]}/>, document.getElementById('Mail'));
+    private ShowMail() {
+        ReactDOM.render(<Mail data={ this.messages.data } mailboxes={["inbox", "sent items"]}/>, document.getElementById('Mail'));
     }
-    
-    private ShowCalendar()
-    {
-        
+
+    private ShowCalendar() {
+
     }
-    
-    private ShowContacts()
-    {
-        
+
+    private ShowContacts() {
+
     }
-    
-    private ShowNotes()
-    {
-        
+
+    private ShowNotes() {
+
     }
-    
+
     private renderMessages() {
         this.ShowMail();
     }

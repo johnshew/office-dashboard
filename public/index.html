@@ -26,7 +26,8 @@
         
         .react-select-box-container {
             position: relative;
-            width: 100%; /* was 240px; */
+            width: 100%;
+            /* was 240px; */
             display: inline-block;
             background-color: #fff;
             border-radius: 0px;
@@ -268,12 +269,15 @@
             <div class="navbar-collapse collapse">
                 <ul class="nav navbar-nav navbar-right">
                     <li class="dropdown">
-                        <a class="dropdown-toggle" role="button" data-toggle="dropdown" href="#"><i class="glyphicon glyphicon-user">&nbsp;<span id="UsernameText"/></i>&nbsp;<span class="caret"></span></a>
+                        <a class="dropdown-toggle" role="button" data-toggle="dropdown" href="#">
+                            <i class="glyphicon glyphicon-user">&nbsp;<span id="UsernameText"/></i>&nbsp;
+                            <span class="caret" />
+                        </a>
                         <ul id="account-menu" class="dropdown-menu" role="menu">
                             <li><a id="DoLogout" href="#">Logout</a></li>
                             <li><a id="ShowAbout" href="#">About...</a></li>
                         </ul>
-                    </li>                    
+                    </li>
                     <li><a id="DoLogin" href="#">Login</a></li>
                 </ul>
             </div>
