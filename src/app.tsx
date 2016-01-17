@@ -3,8 +3,6 @@ import * as ReactDOM from 'react-dom';
 import { Mail } from './office';
 
 
-
-
 class App {
     private identity: Kurve.Identity;
     private graph: Kurve.Graph;

@@ -2,7 +2,9 @@
 {
   "compilerOptions": {
     "jsx": "react",
-    "sourceMap": true
+    "sourceMap": true,
+    "module": "commonjs",
+    "target": "es5"
   },
   "exclude": [
       "node_modules",

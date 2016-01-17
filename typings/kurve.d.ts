@@ -43,11 +43,12 @@ declare module Kurve {
         private loginCallback;
         private accessTokenCallback;
         private getTokenCallback;
-        private redirectUri;
+        private tokenProcessorUrl;
         private tokenCache;
         private logonUser;
         private refreshTimer;
-        constructor(clientId?: string, redirectUri?: string);
+        constructor(clientId?: string, tokenProcessingUri?: string);
+        checkForIdentityRedirect(): boolean;
         private decodeIdToken(idToken);
         private decodeAccessToken(accessToken, resource);
         getIdToken(): any;
@@ -55,8 +56,10 @@ declare module Kurve {
         private renewIdToken();
         getAccessTokenAsync(resource: string): Promise<string, Error>;
         getAccessToken(resource: string, callback: (token: string, error: Error) => void): void;
-        loginAsync(): Promise<void, Error>;
-        login(callback: (error: Error) => void): void;
+        loginAsync(toUrl?: string): Promise<void, Error>;
+        login(callback: (error: Error) => void, toUrl?: string): void;
+        loginNoWindowAsync(toUrl?: string): Promise<void, Error>;
+        loginNoWindow(callback: (error: Error) => void, toUrl?: string): void;
         logOut(): void;
         private base64Decode(encodedString);
         private generateNonce();
@@ -246,8 +249,4 @@ declare module Kurve {
         private buildUsersUrl();
         private buildGroupsUrl();
     }
-}
-
-declare module "kurve" {
-    export = Kurve;
 }
