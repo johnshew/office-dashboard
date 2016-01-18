@@ -304,10 +304,7 @@
     <script src="./kurve.js"></script>
     <script src="./bundle.js"></script>
     <script>
-
-    </script>
-    <!--
-            (function () {
+        (function () {
             var params = document.location.search.length < 1 ? undefined : document.location.search.substring(1).split("&").map((kv) => kv.split('=')).reduce((prev, kva) => { prev[kva[0]] = kva[1]; return prev }, {});
             if (params && params["console"]) {
                 var logger = document.getElementById('DebugLog');
@@ -333,6 +330,8 @@
             }
         })();
         console.log('started');
+    </script>
+<!--
 
  -->
 </body>
