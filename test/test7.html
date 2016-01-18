@@ -4,6 +4,11 @@
 <head>
     <meta charset="UTF-8" />
     <title>Basic React Test</title>
+    <script>
+        window.onerror = function (errorMsg, url, lineNumber) {
+            alert(' Url: ' + url + ' Line: ' + lineNumber + '\r\n' + errorMsg );
+        }
+    </script>
     <script src="https://fb.me/react-0.14.6.js"></script>
     <script src="https://fb.me/react-dom-0.14.6.js"></script>
     <script src="../public/kurve.js"></script>
@@ -27,7 +32,7 @@
 
     <script>
         (function () 
-        {
+            {
                 var forceDebugConsole = true;
                 var params = document.location.search.replace(/.*?\?/,"").split("&").map(function (kv) { return kv.split('='); }).reduce(function (prev, kva) { prev[kva[0]] = (!kva[1]) ? "" : kva[1]; return prev }, {});
                 if (forceDebugConsole || params["console"] ) {
@@ -53,7 +58,7 @@
                         try { cmd.scrollIntoView(); } catch(err) {}
                     }
                 }           
-        })();
+            })();
 
         function clicked() {
             console.log('Clicked');
@@ -68,11 +73,23 @@
                 window.location.href = url;
             }
         }
-    
-        ReactDOM.render(
-            React.createElement('button',{  onClick: clicked}, "test"),
-            document.getElementById('content')
-        );
+        
+        function TestReact()
+        {
+            var element = null;
+            try {
+                console.log('Creating element');
+                element = React.createElement('button',null,"Test");           
+            } catch (err) { console.log("Failed with error " + err); return; }
+            
+            try {
+                console.log('Calling ReactDOM.render');
+                ReactDOM.render(element,document.getElementById('content')
+                );
+            } catch (err) { console.log("Failed with error " + err); return; }
+        }
+        
+        TestReact();
     </script>
 
 </body>
