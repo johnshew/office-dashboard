@@ -73,7 +73,7 @@
             result.identity = new Kurve.Identity("b8dd3290-662a-4f91-92b9-3e70fbabe04e", here.protocol + '//' + here.host + here.pathname.substring(0, here.pathname.lastIndexOf('/') + 1) + '../public/login.html');
             if (result.identity.checkForIdentityRedirect()) {
                 document.getElementById("LoginButton").style.display = "none";
-                console.log('Loggin successful.');
+                console.log('Login successful.');
                 
             };  
             return result;

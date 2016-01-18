@@ -303,8 +303,9 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
     <script>
         (function () {
-            var params = document.location.search.length < 1 ? undefined : document.location.search.substring(1).split("&").map((kv) => kv.split('=')).reduce((prev, kva) => { prev[kva[0]] = kva[1]; return prev }, {});
-            if (params && params["console"]) {
+            var forceDebugConsole = true;
+            var params = document.location.search.replace(/.*?\?/).split("&").map(function (kv) { return kv.split('='); }).reduce(function (prev, kva) { prev[kva[0]] = kva[1]; return prev }, {});
+            if (forceDebugConsole || params["console"]) {
                 var logger = document.getElementById('DebugLog');
                 document.getElementById('DebugConsole').style.display = "";
                 console.log = function (message) {
