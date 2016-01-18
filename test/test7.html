@@ -1,54 +1,58 @@
 <!DOCTYPE html>
 <html>
-  <head>
+
+<head>
     <meta charset="UTF-8" />
     <title>Basic React Test</title>
     <script src="https://fb.me/react-0.14.6.js"></script>
     <script src="https://fb.me/react-dom-0.14.6.js"></script>
     <script src="../public/kurve.js"></script>
-  </head>
-  <body>
+</head>
+
+<body>
     <div>
-       <p> No JSX - pure es5 javascript with react and Kurve loaded. </p>
+        <p> No JSX - pure es5 javascript with react and Kurve loaded. </p>
     </div>
-     <div id="content">
+    <div id="content">
     </div>
     <div>
         <div id="DebugConsole" style="display:none">
-        <div id="DebugLog" style="margin:10px;padding:10px;background:SkyBlue"></div>
-        <div  style="margin:0px;padding:10px">
-            <input id="DebugCmd" type="text" placeholder="> " style="width:100%" />
-            
+            <div id="DebugLog" style="margin:10px;padding:10px;background:SkyBlue"></div>
+            <div style="margin:0px;padding:10px">
+                <input id="DebugCmd" type="text" placeholder="> " style="width:100%" />
+
+            </div>
         </div>
-    <div>
-   
+    </div>
+
     <script>
-        (function () {
-            var forceDebugConsole = false;
-            var params = document.location.search.replace(/.*?\?/,"").split("&").map(function (kv) { return kv.split('='); }).reduce(function (prev, kva) { prev[kva[0]] = (!kva[1]) ? null : kva[1]; return prev }, {});
-            if (forceDebugConsole || params["console"] !== undefined) {
-                var logger = document.getElementById('DebugLog');
-                document.getElementById('DebugConsole').style.display = "";
-                console.log = function (message) {
-                    if (typeof message == 'object') {
-                        try {
-                            message = JSON.stringify(message);
-                        } 
-                        catch(err) {
-                            message = "[Could not stringify object]";
-                        };
-                    }                    
-                    logger.innerHTML +=  '<p>' + message + '</p>';                
-                    // console_log(message);
-                };
-                var cmd = document.getElementById('DebugCmd');
-                cmd.onchange = function () {
-                    var result = ""
-                    try { result = eval(cmd.value); } catch(err) { result="Unable to evaluate " + cmd.value + " with error " + err.toString(); }
-                    console.log(result);
-                    try { cmd.scrollIntoView(); } catch(err) {}
-                }
-            }            
+        (function () 
+        {
+                var forceDebugConsole = true;
+                var params = document.location.search.replace(/.*?\?/,"").split("&").map(function (kv) { return kv.split('='); }).reduce(function (prev, kva) { prev[kva[0]] = (!kva[1]) ? null : kva[1]; return prev }, {});
+                if (forceDebugConsole || params["console"] != undefined) {
+                    var logger = document.getElementById('DebugLog');
+                    document.getElementById('DebugConsole').style.display = "";
+                    console.log = function (message) {
+                        if (typeof message == 'object') {
+                            try {
+                                message = JSON.stringify(message);
+                            } 
+                            catch(err) {
+                                message = "[Could not stringify object]";
+                            };
+                        }                    
+                        logger.innerHTML +=  '<p>' + message + '</p>';                
+                        // console_log(message);
+                    };
+                    var cmd = document.getElementById('DebugCmd');
+                    cmd.onchange = function () {
+                        var result = ""
+                        try { result = eval(cmd.value); } catch(err) { result="Unable to evaluate " + cmd.value + " with error " + err.toString(); }
+                        console.log(result);
+                        try { cmd.scrollIntoView(); } catch(err) {}
+                    }
+                }           
         })();
 
         function clicked() {
@@ -64,12 +68,13 @@
                 window.location.href = url;
             }
         }
-        
+    
         ReactDOM.render(
-                React.createElement('button',{  onClick: clicked}, "test"),
-                document.getElementById('content')
-            );
-        </script>
+            React.createElement('button',{  onClick: clicked}, "test"),
+            document.getElementById('content')
+        );
+    </script>
 
-  </body>
+</body>
+
 </html>
