@@ -29,9 +29,8 @@
         </div>
         <div id="Top" class="row tight">
             <p>
-                <br/>Login AAD URL: <a href="https://login.microsoftonline.com/common/oauth2/authorize?response_type=id_token&client_id=b8dd3290-662a-4f91-92b9-3e70fbabe04e&redirect_uri=http%3A%2F%2Fjohnshew.github.io%2FGraphDashboard%2Ftest%2Ftest3.html&state=clientId%3Db8dd3290-662a-4f91-92b9-3e70fbabe04e%26tokenProcessorUrl%3Dhttp%3A%2F%2Fjohnshew.github.io%2FGraphDashboard%2Ftest%2F..%2Fpublic%2Flogin.html&nonce=5mcLkrghb2sWkHRSHHII09bZqpQc2Y8O">here</a>
                 <br/>Logout AAD URL: <a href="https://login.microsoftonline.com/common/oauth2/logout?post_logout_redirect_uri=http://johnshew.github.io/GraphDashboard/test/test3.html;">here</a>
-                <br/>This App Login URL: <a href="http://johnshew.github.io/GraphDashboard/test/test3.html#id_token=eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsIng1dCI6Ik1uQ19WWmNBVGZNNXBPWWlKSE1iYTlnb0VLWSIsImtpZCI6Ik1uQ19WWmNBVGZNNXBPWWlKSE1iYTlnb0VLWSJ9.eyJhdWQiOiJiOGRkMzI5MC02NjJhLTRmOTEtOTJiOS0zZTcwZmJhYmUwNGUiLCJpc3MiOiJodHRwczovL3N0cy53aW5kb3dzLm5ldC9kZjNhZDgwMi0wZmE4LTQzZjgtYWYyOC1lZTNiM2JlNDE4ZDMvIiwiaWF0IjoxNDUzMDg5NTUwLCJuYmYiOjE0NTMwODk1NTAsImV4cCI6MTQ1MzA5MzQ1MCwiYW1yIjpbInB3ZCJdLCJmYW1pbHlfbmFtZSI6IlNoZXciLCJnaXZlbl9uYW1lIjoiSm9obiIsIm5hbWUiOiJqb2huQHNoZXcubmV0Iiwibm9uY2UiOiIwRUdqUUV2VkhaeWpCb1A1MjRKdmxETzhLTjRmcHU4ZyIsIm9pZCI6IjFlYzUzYzBjLWZiYzktNDliYi05ZTcxLWJlMDkwZGI0ZGY4MyIsInN1YiI6IlR0Y29RNmEwTDZJSFVuVmQ3bFdZN2ZHNlZIS0ZjSmE2Y09wNVoyeTZkSWsiLCJ0aWQiOiJkZjNhZDgwMi0wZmE4LTQzZjgtYWYyOC1lZTNiM2JlNDE4ZDMiLCJ1bmlxdWVfbmFtZSI6ImpvaG5Ac2hldy5uZXQiLCJ1cG4iOiJqb2huQHNoZXcubmV0IiwidmVyIjoiMS4wIn0.fner-_WcrNplg7lHRX65aegS63zZ8b6mtb-FZug2yNtQxfntyJdlAH6pRCpS1kCuc8aFZjEvOP5TNbIR6UpYBGBsFmbU-bTPzyYiksIP-0qoaByKal1S7wFMewlmYn5KwMUqUV5rGueiJUQV8y-KgqROLYOSJmRJF-JGZWhoL8zaZItZkSVT9KDVqr6nAZnbjKMd3UXl1B30kL4-D6iJ0vZCrxipiC-RccC_qYw85kojg69U0HZgCaxUqId2H9TzrhcrhqN3m7m1yjGQLfaE4Nav_72QIFgrzQEv1sFa-CC1LB26DX2vqCxGgYN4gpxk0GLFhpITqVU-o7FPKhf9aA&state=clientId%3db8dd3290-662a-4f91-92b9-3e70fbabe04e%26tokenProcessorUrl%3dhttp%3a%2f%2fjohnshew.github.io%2fGraphDashboard%2ftest%2f..%2fpublic%2flogin.html&session_state=e14e9a85-9829-4cc8-993b-6154bc81a6ac">here</a>
+                <br/>
             </p>
         </div>
         <div id="DebugConsole" class="row tight" style="display:none">
@@ -53,10 +52,10 @@
                 console.log = function (message) {
                     if (typeof message == 'object') {
                         try {
-                            message = JSON && JSON.stringify ? JSON.stringify(message) : message;
+                            message = JSON.stringify(message);
                         } 
                         catch(err) {
-                            message = "[Could not stringify that object]";
+                            message = "[Could not stringify object]";
                         };
                     }                    
                     logger.innerHTML +=  '<p>' + message + '</p>';                
@@ -65,7 +64,7 @@
                 var cmd = document.getElementById('DebugCmd');
                 cmd.onchange = function () {
                     var result = ""
-                    try { result = eval(cmd.value); } catch(err) { result="Unable to evaluate " + cmd.value; }
+                    try { result = eval(cmd.value); } catch(err) { result="Unable to evaluate " + cmd.value + " with error " + err.toString(); }
                     console.log(result);
                     try { cmd.scrollIntoView(); } catch(err) {}
                 }
@@ -80,16 +79,21 @@
             result.graph = new Kurve.Graph({identity: result.identity});
             return result;
         };
-            
-        var app = InitializeApp();        
+        
+        var app = InitializeApp();
+        console.log("Checking for redirect");
         if (app.identity.checkForIdentityRedirect()) {
                 document.getElementById("LoginButton").style.display = "none";
                 onLogin();
         };
 
         function onLogin() {
-                console.log('Login successful.');
-                app.graph.me(function(me,err) { console.log('Got Me: ' + JSON.stringify(me.data));});                                            
+                console.log('Login successful');
+                console.log('Calling graph.me')
+                app.graph.me(function(me,err) { 
+                    if (err) console.log('Got Me error ' +  err.toString());
+                    if (me) console.log('Got me ' + JSON.stringify(me.data)); 
+                });                                            
         }
 
         function Login() {
@@ -102,6 +106,10 @@
         function Logout() {
             console.log('Logout called.');
             app.identity.logout();
+        }
+        
+        function Bad() {
+            throw "[In Bad throwing this error.]";
         }
     </script>
 </body>
