@@ -29,8 +29,8 @@
         (function () 
         {
                 var forceDebugConsole = true;
-                var params = document.location.search.replace(/.*?\?/,"").split("&").map(function (kv) { return kv.split('='); }).reduce(function (prev, kva) { prev[kva[0]] = (!kva[1]) ? null : kva[1]; return prev }, {});
-                if (forceDebugConsole || params["console"] != undefined) {
+                var params = document.location.search.replace(/.*?\?/,"").split("&").map(function (kv) { return kv.split('='); }).reduce(function (prev, kva) { prev[kva[0]] = (!kva[1]) ? "" : kva[1]; return prev }, {});
+                if (forceDebugConsole || params["console"] ) {
                     var logger = document.getElementById('DebugLog');
                     document.getElementById('DebugConsole').style.display = "";
                     console.log = function (message) {
