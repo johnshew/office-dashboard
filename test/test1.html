@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Tesla Console</title>
+
+    <style>
+        .tight {
+            margin-bottom: 0px;
+            margin-top: 0px;
+            margin-left: 0px;
+            margin-right: 0px;
+            padding: 0px
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container-fluid tight">
+        <div class="row tight">
+            <div id="Mail"></div>
+        </div>
+        <div id="Loading" class="row tight" style="display:none">
+            <p>Welcome. Please login.</p>
+        </div>
+        <div id="DebugConsole" class="row tight" style="display:none">
+            <div id="DebugLog" class="col-sm-12 tight bg-info" style="margin:0px;padding:10px;background:SkyBlue"></div>
+            <div class="col-sm-12 tight">
+                <input id="DebugCmd" type="text" placeholder="> " style="width:100%" />
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        (function () {
+            var params = document.location.search.length < 1 ? undefined : document.location.search.substring(1).split("&").map((kv) => kv.split('=')).reduce((prev, kva) => { prev[kva[0]] = kva[1]; return prev }, {});
+            if (true || params && params["console"]) {
+                var logger = document.getElementById('DebugLog');
+                document.getElementById('DebugConsole').style.display = "";
+                console.log = function (message) {
+                    if (typeof message == 'object') {
+                        try {
+                            message = JSON && JSON.stringify ? JSON.stringify(message) : message;
+                        } 
+                        catch(err) {
+                            message = "[Could not stringify that object]";
+                        };
+                    }                    
+                    logger.innerHTML +=  '<p>' + message + '</p>';                
+                    // console_log(message);
+                };
+                var cmd = document.getElementById('DebugCmd');
+                cmd.onchange = function () {
+                    var result = ""
+                    try { result = eval(cmd.value); } catch(err) { result="Unable to evaluate " + cmd.value; }
+                    console.log(result);
+                }
+            }
+        })();
+        console.log('started');
+    </script>
+</body>
+
+</html>
