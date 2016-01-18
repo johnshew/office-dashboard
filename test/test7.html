@@ -5,23 +5,28 @@
     <title>Basic React Test</title>
     <script src="https://fb.me/react-0.14.6.js"></script>
     <script src="https://fb.me/react-dom-0.14.6.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.8.23/browser.min.js"></script>
+    <script src="../public/kurve.js"></script>
   </head>
   <body>
-    <div id="example"></div>
     <div>
-        <div id="DebugConsole">
-        <div id="DebugLog" style="margin:0px;padding:10px;background:SkyBlue"></div>
+       <p> No JSX - pure es5 javascript with react and Kurve loaded. </p>
+    </div>
+     <div id="content">
+    </div>
+    <div>
+        <div id="DebugConsole" style="display:none">
+        <div id="DebugLog" style="margin:10px;padding:10px;background:SkyBlue"></div>
         <div  style="margin:0px;padding:10px">
             <input id="DebugCmd" type="text" placeholder="> " style="width:100%" />
+            
         </div>
     <div>
    
     <script>
         (function () {
-            var forceDebugConsole = true;
-            var params = document.location.search.replace(/.*?\?/,"").split("&").map(function (kv) { return kv.split('='); }).reduce(function (prev, kva) { prev[kva[0]] = kva[1]; return prev }, {});
-            if (forceDebugConsole || params["console"]) {
+            var forceDebugConsole = false;
+            var params = document.location.search.replace(/.*?\?/,"").split("&").map(function (kv) { return kv.split('='); }).reduce(function (prev, kva) { prev[kva[0]] = (!kva[1]) ? null : kva[1]; return prev }, {});
+            if (forceDebugConsole || params["console"] !== undefined) {
                 var logger = document.getElementById('DebugLog');
                 document.getElementById('DebugConsole').style.display = "";
                 console.log = function (message) {
@@ -45,20 +50,20 @@
                 }
             }            
         })();
-        </script>
+
+        function clicked() {
+            console.log('Clicked');
+            var identity = new Kurve.Identity("b8dd3290-662a-4f91-92b9-3e70fbabe04e",
+                    document.location.protocol + '//' + document.location.host + document.location.pathname.substring(0, document.location.pathname.lastIndexOf('/') + 1) + '../public/login.html');
+            console.log("LoggedIn check: " + identity.isLoggedIn());
+            console.log("Check for identity redirect: " + identity.checkForIdentityRedirect());
+        }
         
-        <script type="text/babel">
-            function App ({ title }) {
-                return (
-                    <div>{title}</div>
-                );
-            }
-            window.Testing = (x) => x;           
-            
-            ReactDOM.render(
-                <App title="Hello World" />,
-                document.getElementById('example')
+        ReactDOM.render(
+                React.createElement('button',{  onClick: clicked}, "test"),
+                document.getElementById('content')
             );
         </script>
+
   </body>
 </html>

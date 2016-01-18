@@ -1,26 +1,29 @@
 <!DOCTYPE html>
 <html>
-
-<head>
+  <head>
     <meta charset="UTF-8" />
-    <title>Basic Redirect Test</title>
-</head>
-
-<body>
-    <div id="example">
-        <h2>Test 5 - part 2</h2>
-        <button onclick="ButtonClick()">Redirect</button>
+    <title>Basic React Test</title>
+    <script src="https://fb.me/react-0.14.6.js"></script>
+    <script src="https://fb.me/react-dom-0.14.6.js"></script>
+  </head>
+  <body>
+    <div>
+       <p> No JSX - pure es5 javascript with react. </p>
+    </div>
+     <div id="content">
+       <p> No JSX - pure es5 javascript with react. </p>
     </div>
     <div>
         <div id="DebugConsole">
-            <div id="DebugLog" style="margin:0px;padding:10px;background:SkyBlue"></div>
-            <div style="margin:0px;padding:10px">
-                <input id="DebugCmd" type="text" placeholder="> " style="width:100%" />
-            </div>
+        <div id="DebugLog" style="margin:10px;padding:10px;background:SkyBlue"></div>
+        <div  style="margin:0px;padding:10px">
+            <input id="DebugCmd" type="text" placeholder="> " style="width:100%" />
+            
         </div>
-        <script src="../public/kurve.js"></script>
-        <script>
-            (function () {
+    <div>
+   
+    <script>
+        (function () {
             var forceDebugConsole = true;
             var params = document.location.search.replace(/.*?\?/,"").split("&").map(function (kv) { return kv.split('='); }).reduce(function (prev, kva) { prev[kva[0]] = kva[1]; return prev }, {});
             if (forceDebugConsole || params["console"]) {
@@ -47,11 +50,16 @@
                 }
             }            
         })();
-        
-        function ButtonClick() {
-            window.location.href = "./test5.html";
+
+        function clicked() {
+            console.log('Clicked');
         }
-        </script>
         
-</body>
+        ReactDOM.render(
+                React.createElement('button',{  onClick: clicked}, "test"),
+                document.getElementById('content')
+            );
+        </script>
+
+  </body>
 </html>
