@@ -11,6 +11,7 @@ class App {
     private loginNewWindow: boolean
 
     constructor() {
+        console.log('App initializing');
         var params = document.location.search.length < 1 ? undefined : document.location.search.substring(1).split("&").map((kv) => kv.split('=')).reduce((prev, kva) => { prev[kva[0]] = kva[1]; return prev }, {});
         this.loginNewWindow = !params ? true : !params["inplace"]; 
         var here = document.location;
@@ -71,18 +72,26 @@ class App {
     }
 
     public LoggedIn() {
+        console.log('Successful login.');
         this.UpdateLoginState();
         this.Messages();
     }
 
+    public IsLoggedIn() : boolean {
+        return this.identity.isLoggedIn();
+    }        
+
     public Login() {
+        console.log('Login called');
         if (this.loginNewWindow) {
             this.identity.loginAsync()
             .then(() => { 
                 this.LoggedIn();
             });
         } else {
-            this.identity.loginNoWindowAsync(); // no .then since it will be caught when the page reloads.
+            this.identity.loginNoWindow((error) => {
+                console.log('LoginNoWindow failed.');
+            }); // no .then since it will be caught when the page reloads.
         }
     }
     

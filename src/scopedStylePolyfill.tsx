@@ -94,7 +94,7 @@
             return;
         }
 
-        window.console && console.log("No support for <style scoped> so jumping through hoops for " + styleNode.nodeValue);
+        // window.console && console.log("No support for <style scoped> so jumping through hoops for " + styleNode.nodeValue);
     
         // init some vars
         var parentSheet = styleNode[Compatibility.sheet];
@@ -160,7 +160,7 @@
                 // replace :root by the scoped element
                 selector = selector.replace(/[\ ]+:root/gi, '');
 
-                window.console && console.log('Adding ' + selector + ' to ' + rule.style.cssText);
+                // window.console && console.log('Adding ' + selector + ' to ' + rule.style.cssText);
 
                 if (false) {//compat.changeSelectorTextAllowed) {
                     rule.selectorText = selector;
@@ -192,7 +192,7 @@
                 ScopeCssRules(parentSheet, rule, ruleIndex, parentSelector);
             }
         }
-        window.console && console.log("Updated sheet: " + newInnerHTML);
+        // window.console && console.log("Updated sheet: " + newInnerHTML);
         //!BUG when we get here looking at sheet.rules or sheet.cssRules shows the modified rules.  But looking at sheet.ownerNode.innerHTML has the unmodified version.
         return sheet;
     }

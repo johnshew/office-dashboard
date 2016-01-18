@@ -292,7 +292,7 @@
             <p>Welcome. Please login.</p>
         </div>
         <div id="DebugConsole" class="row tight" style="display:none">
-            <div id="DebugLog" class="col-sm-12 tight" style="padding:10px"></div>
+            <div id="DebugLog" class="col-sm-12 tight bg-info" style="padding:10px"></div>
             <div class="col-sm-12 tight">
                 <input id="DebugCmd" type="text" placeholder="> " style="width:100%" />
             </div>
@@ -301,8 +301,6 @@
     </div>
     <script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
-    <script src="./kurve.js"></script>
-    <script src="./bundle.js"></script>
     <script>
         (function () {
             var params = document.location.search.length < 1 ? undefined : document.location.search.substring(1).split("&").map((kv) => kv.split('=')).reduce((prev, kva) => { prev[kva[0]] = kva[1]; return prev }, {});
@@ -331,6 +329,8 @@
         })();
         console.log('started');
     </script>
+    <script src="./kurve.js"></script>
+    <script src="./bundle.js"></script>
 <!--
 
  -->
