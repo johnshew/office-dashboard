@@ -23,15 +23,6 @@
         <div style="margin:0px;padding:10px"><input id="DebugCmd" type="text" placeholder="> " style="width:100%" /></div>
     </div>
 
-    <script id="worker1" type="text/Xjavascript">
-        onmessage = function(e) { 
-            var result = "Worker received message: " + e.data; 
-            console.log(result);
-            self.postMessage('Worker done.'); 
-        };
-        
-    </script>
-
     <script>
         (function () {
             var forceDebugConsole = true;
@@ -61,11 +52,9 @@
             }           
         })();
 
-        var blob = new Blob([document.querySelector('#worker1').textContent]);
-
-        var worker = new Worker(window.URL.createObjectURL(blob));
+        var worker = new Worker('./test10.js');
         worker.onmessage = function(e) {
-        console.log("Primary thread received message: " + e.data);
+            console.log("Primary thread received message: " + e.data);
         }
         worker.postMessage("Start"); // Start the worker.
     </script>
