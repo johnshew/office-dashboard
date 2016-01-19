@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <title>Test Worker Roles</title>
+    <meta charset="utf-8" />
+</head>
+
+<body>
+
+    <div><p id="log"></p></div>
+
+    <script id="worker1" type="javascript/worker">
+        console.log("Worker starting");        
+        self.onmessage = function(e) {
+            var result = "Worker received message: " + e.data;
+            console.log(result);
+            self.postMessage('Worker done.'); 
+        };
+    </script>
+
+    <script>
+        function log(msg) {
+        // Use a fragment: browser will only render/reflow once.
+            var fragment = document.createDocumentFragment();
+            fragment.appendChild(document.createTextNode(msg));
+            fragment.appendChild(document.createElement('br'));
+
+            document.querySelector("#log").appendChild(fragment);
+    }
+
+    var blob = new Blob([document.querySelector('#worker1').textContent]);
+
+    var worker = new Worker(window.URL.createObjectURL(blob));
+    worker.onmessage = function(e) {
+      log("Primary thread received message: " + e.data);
+    }
+    worker.postMessage("Start"); // Start the worker.
+    </script>
+</body>
+
+</html>
