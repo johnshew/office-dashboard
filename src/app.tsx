@@ -12,8 +12,9 @@ class App {
 
     constructor() {
         console.log('App initializing');
-        var params = document.location.search.replace(/.*?\?/,"").split("&").map(function (kv) { return kv.split('='); }).reduce(function (prev, kva) { prev[kva[0]] = (!kva[1]) ? "" : kva[1]; return prev }, {});
-        this.loginNewWindow =  !params["inplace"]; 
+        var params = document.location.search.replace(/.*?\?/,"").split("&").map(function (kv) { return kv.split('='); }).reduce(function (prev, kva) { prev[kva[0]] = (!kva[1]) ? true : kva[1]; return prev }, {});
+        this.loginNewWindow = !params["inplace"]; 
+        console.log('In place login is ' + !this.loginNewWindow);
         var here = document.location;
         this.identity = new Kurve.Identity("b8dd3290-662a-4f91-92b9-3e70fbabe04e",
             here.protocol + '//' + here.host + here.pathname.substring(0, here.pathname.lastIndexOf('/') + 1) + '../public/login.html');
