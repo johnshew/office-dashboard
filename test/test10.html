@@ -5,38 +5,69 @@
 <head>
     <title>Test Worker Roles</title>
     <meta charset="utf-8" />
+    <script>
+        window.onerror = function (errorMsg, url, lineNumber) {
+            alert( url ? url : "" + ' ' + lineNumber ? linenumber : "" + '\r\n' + errorMsg );
+        }
+    </script>
 </head>
 
 <body>
 
-    <div><p id="log"></p></div>
+    <div>
+        <p ">Testing workers</p>
+    </div>
 
-    <script id="worker1" type="javascript/worker">
-        console.log("Worker starting");        
-        self.onmessage = function(e) {
-            var result = "Worker received message: " + e.data;
+    <div id="DebugConsole" class="row tight" style="display:none">
+        <div id="DebugLog" style="margin:10px;padding:10px;background:SkyBlue"></div>
+        <div style="margin:0px;padding:10px"><input id="DebugCmd" type="text" placeholder="> " style="width:100%" /></div>
+    </div>
+
+    <script id="worker1" type="text/Xjavascript">
+        onmessage = function(e) { 
+            var result = "Worker received message: " + e.data; 
             console.log(result);
             self.postMessage('Worker done.'); 
         };
+        
     </script>
 
     <script>
-        function log(msg) {
-        // Use a fragment: browser will only render/reflow once.
-            var fragment = document.createDocumentFragment();
-            fragment.appendChild(document.createTextNode(msg));
-            fragment.appendChild(document.createElement('br'));
+        (function () {
+            var forceDebugConsole = true;
+            var params = document.location.search.replace(/.*?\?/,"").split("&").map(function (kv) { return kv.split('='); }).reduce(function (prev, kva) { prev[kva[0]] = (!kva[1]) ? true : kva[1]; return prev }, {});
+            if (forceDebugConsole || params["console"] ) {
+                var logger = document.getElementById('DebugLog');
+                document.getElementById('DebugConsole').style.display = "";
+                console.log = function (message) {
+                    if (typeof message == 'object') {
+                        try {
+                            message = JSON.stringify(message);
+                        } 
+                        catch(err) {
+                            message = "[Could not stringify object]";
+                        };
+                    }                    
+                    logger.innerHTML +=  '<p>' + message + '</p>';                
+                    // console_log(message);
+                };
+                var cmd = document.getElementById('DebugCmd');
+                cmd.onchange = function () {
+                    var result = ""
+                    try { result = eval(cmd.value); } catch(err) { result="Unable to evaluate " + cmd.value + " with error " + err.toString(); }
+                    console.log(result);
+                    try { cmd.scrollIntoView(); } catch(err) {}
+                }
+            }           
+        })();
 
-            document.querySelector("#log").appendChild(fragment);
-    }
+        var blob = new Blob([document.querySelector('#worker1').textContent]);
 
-    var blob = new Blob([document.querySelector('#worker1').textContent]);
-
-    var worker = new Worker(window.URL.createObjectURL(blob));
-    worker.onmessage = function(e) {
-      log("Primary thread received message: " + e.data);
-    }
-    worker.postMessage("Start"); // Start the worker.
+        var worker = new Worker(window.URL.createObjectURL(blob));
+        worker.onmessage = function(e) {
+        console.log("Primary thread received message: " + e.data);
+        }
+        worker.postMessage("Start"); // Start the worker.
     </script>
 </body>
 
