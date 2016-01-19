@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Basic React Test</title>
+    <script>
+        window.onerror = function (errorMsg, url, lineNumber) {
+            alert(' Url: ' + url + ' Line: ' + lineNumber + '\r\n' + errorMsg );
+        }
+    </script>
+    <script src="https://raw.githubusercontent.com/es-shims/es5-shim/master/es5-shim.js"></script>
+    <script src="https://raw.githubusercontent.com/es-shims/es5-shim/master/es5-sham.js"></script>
+    <script src="https://fb.me/react-0.14.6.js"></script>
+    <script src="https://fb.me/react-dom-0.14.6.js"></script>
+    <script src="../public/kurve.js"></script>
+
+</head>
+
+<body>
+    <div>
+        <p> No JSX - pure es5 javascript with react and Kurve loaded. </p>
+    </div>
+    <div id="content">
+    </div>
+    <div>
+        <div id="DebugConsole" style="display:none">
+            <div id="DebugLog" style="margin:10px;padding:10px;background:SkyBlue"></div>
+            <div style="margin:0px;padding:10px">
+                <input id="DebugCmd" type="text" placeholder="> " style="width:100%" />
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () 
+            {
+                var forceDebugConsole = true;
+                var params = document.location.search.replace(/.*?\?/,"").split("&").map(function (kv) { return kv.split('='); }).reduce(function (prev, kva) { prev[kva[0]] = (!kva[1]) ? "" : kva[1]; return prev }, {});
+                if (forceDebugConsole || params["console"] ) {
+                    var logger = document.getElementById('DebugLog');
+                    document.getElementById('DebugConsole').style.display = "";
+                    console.log = function (message) {
+                        if (typeof message == 'object') {
+                            try {
+                                message = JSON.stringify(message);
+                            } 
+                            catch(err) {
+                                message = "[Could not stringify object]";
+                            };
+                        }                    
+                        logger.innerHTML +=  '<p>' + message + '</p>';                
+                        // console_log(message);
+                    };
+                    var cmd = document.getElementById('DebugCmd');
+                    cmd.onchange = function () {
+                        var result = ""
+                        try { result = eval(cmd.value); } catch(err) { result="Unable to evaluate " + cmd.value + " with error " + err.toString(); }
+                        console.log(result);
+                        try { cmd.scrollIntoView(); } catch(err) {}
+                    }
+                }           
+            })();
+
+        function clicked() {
+            console.log('Clicked');
+            var identity = new Kurve.Identity("b8dd3290-662a-4f91-92b9-3e70fbabe04e",
+                    document.location.protocol + '//' + document.location.host + document.location.pathname.substring(0, document.location.pathname.lastIndexOf('/') + 1) + '../public/login.html');
+            console.log("Check for identity redirect");
+            if ( identity.checkForIdentityRedirect()) {
+                console.log("Logged in now. ");
+            } else {                
+                var url = "https://login.microsoftonline.com/common/oauth2/authorize?response_type=id_token&client_id=b8dd3290-662a-4f91-92b9-3e70fbabe04e&redirect_uri=http%3A%2F%2Fjohnshew.github.io%2FGraphDashboard%2Ftest%2Ftest8.html&state=none&nonce=HelloWorld";
+                console.log("Redirecting to: " + url);
+                window.location.href = url;
+            }
+        }
+        
+        function TestReact()
+        {
+            var element = null;
+            try {
+                console.log('Creating element');
+                element = React.createElement('button', { onClick: clicked },"Test");           
+            } catch (err) { console.log("Failed with error " + err); return; }
+            
+            try {
+                console.log('Calling ReactDOM.render');
+                ReactDOM.render(element,document.getElementById('content')
+                );
+            } catch (err) { console.log("Failed with error " + err); return; }
+        }
+        
+        TestReact();
+    </script>
+
+</body>
+
+</html>
