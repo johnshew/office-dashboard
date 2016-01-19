@@ -379,6 +379,7 @@ var Kurve;
             return d.promise;
         };
         Identity.prototype.getAccessToken = function (resource, callback) {
+            console.log('Getting access token for ' + resource);
             var _this = this;
             //Check for cache and see if we have a valid token
             var cachedToken = this.tokenCache[resource];
@@ -411,6 +412,7 @@ var Kurve;
                 "&redirectUri=" + encodeURIComponent(this.tokenProcessorUrl) +
                 "&state=" + encodeURIComponent(this.state) +
                 "&nonce=" + encodeURIComponent(this.nonce);
+            console.log('Creating iframe with src=' + iframe.src);
             document.body.appendChild(iframe);
         };
         Identity.prototype.loginAsync = function (toUrl) {
@@ -459,6 +461,7 @@ var Kurve;
                     "&redirect_uri=" + encodeURIComponent(redirectUri) +
                     "&state=" + encodeURIComponent(this.state) +
                     "&nonce=" + encodeURIComponent(this.nonce);
+                console.log('Redirecting ')
                 window.location.href = url;
             }
         };
