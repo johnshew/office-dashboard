@@ -12,7 +12,7 @@
         <p>The URL is https://login.microsoftonline.com/common/oauth2/authorize?response_type=id_token&response_mode=query&client_id=b8dd3290-662a-4f91-92b9-3e70fbabe04e&redirect_uri=http%3A%2F%2Fjohnshew.github.io%2FGraphDashboard%2Ftest%2Ftest11.html&nonce=HelloWorld</p>
 
     <script>
-       alert((window.location.query ? ("Query: " + window.location.query) : "No query found.")
+       alert((window.location.search ? ("Query: " + window.location.search) : "No query found.")
        + '\r\n' + (window.location.hash ? ("Hash: " + window.location.hash) : "No hash found."));
     </script>
 
