@@ -59,6 +59,58 @@ function Combine(...styles: React.CSSProperties[]): React.CSSProperties {  // Es
     }, {});
 }
 
+
+interface CalendarEventSummaryProps extends React.Props<CalendarEventSummary> {
+    key: string;
+    item: Kurve.CalendarEvent;
+    style?: Object;
+    selected?: boolean;
+    onSelect?(messageId: string);
+}
+
+export class CalendarEventSummary extends React.Component<CalendarEventSummaryProps, any> {
+    private handleClick = (e: React.SyntheticEvent) => {
+        this.props.onSelect(this.props.item["data"].id);
+    };
+    render() {
+        var big = Combine(bigStyle, noOverflowStyle, tightStyle, this.props.style);
+        var small = Combine(smallStyle, noOverflowStyle, tightStyle, this.props.style);
+        var smallBold = Combine(small, emphasisStyle);
+        var d = this.props.item["data"];
+        return (
+            <div onClick={ this.handleClick } style={ (this.props.selected) ? selectedSummaryStyle : summaryStyle } >
+                <p style={ big }>{d.subject}</p>
+                <p style={ smallBold}>{(d.organizer) ? d.organizer.emailAddress.name : ""}</p>
+                <p style={ small }>{d.bodyPreview}</p>
+                </div>
+        );
+    }
+}
+
+interface CalendarEventListProps extends React.Props<CalendarEventList> {
+    data: Kurve.CalendarEvent[];
+    selected?: string;
+    onSelection?(id: string);
+}
+
+export class CalendarEventList extends React.Component<CalendarEventListProps, any> {
+    constructor(props, state) {
+        super(props, state);
+    }
+    private handleSelect = (id: string) => {
+        this.props.onSelection(id);
+    };
+    render() {
+        var items = this.props.data.map((item) => {
+            return (<CalendarEventSummary  onSelect={this.handleSelect} selected={ this.props.selected === item["data"].id}  key={item["data"].id} item={item}/>);
+        });
+        return <div>
+            { items }
+            </div>;
+    }
+}
+
+
 interface MailSummaryProps extends React.Props<MailSummary> {
     key: string;
     message: Kurve.Message;
@@ -135,7 +187,7 @@ function CleanUp(html: string) {
         var styles = head.getElementsByTagName("style");
         var styleIndex = styles.length;
         while (styleIndex--) {
-            var styleNode = styles.item(styleIndex);            
+            var styleNode = styles.item(styleIndex);
             if (styleNode.parentNode === head) {
                 head.removeChild(styleNode);
                 resultElement.appendChild(styleNode);
@@ -151,7 +203,7 @@ function CleanUp(html: string) {
     }
     ScopedStyles.ScopeStyles(doc.documentElement); // polyfill scoping if necessary
     
-    return { __html: doc.body.innerHTML }  
+    return { __html: doc.body.innerHTML }
 }
 
 
@@ -192,6 +244,8 @@ export class MessageView extends React.Component<MessageViewProps, any>
     }
 }
 
+
+
 interface MailProps extends React.Props<Mail> {
     data: Kurve.Message[];
     mailboxes: string[];
@@ -202,9 +256,12 @@ interface MailState {
     selected?: string;
 }
 
+
+
 export class Mail extends React.Component<MailProps, MailState>
 {
     private values: any[];
+
     constructor(props, state) {
         super(props, state);
         this.state = { mailboxFilter: [], selected: null };
@@ -251,3 +308,46 @@ export class Mail extends React.Component<MailProps, MailState>
                         {options}
                     </SelectBox>                        
 */
+
+
+interface CalendarProps extends React.Props<Calendar> {
+    data: Kurve.CalendarEvent[];
+}
+
+interface CalendarState {
+    selected?: string;
+}
+
+
+
+export class Calendar extends React.Component<CalendarProps, CalendarState>
+{
+    private values: any[];
+    constructor(props, state) {
+        super(props, state);
+        this.state = { selected: null };
+    }
+
+    private handleSelection = (id: string) => {
+        this.setState({ selected: id });
+    }
+
+    private selectedCalendarEvent(): Kurve.CalendarEvent {
+        var found = this.props.data.filter((message) => (message["data"].id === this.state.selected));
+        return (found.length > 0) ? found[0] : null;
+    }
+
+    render() {
+
+        return (
+            <div>
+                <div className="col-xm-12 col-sm-6 col-lg-6" style={ mailListStyle }>
+                    <div>
+                        <CalendarEventList onSelection={ this.handleSelection } selected={this.state.selected } data={ this.props.data } />
+                    </div>                    
+                </div>
+            </div>);
+            
+    }
+}
+
