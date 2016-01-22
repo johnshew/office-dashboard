@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Tesla Console</title>
+    <script src="http://vorlontesla.azurewebsites.net/vorlon.js"></script>
+    <script>
+        window.onerror = function (errorMsg, url, lineNumber) {
+            alert( url ? url : "" + ' ' + lineNumber ? linenumber : "" + '\r\n' + errorMsg );
+        }
+    </script>
+    <script src="https://raw.githubusercontent.com/es-shims/es5-shim/master/es5-shim.js"></script>
+    <script src="https://raw.githubusercontent.com/es-shims/es5-shim/master/es5-sham.js"></script>
+    <script src="../public/kurve.js"></script>
+
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css">
+
+    <style>
+        .tight {
+            margin-bottom: 0px;
+            margin-top: 0px;
+            margin-left: 0px;
+            margin-right: 0px;
+            padding: 0px
+        }
+    </style>
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+</head>
+
+<body>
+
+    <div id="top-nav" class="navbar navbar-inverse navbar-static-top tight">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <a class="navbar-brand" href="#">Dashboard</a>
+            </div>
+            <ul class="nav navbar-nav">
+                <li class="active"><a id="ShowMail" href="#">Mail</a></li>
+                <li><a id="ShowCalendar" href="#">Calendar</a></li>
+                <li><a id="ShowContacts" href="#">Contacts</a></li>
+                <li><a id="ShowNotes" href="#">Notes</a></li>
+            </ul>
+            <div class="navbar-collapse collapse">
+                <ul class="nav navbar-nav navbar-right">
+                    <li class="dropdown">
+                        <a class="dropdown-toggle" role="button" data-toggle="dropdown" href="#">
+                            <i class="glyphicon glyphicon-user">&nbsp;<span id="UsernameText"></span></i>&nbsp;<span class="caret"></span>
+                        </a>
+                        <ul id="account-menu" class="dropdown-menu" role="menu">
+                            <li><a id="DoLogout" href="#">Logout</a></li>
+                            <li><a id="ShowAbout" href="#">About...</a></li>
+                        </ul>
+                    </li>
+                    <li><a id="DoLogin" href="#">Login</a></li>
+                </ul>
+            </div>
+        </div>
+        <!-- /container -->
+    </div>
+
+    <div class="container-fluid tight">
+        <div class="row tight">
+            <div id="Mail"></div>
+            <div id="Calendar"></div>
+            <div id="Contacts"></div>
+            <div id="Notes"></div>
+        </div>
+        <div id="Loading" class="row tight" style="display:none">
+            <p>Welcome. Please login.</p>
+        </div>
+
+
+    </div>
+    <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+    <script>
+        console.log('Started');
+    </script>
+    <script src="../public/bundle.js"></script>
+
+</body>
+
+</html>
