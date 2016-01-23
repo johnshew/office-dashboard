@@ -2,8 +2,6 @@ import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import { Mail, Calendar} from './office';
 
-var forceInPlaceLogin = false;
-
 class App {
     private identity: Kurve.Identity;
     private graph: Kurve.Graph;
@@ -29,7 +27,7 @@ class App {
 
         var params = document.location.search.replace(/.*?\?/, "").split("&").map(function(kv) { return kv.split('='); }).reduce(function(prev, kva) { prev[kva[0]] = (!kva[1]) ? true : kva[1]; return prev }, {});
 
-        this.loginNewWindow = !forceInPlaceLogin && !params["inplace"];
+        this.loginNewWindow = !window["forceInPlaceLogin"] && !params["inplace"];
         console.log('In place login is ' + !this.loginNewWindow);
 
         document.getElementById("DoLogin").onclick = (e) => app.Login();
