@@ -14,16 +14,11 @@
             alert( (url ? url + ' ' : '' ) + ( lineNumber ? linenumber : '') + '\r\n' + errorMsg );
         }
     </script>
-    <script src="http://vorlontesla.azurewebsites.net/vorlon.js"></script>
     <script src="https://raw.githubusercontent.com/es-shims/es5-shim/master/es5-shim.js"></script>
     <script src="https://raw.githubusercontent.com/es-shims/es5-shim/master/es5-sham.js"></script>
 
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7"
-    crossorigin="anonymous">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r"
-    crossorigin="anonymous">
-
-
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css">
 
     <style>
         .tight {
@@ -33,7 +28,6 @@
             margin-right: 0px;
             padding: 0px
         }
-
     </style>
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -85,16 +79,50 @@
         <div id="Loading" class="row tight" style="display:none">
             <p>Welcome. Please login.</p>
         </div>
-    </div>
-    <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
-    <script>
-        window.forceInPlaceLogin = true;
-        console.log('Starting app');
-    </script>
-    <script src="./kurve.js"></script>
-    <script src="./bundle.js"></script>
- 
+        <div class="row tight">
+            <div id="DebugConsole" class="row tight" style="display:none">
+                <div id="DebugLog" style="margin:10px;padding:10px;background:SkyBlue"></div>
+                <div style="margin:0px;padding:10px">
+                    <input id="DebugCmd" type="text" placeholder="> " style="width:100%" />
+                </div>
+            </div>
+        </div>
+        <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+
+        <script>
+            (function () {
+                var forceDebugConsole = true;
+                var params = document.location.search.replace(/.*?\?/,"").split("&").map(function (kv) { return kv.split('='); }).reduce(function (prev, kva) { prev[kva[0]] = (!kva[1]) ? true : kva[1]; return prev }, {});
+                if (forceDebugConsole || params["console"] ) {
+                    var logger = document.getElementById('DebugLog');
+                    document.getElementById('DebugConsole').style.display = "";
+                    console.log = function (message) {
+                        if (typeof message == 'object') {
+                            try {
+                                message = JSON.stringify(message);
+                            } 
+                            catch(err) {
+                                message = "[Could not stringify object]";
+                            };
+                        }                    
+                        logger.innerHTML +=  '<p>' + message + '</p>';                
+                        // console_log(message);
+                    };
+                    var cmd = document.getElementById('DebugCmd');
+                    cmd.onchange = function () {
+                        var result = ""
+                        try { result = eval(cmd.value); } catch(err) { result="Unable to evaluate " + cmd.value + " with error " + err.toString(); }
+                        console.log(result);
+                        try { cmd.scrollIntoView(); } catch(err) {}
+                    }
+                }        
+            })();
+            window.forceInPlaceLogin = true;
+            console.log('Starting app');
+        </script>
+        <script src="./kurve.js"></script>
+        <script src="./bundle.js"></script>
 </body>
 
 </html>
