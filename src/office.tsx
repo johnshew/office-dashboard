@@ -60,40 +60,44 @@ function Combine(...styles: React.CSSProperties[]): React.CSSProperties {  // Es
 }
 
 
-interface CalendarEventSummaryProps extends React.Props<CalendarEventSummary> {
+interface EventSummaryProps extends React.Props<EventSummary> {
     key: string;
-    item: Kurve.CalendarEvent;
+    item: Kurve.Event;
     style?: Object;
     selected?: boolean;
     onSelect?(messageId: string);
 }
 
-export class CalendarEventSummary extends React.Component<CalendarEventSummaryProps, any> {
+export class EventSummary extends React.Component<EventSummaryProps, any> {
     private handleClick = (e: React.SyntheticEvent) => {
-        this.props.onSelect(this.props.item["data"].id);
+        this.props.onSelect(this.props.item.data["id"]);
     };
     render() {
         var big = Combine(bigStyle, noOverflowStyle, tightStyle, this.props.style);
         var small = Combine(smallStyle, noOverflowStyle, tightStyle, this.props.style);
         var smallBold = Combine(small, emphasisStyle);
-        var d = this.props.item["data"];
+        var d = this.props.item.data;
+        var startTime = new Date(d.start.dateTime), endTime = new Date(d.end.dateTime);
+        var durationMinutes = (Date.parse(d.end.dateTime) - Date.parse(d.start.dateTime)) / 60000; // (60 & 1000 milliseconds)
+        var startTimeText = startTime.toLocaleTimeString().replace(/\:\d\d /, " ");
+        var durationText = durationMinutes + " mins";
         return (
             <div onClick={ this.handleClick } style={ (this.props.selected) ? selectedSummaryStyle : summaryStyle } >
-                <p style={ big }>{d.subject}</p>
-                <p style={ smallBold}>{(d.organizer) ? d.organizer.emailAddress.name : ""}</p>
+                <p style={ big }>{startTimeText + " " + durationText }</p>
+                <p style={ smallBold}>{ d.subject + " / " + ((d.organizer) ? d.organizer.emailAddress.name : "")}</p>
                 <p style={ small }>{d.bodyPreview}</p>
                 </div>
         );
     }
 }
 
-interface CalendarEventListProps extends React.Props<CalendarEventList> {
-    data: Kurve.CalendarEvent[];
+interface EventListProps extends React.Props<EventList> {
+    data: Kurve.Event[];
     selected?: string;
     onSelection?(id: string);
 }
 
-export class CalendarEventList extends React.Component<CalendarEventListProps, any> {
+export class EventList extends React.Component<EventListProps, any> {
     constructor(props, state) {
         super(props, state);
     }
@@ -102,7 +106,7 @@ export class CalendarEventList extends React.Component<CalendarEventListProps, a
     };
     render() {
         var items = this.props.data.map((item) => {
-            return (<CalendarEventSummary  onSelect={this.handleSelect} selected={ this.props.selected === item["data"].id}  key={item["data"].id} item={item}/>);
+            return (<EventSummary  onSelect={this.handleSelect} selected={ this.props.selected === item.data["id"]}  key={item.data["id"]} item={item}/>);
         });
         return <div>
             { items }
@@ -311,7 +315,7 @@ export class Mail extends React.Component<MailProps, MailState>
 
 
 interface CalendarProps extends React.Props<Calendar> {
-    data: Kurve.CalendarEvent[];
+    data: Kurve.Event[];
 }
 
 interface CalendarState {
@@ -332,8 +336,8 @@ export class Calendar extends React.Component<CalendarProps, CalendarState>
         this.setState({ selected: id });
     }
 
-    private selectedCalendarEvent(): Kurve.CalendarEvent {
-        var found = this.props.data.filter((message) => (message["data"].id === this.state.selected));
+    private selectedCalendarEvent(): Kurve.Event {
+        var found = this.props.data.filter((message) => (message.data["id"] === this.state.selected));
         return (found.length > 0) ? found[0] : null;
     }
 
@@ -343,7 +347,7 @@ export class Calendar extends React.Component<CalendarProps, CalendarState>
             <div>
                 <div className="col-xm-12 col-sm-6 col-lg-6" style={ mailListStyle }>
                     <div>
-                        <CalendarEventList onSelection={ this.handleSelection } selected={this.state.selected } data={ this.props.data } />
+                        <EventList onSelection={ this.handleSelection } selected={this.state.selected } data={ this.props.data } />
                     </div>                    
                 </div>
             </div>);

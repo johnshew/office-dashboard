@@ -23,13 +23,29 @@ declare module Kurve {
         fail<R>(errorCallback?: (error: E) => R): Promise<R, E>;
     }
 }
-
 declare module Kurve {
+    enum OAuthVersion {
+        v1 = 1,
+        v2 = 2,
+    }
     class Error {
         status: number;
         statusText: string;
         text: string;
         other: any;
+    }
+    class IdToken {
+        Token: string;
+        IssuerIdentifier: string;
+        SubjectIdentifier: string;
+        Audience: string;
+        Expiry: Date;
+        UPN: string;
+        TenantId: string;
+        FamilyName: string;
+        GivenName: string;
+        Name: string;
+        PreferredUsername: string;
     }
     class Identity {
         authContext: any;
@@ -38,6 +54,7 @@ declare module Kurve {
         clientId: string;
         private req;
         private state;
+        private version;
         private nonce;
         private idToken;
         private loginCallback;
@@ -47,17 +64,20 @@ declare module Kurve {
         private tokenCache;
         private logonUser;
         private refreshTimer;
-        constructor(clientId?: string, tokenProcessingUri?: string);
+        constructor(clientId?: string, tokenProcessingUri?: string, version?: OAuthVersion);
         checkForIdentityRedirect(): boolean;
         private decodeIdToken(idToken);
-        private decodeAccessToken(accessToken, resource);
+        private decodeAccessToken(accessToken, resource?, scopes?);
         getIdToken(): any;
         isLoggedIn(): boolean;
         private renewIdToken();
+        getCurrentOauthVersion(): OAuthVersion;
         getAccessTokenAsync(resource: string): Promise<string, Error>;
         getAccessToken(resource: string, callback: (token: string, error: Error) => void): void;
-        loginAsync(toUrl?: string): Promise<void, Error>;
-        login(callback: (error: Error) => void, toUrl?: string): void;
+        getAccessTokenForScopesAsync(scopes: string[], promptForConsent?: boolean): Promise<string, Error>;
+        getAccessTokenForScopes(scopes: string[], promptForConsent: boolean, callback: (token: string, error: Error) => void): void;
+        loginAsync(scopes?: string[]): Promise<void, Error>;
+        login(callback: (error: Error) => void, scopes?: string[]): void;
         loginNoWindowAsync(toUrl?: string): Promise<void, Error>;
         loginNoWindow(callback: (error: Error) => void, toUrl?: string): void;
         logOut(): void;
@@ -65,8 +85,64 @@ declare module Kurve {
         private generateNonce();
     }
 }
-
 declare module Kurve {
+    module Scopes {
+        class General {
+            static OpenId: string;
+            static OfflineAccess: string;
+        }
+        class User {
+            static Read: string;
+            static ReadWrite: string;
+            static ReadBasicAll: string;
+            static ReadAll: string;
+            static ReadWriteAll: string;
+        }
+        class Contacts {
+            static Read: string;
+            static ReadWrite: string;
+        }
+        class Directory {
+            static ReadAll: string;
+            static ReadWriteAll: string;
+            static AccessAsUserAll: string;
+        }
+        class Group {
+            static ReadAll: string;
+            static ReadWriteAll: string;
+            static AccessAsUserAll: string;
+        }
+        class Mail {
+            static Read: string;
+            static ReadWrite: string;
+            static Send: string;
+        }
+        class Calendars {
+            static Read: string;
+            static ReadWrite: string;
+        }
+        class Files {
+            static Read: string;
+            static ReadAll: string;
+            static ReadWrite: string;
+            static ReadWriteAppFolder: string;
+            static ReadWriteSelected: string;
+        }
+        class Tasks {
+            static ReadWrite: string;
+        }
+        class People {
+            static Read: string;
+            static ReadWrite: string;
+        }
+        class Notes {
+            static Create: string;
+            static ReadWriteCreatedByApp: string;
+            static Read: string;
+            static ReadAll: string;
+            static ReadWriteAll: string;
+        }
+    }
     class ProfilePhotoDataModel {
         id: string;
         height: Number;
@@ -92,10 +168,12 @@ declare module Kurve {
         id: string;
     }
     class User {
-        protected graph: Kurve.Graph;
-        protected _data: UserDataModel;
+        private graph;
+        private _data;
         constructor(graph: Kurve.Graph, _data: UserDataModel);
         data: UserDataModel;
+        events(callback: (items: Events, error: Error) => void, odataQuery?: string): void;
+        eventsAsync(odataQuery?: string): Promise<Events, Error>;
         memberOf(callback: (groups: Groups, Error) => void, Error: any, odataQuery?: string): void;
         memberOfAsync(odataQuery?: string): Promise<Messages, Error>;
         messages(callback: (messages: Messages, error: Error) => void, odataQuery?: string): void;
@@ -106,8 +184,8 @@ declare module Kurve {
         profilePhotoAsync(): Promise<ProfilePhoto, Error>;
         profilePhotoValue(callback: (val: any, error: Error) => void): void;
         profilePhotoValueAsync(): Promise<any, Error>;
-        calendar(callback: (calendarItems: CalendarEvents, error: Error) => void, odataQuery?: string): void;
-        calendarAsync(odataQuery?: string): Promise<CalendarEvents, Error>;
+        calendar(callback: (calendarItems: Events, error: Error) => void, odataQuery?: string): void;
+        calendarAsync(odataQuery?: string): Promise<Events, Error>;
     }
     class Users {
         protected graph: Kurve.Graph;
@@ -115,6 +193,10 @@ declare module Kurve {
         nextLink: (callback?: (users: Kurve.Users, error: Error) => void, odataQuery?: string) => Promise<Users, Error>;
         constructor(graph: Kurve.Graph, _data: User[]);
         data: User[];
+    }
+    class EmailAddress {
+        name: string;
+        address: string;
     }
     class MessageDataModel {
         bccRecipients: string[];
@@ -153,18 +235,77 @@ declare module Kurve {
     class Messages {
         protected graph: Kurve.Graph;
         protected _data: Message[];
-        nextLink: (callback?: (messages: Kurve.Messages, error: Error) => void, odataQuery?: string) => Promise<Messages, Error>;
+        nextLink: (callback?: (messages: Messages, error: Error) => void, odataQuery?: string) => Promise<Messages, Error>;
         constructor(graph: Kurve.Graph, _data: Message[]);
         data: Message[];
     }
-    class CalendarEvent {
+    interface ItemBody {
+        contentType: string;
+        content: string;
     }
-    class CalendarEvents {
+    interface Attendee {
+        status: ResponseStatus;
+        type: string;
+        emailAddress: EmailAddress;
+    }
+    interface DateTimeTimeZone {
+        dateTime: string;
+        timeZone: string;
+    }
+    interface Recipient {
+        emailAddress: EmailAddress;
+    }
+    interface PatternedRecurrence {
+    }
+    interface ResponseStatus {
+        response: string;
+        time: string;
+    }
+    class EventDataModel {
+        attendees: Attendee[];
+        body: ItemBody;
+        bodyPreview: string;
+        categories: string[];
+        changeKey: string;
+        createdDateTime: string;
+        end: DateTimeTimeZone;
+        hasAttachments: boolean;
+        iCalUId: string;
+        IDBCursor: string;
+        importance: string;
+        isAllDay: boolean;
+        isCancelled: boolean;
+        isOrganizer: boolean;
+        isReminderOn: boolean;
+        lastModifiedDateTime: string;
+        location: Location;
+        organizer: Recipient;
+        originalEndTimeZone: string;
+        originalStartTimeZone: string;
+        recurrence: PatternedRecurrence;
+        reminderMinutesBeforeStart: number;
+        responseRequested: boolean;
+        responseStatus: ResponseStatus;
+        sensitivity: string;
+        seriesMasterId: string;
+        showAs: string;
+        start: DateTimeTimeZone;
+        subject: string;
+        type: string;
+        webLink: string;
+    }
+    class Event {
         protected graph: Kurve.Graph;
-        protected _data: CalendarEvent[];
-        nextLink: (callback?: (events: Kurve.CalendarEvents, error: Error) => void, odataQuery?: string) => Promise<(events: Kurve.CalendarEvents, error: Error) => void, Error>;
-        constructor(graph: Kurve.Graph, _data: CalendarEvent[]);
-        data: CalendarEvent[];
+        protected _data: EventDataModel;
+        constructor(graph: Kurve.Graph, _data: EventDataModel);
+        data: EventDataModel;
+    }
+    class Events {
+        protected graph: Kurve.Graph;
+        protected _data: Event[];
+        nextLink: (callback?: (events: Events, error: Error) => void, odataQuery?: string) => Promise<Events, Error>;
+        constructor(graph: Kurve.Graph, _data: Event[]);
+        data: Event[];
     }
     class Contact {
     }
@@ -198,8 +339,6 @@ declare module Kurve {
     }
     class Graph {
         private req;
-        private state;
-        private nonce;
         private accessToken;
         private KurveIdentity;
         private defaultResourceID;
@@ -210,41 +349,43 @@ declare module Kurve {
         constructor(identityInfo: {
             defaultAccessToken: string;
         });
+        private scopesForV2(scopes);
         meAsync(odataQuery?: string): Promise<User, Error>;
         me(callback: (user: User, error: Error) => void, odataQuery?: string): void;
-        userAsync(userId: string): Promise<User, Error>;
-        user(userId: string, callback: (user: Kurve.User, error: Error) => void): void;
-        usersAsync(odataQuery?: string): Promise<Users, Error>;
-        users(callback: (users: Kurve.Users, error: Error) => void, odataQuery?: string): void;
-        groupAsync(groupId: string): Promise<Group, Error>;
-        group(groupId: string, callback: (group: any, error: Error) => void): void;
-        groups(callback: (groups: any, error: Error) => void, odataQuery?: string): void;
+        userAsync(userId: string, odataQuery?: string, basicProfileOnly?: boolean): Promise<User, Error>;
+        user(userId: string, callback: (user: Kurve.User, error: Error) => void, odataQuery?: string, basicProfileOnly?: boolean): void;
+        usersAsync(odataQuery?: string, basicProfileOnly?: boolean): Promise<Users, Error>;
+        users(callback: (users: Kurve.Users, error: Error) => void, odataQuery?: string, basicProfileOnly?: boolean): void;
+        groupAsync(groupId: string, odataQuery?: string): Promise<Group, Error>;
+        group(groupId: string, callback: (group: any, error: Error) => void, odataQuery?: string): void;
         groupsAsync(odataQuery?: string): Promise<Groups, Error>;
-        messagesForUser(userPrincipalName: string, callback: (messages: Messages, error: Error) => void, odataQuery?: string): void;
+        groups(callback: (groups: any, error: Error) => void, odataQuery?: string): void;
         messagesForUserAsync(userPrincipalName: string, odataQuery?: string): Promise<Messages, Error>;
-        calendarForUser(userPrincipalName: string, callback: (events: CalendarEvent, error: Error) => void, odataQuery?: string): void;
-        calendarForUserAsync(userPrincipalName: string, odataQuery?: string): Promise<CalendarEvents, Error>;
-        memberOfForUser(userPrincipalName: string, callback: (groups: Kurve.Groups, error: Error) => void, odataQuery?: string): void;
+        messagesForUser(userPrincipalName: string, callback: (messages: Messages, error: Error) => void, odataQuery?: string): void;
+        eventsForUserAsync(userPrincipalName: string, odataQuery?: string): Promise<Events, Error>;
+        eventsForUser(userPrincipalName: string, callback: (messages: Events, error: Error) => void, odataQuery?: string): void;
         memberOfForUserAsync(userPrincipalName: string, odataQuery?: string): Promise<Messages, Error>;
-        managerForUser(userPrincipalName: string, callback: (manager: Kurve.User, error: Error) => void, odataQuery?: string): void;
+        memberOfForUser(userPrincipalName: string, callback: (groups: Kurve.Groups, error: Error) => void, odataQuery?: string): void;
         managerForUserAsync(userPrincipalName: string, odataQuery?: string): Promise<User, Error>;
-        directReportsForUser(userPrincipalName: string, callback: (users: Kurve.Users, error: Error) => void, odataQuery?: string): void;
+        managerForUser(userPrincipalName: string, callback: (manager: Kurve.User, error: Error) => void, odataQuery?: string): void;
         directReportsForUserAsync(userPrincipalName: string, odataQuery?: string): Promise<Users, Error>;
-        profilePhotoForUser(userPrincipalName: string, callback: (photo: ProfilePhoto, error: Error) => void): void;
+        directReportsForUser(userPrincipalName: string, callback: (users: Kurve.Users, error: Error) => void, odataQuery?: string): void;
         profilePhotoForUserAsync(userPrincipalName: string): Promise<ProfilePhoto, Error>;
-        profilePhotoValueForUser(userPrincipalName: string, callback: (photo: any, error: Error) => void): void;
+        profilePhotoForUser(userPrincipalName: string, callback: (photo: ProfilePhoto, error: Error) => void): void;
         profilePhotoValueForUserAsync(userPrincipalName: string): Promise<any, Error>;
+        profilePhotoValueForUser(userPrincipalName: string, callback: (photo: any, error: Error) => void): void;
         getAsync(url: string): Promise<string, Error>;
-        get(url: string, callback: (response: string, error: Error) => void, responseType?: string): void;
+        get(url: string, callback: (response: string, error: Error) => void, responseType?: string, scopes?: string[]): void;
         private generateError(xhr);
-        private getUsers(urlString, callback);
-        private getUser(urlString, callback);
-        private addAccessTokenAndSend(xhr, callback);
-        private getMessages(urlString, callback, odataQuery?);
-        private getGroups(urlString, callback, odataQuery?);
-        private getGroup(urlString, callback);
-        private getPhoto(urlString, callback);
-        private getPhotoValue(urlString, callback);
+        private getUsers(urlString, callback, scopes?, basicProfileOnly?);
+        private getUser(urlString, callback, scopes?);
+        private addAccessTokenAndSend(xhr, callback, scopes?);
+        private getMessages(urlString, callback, odataQuery?, scopes?);
+        private getEvents(urlString, callback, odataQuery?, scopes?);
+        private getGroups(urlString, callback, odataQuery?, scopes?);
+        private getGroup(urlString, callback, scopes?);
+        private getPhoto(urlString, callback, scopes?);
+        private getPhotoValue(urlString, callback, scopes?);
         private buildMeUrl();
         private buildUsersUrl();
         private buildGroupsUrl();
