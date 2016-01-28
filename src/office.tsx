@@ -38,6 +38,10 @@ const selectedSummaryStyle = Combine(summaryStyle, {
     backgroundColor: "LightBlue"
 });
 
+const informationStyle = Combine(summaryStyle, {
+    backgroundColor: "LightGrey"
+});
+
 const mailViewStyle: React.CSSProperties = {
     paddingRight: 0,
     paddingLeft: 0
@@ -77,16 +81,23 @@ export class EventSummary extends React.Component<EventSummaryProps, any> {
         var small = Combine(smallStyle, noOverflowStyle, tightStyle, this.props.style);
         var smallBold = Combine(small, emphasisStyle);
         var d = this.props.item.data;
-        var startTime = new Date(d.start.dateTime), endTime = new Date(d.end.dateTime);
+        var startDate = new Date(d.start.dateTime);
         var durationMinutes = (Date.parse(d.end.dateTime) - Date.parse(d.start.dateTime)) / 60000; // (60 & 1000 milliseconds)
-        var startTimeText = startTime.toLocaleTimeString().replace(/\:\d\d /, " ");
-        var durationText = durationMinutes + " mins";
+        var durationHours = Math.floor(durationMinutes / 60);
+        var durationDays = Math.floor(durationHours / 24);
+        durationHours -= durationDays * 24; durationMinutes -= ((durationDays * 24 + durationHours) * 60);
+        var duration = ((durationDays != 0) ? durationDays + " days " : "") + (durationHours != 0 ? durationHours + " hours " : "") + (durationMinutes != 0 ? durationMinutes + " mins " : "");        
+        var startTime = startDate.toLocaleTimeString().replace(/\:\d\d /, " ");
+        var location = d.location && d.location["displayName"];
+        var organizer = d.organizer && d.organizer.emailAddress && d.organizer.emailAddress.name;
+        var line2 = d.subject + (location ? " / " + location : "");
+        var line2react = (line2) ? <p style={ smallBold }> { line2 } </p> : null;
         return (
             <div onClick={ this.handleClick } style={ (this.props.selected) ? selectedSummaryStyle : summaryStyle } >
-                <p style={ big }>{startTimeText + " " + durationText }</p>
-                <p style={ smallBold}>{ d.subject + " / " + ((d.organizer) ? d.organizer.emailAddress.name : "")}</p>
-                <p style={ small }>{d.bodyPreview}</p>
-                </div>
+                <p style={ big }>{startTime + (duration ? " / " + duration : "") }</p>
+                { line2react }
+                <p style={ small }>{ (organizer ? organizer + " " : "") + (d.bodyPreview ? " / " + d.bodyPreview : "") }</p>
+            </div>
         );
     }
 }
@@ -105,12 +116,19 @@ export class EventList extends React.Component<EventListProps, any> {
         this.props.onSelection(id);
     };
     render() {
+        var lastDate = "";
         var items = this.props.data.map((item) => {
-            return (<EventSummary  onSelect={this.handleSelect} selected={ this.props.selected === item.data["id"]}  key={item.data["id"]} item={item}/>);
+            var date = new Date(item.data.start.dateTime);
+            var dateSeperator = ((date.toDateString() != lastDate) ? <div style= { informationStyle }> { date.toDateString() } </div> : <div></div>);
+            lastDate = date.toDateString();
+            return (<div>
+                { dateSeperator }
+                <EventSummary  onSelect= { this.handleSelect } selected= { this.props.selected === item.data["id"]}  key= { item.data["id"]} item= { item } />
+                </div>
+                );
+        
         });
-        return <div>
-            { items }
-            </div>;
+        return <div> { items } </div>;
     }
 }
 

@@ -76,8 +76,9 @@ class App {
                 });
         } else {
             console.log('Got me.  Now getting calendar events.');
+            var now = new Date(Date.now())
             // https://graph.microsoft.com/v1.0/me/calendar/events?$select=subject,location,start,bodyPreview,organizer&$orderby=start/dateTime&$filter=start/dateTime gt '2016-01-20T00:00:00.0000000'
-            this.me.calendarAsync("$orderby=start/dateTime&$filter=start/dateTime gt '2016-01-20T00:00:00.0000000'")
+            this.me.calendarAsync("$orderby=start/dateTime&$filter=start/dateTime gt '" + now.toUTCString() +  "'")
                 .then((calendar) => {
                     console.log('Got calendar.  Now rendering.');
                     // calendar.data.sort(sortBy('start', (item: Kurve.Event) => Date.parse(item.data.start.dateTime)));
