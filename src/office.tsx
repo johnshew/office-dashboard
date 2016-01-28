@@ -72,6 +72,23 @@ interface EventSummaryProps extends React.Props<EventSummary> {
     onSelect?(messageId: string);
 }
 
+class DateSpan {
+    public days: number;
+    public hours: number;
+    public minutes: number;
+
+    constructor(e: any, s: any) {
+        var em = typeof e == 'string' ? Date.parse(e) : typeof e == 'number' ? e : typeof e == 'Date' ? (e as Date).getTime() : null;
+        var sm = typeof s == 'string' ? Date.parse(s) : typeof s == 'number' ? s : typeof s == 'Date' ? (s as Date).getTime() : null;
+        if (!sm || !em) throw new Error("DataSpan: constructor bad argument type");
+        this.minutes = Math.floor((em - sm) / (60 * 1000));
+        this.hours = Math.floor(this.minutes / 60);
+        this.days = Math.floor(this.hours / 24);
+        this.hours -= this.days * 24;
+        this.minutes -= ((this.days * 24) + this.hours) * 60;
+    }       
+}
+
 export class EventSummary extends React.Component<EventSummaryProps, any> {
     private handleClick = (e: React.SyntheticEvent) => {
         this.props.onSelect(this.props.item.data["id"]);
@@ -81,22 +98,17 @@ export class EventSummary extends React.Component<EventSummaryProps, any> {
         var small = Combine(smallStyle, noOverflowStyle, tightStyle, this.props.style);
         var smallBold = Combine(small, emphasisStyle);
         var d = this.props.item.data;
-        var startDate = new Date(d.start.dateTime);
-        var durationMinutes = (Date.parse(d.end.dateTime) - Date.parse(d.start.dateTime)) / 60000; // (60 & 1000 milliseconds)
-        var durationHours = Math.floor(durationMinutes / 60);
-        var durationDays = Math.floor(durationHours / 24);
-        durationHours -= durationDays * 24; durationMinutes -= ((durationDays * 24 + durationHours) * 60);
-        var duration = ((durationDays != 0) ? durationDays + " days " : "") + (durationHours != 0 ? durationHours + " hours " : "") + (durationMinutes != 0 ? durationMinutes + " mins " : "");        
-        var startTime = startDate.toLocaleTimeString().replace(/\:\d\d /, " ");
+        var startTime = new Date(d.start.dateTime).toLocaleTimeString().replace(/\:\d\d /, " ");
+        var span = new DateSpan(d.end.dateTime, d.start.dateTime);
+        var duration = ((span.days != 0) ? span.days + " days " : "") + (span.hours != 0 ? span.hours + " hours " : "") + (span.minutes != 0 ? span.minutes + " mins " : "");        
         var location = d.location && d.location["displayName"];
         var organizer = d.organizer && d.organizer.emailAddress && d.organizer.emailAddress.name;
-        var line2 = d.subject + (location ? " / " + location : "");
-        var line2react = (line2) ? <p style={ smallBold }> { line2 } </p> : null;
+        
         return (
             <div onClick={ this.handleClick } style={ (this.props.selected) ? selectedSummaryStyle : summaryStyle } >
                 <p style={ big }>{startTime + (duration ? " / " + duration : "") }</p>
-                { line2react }
-                <p style={ small }>{ (organizer ? organizer + " " : "") + (d.bodyPreview ? " / " + d.bodyPreview : "") }</p>
+                { d.subject ? <p style={ smallBold }> { d.subject } </p> : null }
+                { location ? <p style={ small }>{ location }</p> : null}
             </div>
         );
     }
