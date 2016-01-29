@@ -253,6 +253,7 @@ export class MessageView extends React.Component<MessageViewProps, any>
             var result = ((p != null) ? p + '; ' : 'To: ') + c.emailAddress.name;
             return result;
         }, null);
+        return "";
     }
 
     render() {
@@ -260,10 +261,12 @@ export class MessageView extends React.Component<MessageViewProps, any>
         var small = Combine(smallStyle, noOverflowStyle, this.props.style);
         var smallEmphasis = Combine(smallStyle, emphasisStyle, noOverflowStyle, this.props.style);
         var smallScrolling = Combine(smallStyle, this.props.style);
-        var subject = this.props.message && this.props.message.data.subject || "";
-        var from = this.props.message && this.props.message.data.sender.emailAddress.name || "";
-        var toRecipients = this.props.message && this.toLine() || "";
-        var body = this.props.message && this.props.message.data.body["content"] || ""; //TODO Fix Kurve
+        var data = this.props.message && this.props.message.data;
+        if (!data) { return null; }
+        var subject =  data.subject || "";
+        var from =  data.sender && data.sender.emailAddress && data.sender.emailAddress.name || "";
+        var toRecipients = this.toLine() || "";
+        var body = data.body && this.props.message.data.body["content"] || ""; //TODO Fix Kurve
         return (
             <div>
               <div className="well" style={  { padding: 10 } }>

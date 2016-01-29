@@ -92,7 +92,7 @@
 
         <script>
             var forceInPlaceLogin = false;
-            var forceDebugConsole = true;
+            var forceDebugConsole = false;
             (function () {
                 var params = document.location.search.replace(/.*?\?/,"").split("&").map(function (kv) { return kv.split('='); }).reduce(function (prev, kva) { prev[kva[0]] = (!kva[1]) ? true : kva[1]; return prev }, {});
                 if (forceDebugConsole || params["console"] ) {
