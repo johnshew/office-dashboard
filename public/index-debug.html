@@ -91,6 +91,7 @@
         <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
 
         <script>
+
             var forceInPlaceLogin = false;
             var forceDebugConsole = false;
             (function () {
@@ -125,6 +126,13 @@
         </script>
         <script src="./kurve.js"></script>
         <script src="./bundle.js"></script>
+        <script>
+            $(function () {
+                $('.navbar-nav li').click(function () {
+                    $(this).addClass('active').siblings().removeClass('active');
+                });
+            });
+        </script>
 </body>
 
 </html>

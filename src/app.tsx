@@ -188,11 +188,12 @@ class App {
     }
 
     private RefreshTick() {
+        console.log("RefreshTick");
         if (this.IsLoggedIn()) {
             this.GetMessages();
             this.GetCalendarEvents();
         }
-        this.RefreshFromCloud(10 * 60 * 1000); // Every 10 minutes
+        this.RefreshFromCloud(2 * 60 * 1000); 
     }
 }
 
