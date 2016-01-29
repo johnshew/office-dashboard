@@ -2,10 +2,10 @@ import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import { Mail, Calendar} from './office';
 
-function sortBy (field: string, primer?: (any) => any, reverse?: boolean ) {
-    var key = primer ? (x) => { return primer(x[field])  } : (x) => { return x[field]  };
-    var direction  = !reverse ? 1 : -1;
-    return (a : any, b : any) => {
+function sortBy(field: string, primer?: (any) => any, reverse?: boolean) {
+    var key = primer ? (x) => { return primer(x[field]) } : (x) => { return x[field] };
+    var direction = !reverse ? 1 : -1;
+    return (a: any, b: any) => {
         var x = key(a), y = key(b);
         return direction * ((x as any > y as any) - (y as any > x as any));
     }
@@ -34,7 +34,7 @@ class App {
         this.me = null;
         this.messages = null;
 
-        var params = document.location.search.replace(/.*?\?/, "").split("&").map(function(kv) { return kv.split('='); }).reduce(function(prev, kva) { prev[kva[0]] = (!kva[1]) ? true : kva[1]; return prev }, {});
+        var params = document.location.search.replace(/.*?\?/, "").split("&").map(function (kv) { return kv.split('='); }).reduce(function (prev, kva) { prev[kva[0]] = (!kva[1]) ? true : kva[1]; return prev }, {});
 
         this.loginNewWindow = !window["forceInPlaceLogin"] && !params["inplace"];
         console.log('In place login is ' + !this.loginNewWindow);
@@ -78,7 +78,7 @@ class App {
             console.log('Got me.  Now getting calendar events.');
             var now = new Date(Date.now())
             // https://graph.microsoft.com/v1.0/me/calendar/events?$select=subject,location,start,bodyPreview,organizer&$orderby=start/dateTime&$filter=start/dateTime gt '2016-01-20T00:00:00.0000000'
-            this.me.calendarAsync("$orderby=start/dateTime&$filter=start/dateTime gt '" + now.toUTCString() +  "'")
+            this.me.calendarAsync("$orderby=start/dateTime&$filter=start/dateTime gt '" + now.toUTCString() + "'")
                 .then((calendar) => {
                     console.log('Got calendar.  Now rendering.');
                     // calendar.data.sort(sortBy('start', (item: Kurve.Event) => Date.parse(item.data.start.dateTime)));
@@ -152,7 +152,7 @@ class App {
 
     private ShowMail() {
         this.mail.style.display = "";
-        this.calendar.style.display = this.contacts.style.display = this.notes.style.display = "none"; 
+        this.calendar.style.display = this.contacts.style.display = this.notes.style.display = "none";
         if (this.messages) {
             ReactDOM.render(<Mail data={ this.messages.data } mailboxes={["inbox", "sent items"]}/>, this.mail);
         } else {
@@ -180,5 +180,81 @@ class App {
 
 }
 
+
+class Storage {
+    constructor() { }
+    public setItem(key: string, data: any) {
+        if (localStorage) {
+            try {
+                localStorage.setItem(key, JSON.stringify({ data: data }));
+            }
+            catch (e) {
+                console.log("localStorage error " + e);
+            }
+        }
+    }
+
+    public static getItem(key: string) : any {
+        if (localStorage) {
+            try {
+                var data = JSON.parse(localStorage.getItem(key));
+                return data && data.data;
+            }
+            catch (e) {
+                console.log('localStorage read error ' + e);
+            }
+        }
+        return null;
+    }
+}
+
+export class Tools {
+
+    public static Hook(rootObject: any, functionToHook: string, hookingFunction: (...optionalParams: any[]) => void): void {
+        var previousFunction = rootObject[functionToHook];
+
+        rootObject[functionToHook] = (...optionalParams: any[]) => {
+            hookingFunction(optionalParams);
+            previousFunction.apply(rootObject, optionalParams);
+        }
+        return previousFunction;
+    }
+
+
+    public static CreateCookie(name: string, value: string, days: number): void {
+        var expires: string;
+        if (days) {
+            var date = new Date();
+            date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+            expires = "; expires=" + date.toUTCString();
+        } else {
+            expires = "";
+        }
+
+        document.cookie = name + "=" + value + expires + "; path=/";
+    }
+
+    public static ReadCookie(name: string): string {
+        var nameEQ = name + "=";
+        var ca = document.cookie.split(';');
+        for (var i = 0; i < ca.length; i++) {
+            var c = ca[i];
+            while (c.charAt(0) === ' ') {
+                c = c.substring(1, c.length);
+            }
+
+            if (c.indexOf(nameEQ) === 0) {
+                return c.substring(nameEQ.length, c.length);
+            }
+        }
+        return "";
+    }
+
+}
+
 var app = new App();
-window["MyApp"] = app;
+window["myapp"] = app;
+Tools.Hook(window, 'open', (args) => {
+    console.log("window.open(url=" + args[0] + ")")
+});
+

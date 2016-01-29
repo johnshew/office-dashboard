@@ -91,23 +91,26 @@
         <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
 
         <script>
+            var forceInPlaceLogin = false;
+            var forceDebugConsole = true;
             (function () {
-                var forceDebugConsole = true;
                 var params = document.location.search.replace(/.*?\?/,"").split("&").map(function (kv) { return kv.split('='); }).reduce(function (prev, kva) { prev[kva[0]] = (!kva[1]) ? true : kva[1]; return prev }, {});
                 if (forceDebugConsole || params["console"] ) {
                     var logger = document.getElementById('DebugLog');
                     document.getElementById('DebugConsole').style.display = "";
-                    console.log = function (message) {
-                        if (typeof message == 'object') {
+                    underlying = console.log;
+                    console.log = function (...args) {
+                        message = args && args[0];
+                        if (message) {
                             try {
-                                message = JSON.stringify(message);
+                                message = typeof message == "string" ? message : JSON.stringify(message);
                             } 
                             catch(err) {
                                 message = "[Could not stringify object]";
                             };
                         }                    
-                        logger.innerHTML +=  '<p>' + message + '</p>';                
-                        // console_log(message);
+                        if (message) { logger.innerHTML += '<p>' + message + '</p>'; }
+                        underlying.apply(console, args);
                     };
                     var cmd = document.getElementById('DebugCmd');
                     cmd.onchange = function () {
@@ -118,7 +121,6 @@
                     }
                 }        
             })();
-            window.forceInPlaceLogin = true;
             console.log('Starting app');
         </script>
         <script src="./kurve.js"></script>
