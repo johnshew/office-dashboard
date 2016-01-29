@@ -43,15 +43,21 @@
     <div id="top-nav" class="navbar navbar-inverse navbar-static-top tight">
         <div class="container-fluid">
             <div class="navbar-header">
+                 <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#NavBarActions" aria-expanded="false">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
                 <a class="navbar-brand" href="#">Dashboard</a>
             </div>
+            <div class="navbar-collapse collapse" id="NavBarActions">
             <ul class="nav navbar-nav">
                 <li class="active"><a id="ShowMail" href="#">Mail</a></li>
                 <li><a id="ShowCalendar" href="#">Calendar</a></li>
                 <li style="display: none"><a id="ShowContacts" href="#">Contacts</a></li>
                 <li style="display:none"><a id="ShowNotes" href="#">Notes</a></li>
             </ul>
-            <div class="navbar-collapse collapse">
                 <ul class="nav navbar-nav navbar-right">
                     <li class="dropdown">
                         <a class="dropdown-toggle" role="button" data-toggle="dropdown" href="#">
