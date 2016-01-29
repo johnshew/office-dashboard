@@ -2,8 +2,7 @@ import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import { Mail, Calendar} from './office';
 
-function sortBy(field: string, primer?: (any) => any, reverse?: boolean) {
-    var key = primer ? (x) => { return primer(x[field]) } : (x) => { return x[field] };
+function sortBy(key?: (any) => any, reverse?: boolean) {
     var direction = !reverse ? 1 : -1;
     return (a: any, b: any) => {
         var x = key(a), y = key(b);
@@ -18,6 +17,7 @@ class App {
     private messages: Kurve.Messages;
     private calendarEvents: Kurve.Events;
     private loginNewWindow: boolean;
+    private timerHandle: any;
 
     private mail = document.getElementById('Mail');
     private calendar = document.getElementById('Calendar');
@@ -51,6 +51,7 @@ class App {
             this.LoggedIn()
         }
         this.UpdateLoginState();
+        this.ShowMail();
     }
 
     public GetMe(): Kurve.User {
@@ -58,55 +59,50 @@ class App {
             return this.me;
         }
         console.log('Getting me');
-        this.graph.meAsync().then((result) => {
-            console.log("Got me.");
-            this.me = result;
-        });
+        this.graph.meAsync()
+            .then((result) => {
+                console.log("Got me.");
+                this.me = result;
+                this.RefreshFromCloud(100);
+            })
+            .fail((error) => {
+                console.log("Get me failed.");
+            });
         return null;
     }
 
     public GetCalendarEvents() {
-        if (this.calendarEvents) {
-            return; // Exits the "recursion"
-        } else if (!this.me) {
-            console.log('Getting me');
-            this.graph.meAsync()
-                .then(() => {
-                    this.GetCalendarEvents()
-                });
-        } else {
-            console.log('Got me.  Now getting calendar events.');
-            var now = new Date(Date.now())
-            // https://graph.microsoft.com/v1.0/me/calendar/events?$select=subject,location,start,bodyPreview,organizer&$orderby=start/dateTime&$filter=start/dateTime gt '2016-01-20T00:00:00.0000000'
-            this.me.calendarAsync("$orderby=start/dateTime&$filter=start/dateTime gt '" + now.toUTCString() + "'")
-                .then((calendar) => {
-                    console.log('Got calendar.  Now rendering.');
-                    // calendar.data.sort(sortBy('start', (item: Kurve.Event) => Date.parse(item.data.start.dateTime)));
-                    this.calendarEvents = calendar;
-                    this.ShowCalendar();
-                });
+        if (!this.me) {
+            this.GetMe();
+            return;
         }
+        console.log('Now getting calendar events.');
+        var now = new Date(Date.now())
+        // https://graph.microsoft.com/v1.0/me/calendar/events?$select=subject,location,start,bodyPreview,organizer&$orderby=start/dateTime&$filter=start/dateTime gt '2016-01-20T00:00:00.0000000'
+        this.me.calendarAsync("$orderby=start/dateTime&$filter=start/dateTime gt '" + now.toUTCString() + "'")
+            .then((events) => {
+                console.log('Got calendar.  Now rendering.');
+                // calendar.data.sort(sortBy((item: Kurve.Event) => Date.parse(item.data.start.dateTime)));
+                this.calendarEvents = events;
+                this.RenderCalendar();
+            });
     }
 
     public GetMessages() {
-
-        if (this.messages) {
+        if (!this.me) {
+            this.GetMe();
             return;
-        } else {
-            console.log('Getting me');
-            this.graph.meAsync()
-                .then((me) => {
-                    this.me = me;
-                    console.log('Got me.  Now getting messages.');
-                    me.messagesAsync().then((messages) => {
-                        console.log('Got messages.  Now rendering.');
-                        this.messages = messages;
-                        this.ShowMail();
-                    });
-                })
-
         }
+        console.log('Now getting messages.');
+        this.me.messagesAsync()
+            .then((messages) => {
+                console.log('Got messages.  Now rendering.');
+                this.messages = messages;
+                this.RenderMail();
+            });
     }
+
+    
     public UpdateLoginState() {
         if (this.identity.isLoggedIn()) {
             document.getElementById("DoLogin").style.display = "none";
@@ -119,11 +115,12 @@ class App {
 
     public LoggedIn() {
         console.log('Successful login.');
-        this.UpdateLoginState();
-        this.GetMessages();
+        this.UpdateLoginState();        
+        this.GetMe();
     }
 
     public IsLoggedIn(): boolean {
+        this.StopRefreshFromCloud();
         return this.identity.isLoggedIn();
     }
 
@@ -153,20 +150,22 @@ class App {
     private ShowMail() {
         this.mail.style.display = "";
         this.calendar.style.display = this.contacts.style.display = this.notes.style.display = "none";
-        if (this.messages) {
-            ReactDOM.render(<Mail data={ this.messages.data } mailboxes={["inbox", "sent items"]}/>, this.mail);
-        } else {
-            this.GetMessages();
-        }
     }
 
     private ShowCalendar() {
         this.calendar.style.display = "";
         this.mail.style.display = this.contacts.style.display = this.notes.style.display = "none";
+    }
+
+    private RenderMail() {
+        if (this.messages) {
+            ReactDOM.render(<Mail data={ this.messages.data } mailboxes={["inbox", "sent items"]}/>, this.mail);
+        }
+    }
+
+    private RenderCalendar() {
         if (this.calendarEvents) {
             ReactDOM.render(<Calendar data={ this.calendarEvents.data } />, this.calendar);
-        } else {
-            this.GetCalendarEvents();
         }
     }
 
@@ -178,6 +177,23 @@ class App {
 
     }
 
+    private RefreshFromCloud(delay : number) {
+        clearTimeout(this.timerHandle);
+        this.timerHandle = setTimeout(() => {
+            this.RefreshTick();
+        }, delay);
+    }
+    private StopRefreshFromCloud() {
+        clearTimeout(this.timerHandle);
+    }
+
+    private RefreshTick() {
+        if (this.IsLoggedIn()) {
+            this.GetMessages();
+            this.GetCalendarEvents();
+        }
+        this.RefreshFromCloud(10 * 60 * 1000); // Every 10 minutes
+    }
 }
 
 
@@ -249,6 +265,7 @@ export class Tools {
         }
         return "";
     }
+
 
 }
 
