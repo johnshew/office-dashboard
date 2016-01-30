@@ -195,10 +195,7 @@ export class MailList extends React.Component<MailListProps, any> {
     }
 }
 
-interface MessageViewProps extends React.Props<MessageView> {
-    message: Kurve.Message;
-    style?: React.CSSProperties;
-}
+
 
 function CleanUp(html: string) {
     var doc = document.implementation.createHTMLDocument("example");
@@ -240,6 +237,10 @@ function CleanUp(html: string) {
     return { __html: doc.body.innerHTML }
 }
 
+interface MessageViewProps extends React.Props<MessageView> {
+    message: Kurve.Message;
+    style?: React.CSSProperties;
+}
 
 export class MessageView extends React.Component<MessageViewProps, any>
 {
@@ -283,6 +284,52 @@ export class MessageView extends React.Component<MessageViewProps, any>
 
 
 
+interface EventViewProps extends React.Props<EventView> {
+    event: Kurve.Event;
+    style?: React.CSSProperties;
+}
+
+export class EventView extends React.Component<EventViewProps, any>
+{
+    private check(text: string) {
+        return (text != null) ? text : "";
+    }
+
+    private attendees() {
+        var x = this.props.event.data.attendees;
+        return x.reduce((p, a) => {
+            var result = ((p != null) ? p + '; ' : '') + a. emailAddress.name;
+            return result;
+        }, null);
+        return "";
+    }
+
+    render() {
+        var big = Combine(bigStyle, noOverflowStyle, this.props.style);
+        var small = Combine(smallStyle, noOverflowStyle, this.props.style);
+        var smallEmphasis = Combine(smallStyle, emphasisStyle, noOverflowStyle, this.props.style);
+        var smallScrolling = Combine(smallStyle, this.props.style);
+        var data = this.props.event && this.props.event.data;
+        if (!data) { return null; }
+        var subject = data.subject || "";
+        var organizer = data.organizer && data.organizer.emailAddress && data.organizer.emailAddress.name || "";
+        var attendees = this.attendees() || "";
+        var body = data.body && this.props.event.data.body["content"] || ""; //TODO Fix Kurve
+        return (
+            <div>
+              <div className="well" style={  { padding: 10 } }>
+                <p style={ big }>{organizer}</p>
+                <p style={ smallEmphasis }>{subject}</p>
+                <p style={ small }>{attendees}</p>
+                  </div>
+              <div style={  { paddingRight: 10, paddingLeft: 10 } } dangerouslySetInnerHTML={ CleanUp(body) }>
+                  </div>
+                </div>
+        );
+    }
+}
+
+
 interface MailProps extends React.Props<Mail> {
     data: Kurve.Message[];
     mailboxes: string[];
@@ -292,7 +339,6 @@ interface MailState {
     mailboxFilter?: string[];
     selected?: string;
 }
-
 
 
 export class Mail extends React.Component<MailProps, MailState>
@@ -378,10 +424,13 @@ export class Calendar extends React.Component<CalendarProps, CalendarState>
 
         return (
             <div>
-                <div className="col-xm-12 col-sm-6 col-lg-6" style={ mailListStyle }>
+                <div className="col-xm-12 col-sm-6 col-lg-3" style={ mailListStyle }>
                     <div>
                         <EventList onSelection={ this.handleSelection } selected={this.state.selected } data={ this.props.data } />
                     </div>                    
+                </div>
+                <div className="col-sm-12 col-sm-6 col-lg-9" style={ mailViewStyle }>
+                    <EventView event={this.selectedCalendarEvent() } />
                 </div>
             </div>);
             
