@@ -10,10 +10,19 @@
 
     <title>Tesla Console</title>
 
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7"
-    crossorigin="anonymous">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r"
-    crossorigin="anonymous">
+    <script>
+        window.onerror = function (errorMsg, url, lineNumber) {
+            alert((url ? url + ' ' : '') + (lineNumber ? lineNumber : '') + '\r\n' + errorMsg);
+        }
+        // Show page load alerts on Tesla browser
+    </script>
+
+    <!-- Polyfile ES5 on Telsa - not sure if both are needed -->
+    <script src="https://raw.githubusercontent.com/es-shims/es5-shim/master/es5-shim.js"></script>
+    <script src="https://raw.githubusercontent.com/es-shims/es5-shim/master/es5-sham.js"></script>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css">
 
     <style>
         .tight {
@@ -21,252 +30,32 @@
             margin-top: 0px;
             margin-left: 0px;
             margin-right: 0px;
-            padding: 0px
-        }
-        
-        .react-select-box-container {
-            position: relative;
-            width: 100%;
-            /* was 240px; */
-            display: inline-block;
-            background-color: #fff;
-            border-radius: 0px;
-            text-align: left;
-            box-shadow: 0 0 2px rgba(0, 0, 0, .3);
-        }
-        
-        .react-select-box {
-            padding: 15px 0;
-            display: inline-block;
-            cursor: pointer;
-            border: none;
-            width: 100%;
-            text-align: left;
-            background-color: transparent;
-        }
-        
-        .react-select-box:focus {
-            outline: 0;
-            box-shadow: 0 0 4px #0493D1;
-        }
-        
-        .react-select-box:before {
-            content: ' ';
-            z-index: 1;
-            position: absolute;
-            height: 20px;
-            top: 15px;
-            right: 34px;
-            border-left: 1px solid #CBD2D7;
-        }
-        
-        .react-select-box:after {
-            content: ' ';
-            position: absolute;
-            z-index: 1;
-            top: 23px;
-            right: 13px;
-            border-top: 6px solid #7B8E9B;
-            border-left: 5px solid transparent;
-            border-right: 5px solid transparent;
-        }
-        
-        .react-select-box-label,
-        .react-select-box-option {
-            line-height: 16px;
-            font-size: 12px;
-            font-weight: bold;
-            color: #7B8E9B;
-        }
-        
-        .react-select-box-label {
-            padding: 0 40px 0 20px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            color: #0493D1;
-        }
-        
-        .react-select-box-empty .react-select-box-label {
-            color: #7B8E9B;
-        }
-        
-        .react-select-box-click-outside-layer {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            z-index: 2;
-        }
-        
-        .react-select-box-clear {
-            position: absolute;
-            top: 15px;
-            right: 0;
-            width: 35px;
-            height: 20px;
-            background-color: #fff;
-            text-indent: -9999em;
-            z-index: 3;
-            border: none;
-        }
-        
-        .react-select-box-clear:before {
-            content: '×';
-            position: absolute;
-            top: 2px;
-            left: 10px;
-            z-index: 1;
-            background-color: #7B8E9B;
-            border-radius: 100%;
-            font-size: 13px;
-            color: #fff;
-            line-height: 1;
-            width: 15px;
-            height: 15px;
-            text-indent: 0;
-            text-align: center;
-        }
-        
-        .react-select-box-clear:hover,
-        .react-select-box-clear:focus {
-            outline: 0;
-        }
-        
-        .react-select-box-clear:hover:before,
-        .react-select-box-clear:focus:before {
-            background-color: #0493D1;
-        }
-        
-        .react-select-box-hidden {
-            display: none
-        }
-        
-        .react-select-box-options {
-            margin: 2px 0 0;
-            position: absolute;
-            padding: 10px 0;
-            width: 240px;
-            top: 100%;
-            left: 0;
-            z-index: 4;
-            background-color: #fff;
-            border-radius: 4px;
-            box-shadow: 0 0 2px rgba(0, 0, 0, .3);
-        }
-        
-        .react-select-box-options-list {
-            list-style: none outside;
-            margin: 0;
-            padding: 0;
-        }
-        
-        .react-select-box-option {
-            padding: 10px 20px;
-            margin: 0;
-            cursor: pointer;
-            display: block;
-            line-height: 1.2;
-            text-decoration: none;
-        }
-        
-        .react-select-box-option:hover {
-            color: #0493D1;
-            background-color: #f4f4f4;
-        }
-        
-        .react-select-box-option-selected {
-            color: #CBD2D7;
-        }
-        
-        .react-select-box-multi .react-select-box-option {
-            padding-left: 42px;
-            position: relative;
-        }
-        
-        .react-select-box-multi .react-select-box-option:before {
-            content: ' ';
-            position: absolute;
-            line-height: 1;
-            text-align: center;
-            left: 20px;
-            top: 9px;
-            border-radius: 3px;
-            height: 12px;
-            width: 12px;
-            margin-right: 10px;
-            border: 1px solid #7B8E9B;
-            background: #f9f9f9;
-            vertical-align: middle;
-        }
-        
-        .react-select-box-multi .react-select-box-option-selected:before {
-            content: '✓';
-        }
-        
-        .react-select-box-multi .react-select-box-option-selected {
-            color: #1F3344;
-        }
-        
-        .react-select-box-option:focus,
-        .react-select-box-option-focused {
-            color: #0493D1;
-            outline: 0;
-            background-color: #DDE2E5;
-        }
-        
-        .react-select-box-close {
-            color: #0493D1;
-            text-transform: uppercase;
-            background-color: transparent;
-            border: none;
-            padding: 5px 0;
-            display: block;
-            text-align: center;
-            width: 100%;
-            font-weight: bold;
-            cursor: pointer;
-            outline: none;
-        }
-        
-        .react-select-box-close:hover,
-        .react-select-box-close:focus {
-            text-decoration: underline;
-        }
-        
-        .react-select-box-empty .react-select-box-close {
-            color: #CBD2D7;
-        }
-        
-        .react-select-box-native {
-            position: absolute;
-            left: -99999em;
+            padding: 0px;
         }
     </style>
-    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
-    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
-    <!--[if lt IE 9]>
-        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
-        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
-    <![endif]-->
+
 
 </head>
 
 <body>
-
     <div id="top-nav" class="navbar navbar-inverse navbar-static-top tight">
         <div class="container-fluid">
             <div class="navbar-header">
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#NavBarActions" aria-expanded="false">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
                 <a class="navbar-brand" href="#">Dashboard</a>
             </div>
-            <ul class="nav navbar-nav">
-                <li class="active"><a id="ShowMail" href="#">Mail</a></li>
-                <li><a id="ShowCalendar" href="#">Calendar</a></li>
-                <li><a id="ShowContacts" href="#">Contacts</a></li>
-                <li><a id="ShowNotes" href="#">Notes</a></li>
-            </ul>
-            <div class="navbar-collapse collapse">
+            <div class="navbar-collapse collapse" id="NavBarActions">
+                <ul class="nav navbar-nav">
+                    <li class="active"><a id="ShowMail" href="#">Mail</a></li>
+                    <li><a id="ShowCalendar" href="#">Calendar</a></li>
+                    <li style="display: none"><a id="ShowContacts" href="#">Contacts</a></li>
+                    <li style="display: none"><a id="ShowNotes" href="#">Notes</a></li>
+                </ul>
                 <ul class="nav navbar-nav navbar-right">
                     <li class="dropdown">
                         <a class="dropdown-toggle" role="button" data-toggle="dropdown" href="#">
@@ -291,51 +80,68 @@
             <div id="Contacts"></div>
             <div id="Notes"></div>
         </div>
-        <div id="Loading" class="row tight" style="display:none">
+        <div id="Loading" class="row tight" style="display: none">
             <p>Welcome. Please login.</p>
         </div>
-        <div id="DebugConsole" class="row tight" style="display:none">
-            <div id="DebugLog" class="col-sm-12 tight bg-info" style="padding:10px"></div>
-            <div class="col-sm-12 tight">
-                <input id="DebugCmd" type="text" placeholder="> " style="width:100%" />
+        
+        <!-- Div for mini console on Tesla browser -->
+        <div class="row tight">
+            <div id="DebugConsole" class="row tight" style="display: none">
+                <div id="DebugLog" style="margin: 10px; padding: 10px; background: SkyBlue"></div>
+                <div style="margin: 0px; padding: 10px">
+                    <input id="DebugCmd" type="text" placeholder="> " style="width: 100%" />
+                </div>
             </div>
         </div>
 
-    </div>
-    <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
-    <script>
-        (function () {
-            var forceDebugConsole = true;
-            var params = document.location.search.replace(/.*?\?/,"").split("&").map(function (kv) { return kv.split('='); }).reduce(function (prev, kva) { prev[kva[0]] = kva[1]; return prev }, {});
-            if (forceDebugConsole || params["console"]) {
-                var logger = document.getElementById('DebugLog');
-                document.getElementById('DebugConsole').style.display = "";
-                console.log = function (message) {
-                    if (typeof message == 'object') {
-                        try {
-                            message = JSON && JSON.stringify ? JSON.stringify(message) : message;
-                        } 
-                        catch(err) {
-                            message = "[Could not stringify that object]";
-                        };
-                    }                    
-                    logger.innerHTML +=  '<p>' + message + '</p>';                
-                    // console_log(message);
-                };
-                var cmd = document.getElementById('DebugCmd');
-                cmd.onchange = function () {
-                    var result = ""
-                    try { result = eval(cmd.value); } catch(err) { result="Unable to evaluate " + cmd.value; }
-                    console.log(result);
+        <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+
+        <script>
+            var forceInPlaceLogin = false;
+            var forceDebugConsole = false;
+
+            (function () {
+                var params = document.location.search.replace(/.*?\?/, "").split("&").map(function (kv) { return kv.split('='); }).reduce(function (prev, kva) { prev[kva[0]] = (!kva[1]) ? true : kva[1]; return prev }, {});
+                if (forceDebugConsole || params["console"]) {
+                    var logger = document.getElementById('DebugLog');
+                    document.getElementById('DebugConsole').style.display = "";
+                    underlying = console.log;
+                    console.log = function (...args) {
+                        message = args && args[0];
+                        if (message) {
+                            try {
+                                message = typeof message == "string" ? message : JSON.stringify(message);
+                            }
+                            catch (err) {
+                                message = "[Could not stringify object]";
+                            };
+                        }
+                        if (message) { logger.innerHTML += '<p>' + message + '</p>'; }
+                        underlying.apply(console, args);
+                    };
+                    var cmd = document.getElementById('DebugCmd');
+                    cmd.onchange = function () {
+                        var result = ""
+                        try { result = eval(cmd.value); } catch (err) { result = "Unable to evaluate " + cmd.value + " with error " + err.toString(); }
+                        console.log(result);
+                        try { cmd.scrollIntoView(); } catch (err) { }
+                    }
                 }
-            }
-        })();
-        console.log('started');
-    </script>
-    <script src="./kurve.js"></script>
-    <script src="./bundle.js"></script>
- 
+            })();
+
+            console.log('Starting app');
+        </script>
+        <script src="./kurve.js"></script>
+        <script src="./bundle.js"></script>
+        <script>
+            // Here to keep jquery out of main react app.  Ultimately may move away from bootstrap to a React navigation bar.
+            $(function () {
+                $('.navbar-nav li').click(function () {
+                    $(this).addClass('active').siblings().removeClass('active');
+                });
+            });
+        </script>
 </body>
 
 </html>

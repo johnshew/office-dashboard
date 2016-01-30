@@ -11,7 +11,7 @@
     <title>Tesla Console</title>
     <script>
         window.onerror = function (errorMsg, url, lineNumber) {
-            alert( (url ? url + ' ' : '' ) + ( lineNumber ? lineNumber : '') + '\r\n' + errorMsg );
+            alert((url ? url + ' ' : '') + (lineNumber ? lineNumber : '') + '\r\n' + errorMsg);
         }
     </script>
     <script src="https://raw.githubusercontent.com/es-shims/es5-shim/master/es5-shim.js"></script>
@@ -26,7 +26,7 @@
             margin-top: 0px;
             margin-left: 0px;
             margin-right: 0px;
-            padding: 0px
+            padding: 0px;
         }
     </style>
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
@@ -43,21 +43,21 @@
     <div id="top-nav" class="navbar navbar-inverse navbar-static-top tight">
         <div class="container-fluid">
             <div class="navbar-header">
-                 <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#NavBarActions" aria-expanded="false">
-        <span class="sr-only">Toggle navigation</span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-      </button>
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#NavBarActions" aria-expanded="false">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
                 <a class="navbar-brand" href="#">Dashboard</a>
             </div>
             <div class="navbar-collapse collapse" id="NavBarActions">
-            <ul class="nav navbar-nav">
-                <li class="active"><a id="ShowMail" href="#">Mail</a></li>
-                <li><a id="ShowCalendar" href="#">Calendar</a></li>
-                <li style="display: none"><a id="ShowContacts" href="#">Contacts</a></li>
-                <li style="display:none"><a id="ShowNotes" href="#">Notes</a></li>
-            </ul>
+                <ul class="nav navbar-nav">
+                    <li class="active"><a id="ShowMail" href="#">Mail</a></li>
+                    <li><a id="ShowCalendar" href="#">Calendar</a></li>
+                    <li style="display: none"><a id="ShowContacts" href="#">Contacts</a></li>
+                    <li style="display: none"><a id="ShowNotes" href="#">Notes</a></li>
+                </ul>
                 <ul class="nav navbar-nav navbar-right">
                     <li class="dropdown">
                         <a class="dropdown-toggle" role="button" data-toggle="dropdown" href="#">
@@ -82,14 +82,14 @@
             <div id="Contacts"></div>
             <div id="Notes"></div>
         </div>
-        <div id="Loading" class="row tight" style="display:none">
+        <div id="Loading" class="row tight" style="display: none">
             <p>Welcome. Please login.</p>
         </div>
         <div class="row tight">
-            <div id="DebugConsole" class="row tight" style="display:none">
-                <div id="DebugLog" style="margin:10px;padding:10px;background:SkyBlue"></div>
-                <div style="margin:0px;padding:10px">
-                    <input id="DebugCmd" type="text" placeholder="> " style="width:100%" />
+            <div id="DebugConsole" class="row tight" style="display: none">
+                <div id="DebugLog" style="margin: 10px; padding: 10px; background: SkyBlue"></div>
+                <div style="margin: 0px; padding: 10px">
+                    <input id="DebugCmd" type="text" placeholder="> " style="width: 100%" />
                 </div>
             </div>
         </div>
@@ -101,8 +101,8 @@
             var forceInPlaceLogin = false;
             var forceDebugConsole = false;
             (function () {
-                var params = document.location.search.replace(/.*?\?/,"").split("&").map(function (kv) { return kv.split('='); }).reduce(function (prev, kva) { prev[kva[0]] = (!kva[1]) ? true : kva[1]; return prev }, {});
-                if (forceDebugConsole || params["console"] ) {
+                var params = document.location.search.replace(/.*?\?/, "").split("&").map(function (kv) { return kv.split('='); }).reduce(function (prev, kva) { prev[kva[0]] = (!kva[1]) ? true : kva[1]; return prev }, {});
+                if (forceDebugConsole || params["console"]) {
                     var logger = document.getElementById('DebugLog');
                     document.getElementById('DebugConsole').style.display = "";
                     underlying = console.log;
@@ -111,22 +111,22 @@
                         if (message) {
                             try {
                                 message = typeof message == "string" ? message : JSON.stringify(message);
-                            } 
-                            catch(err) {
+                            }
+                            catch (err) {
                                 message = "[Could not stringify object]";
                             };
-                        }                    
+                        }
                         if (message) { logger.innerHTML += '<p>' + message + '</p>'; }
                         underlying.apply(console, args);
                     };
                     var cmd = document.getElementById('DebugCmd');
                     cmd.onchange = function () {
                         var result = ""
-                        try { result = eval(cmd.value); } catch(err) { result="Unable to evaluate " + cmd.value + " with error " + err.toString(); }
+                        try { result = eval(cmd.value); } catch (err) { result = "Unable to evaluate " + cmd.value + " with error " + err.toString(); }
                         console.log(result);
-                        try { cmd.scrollIntoView(); } catch(err) {}
+                        try { cmd.scrollIntoView(); } catch (err) { }
                     }
-                }        
+                }
             })();
             console.log('Starting app');
         </script>

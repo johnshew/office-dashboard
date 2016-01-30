@@ -203,12 +203,13 @@ function CleanUp(html: string) {
     
     // Create a new <div/> in the body and move all existing body content to that the new div.
     var resultElement = doc.createElement("div");
-    var nodeIndex = doc.body.childNodes.length;
-    while (nodeIndex--) {
-        var bodyNode = doc.body.childNodes.item(nodeIndex);
+    var count = doc.body.childNodes.length;
+    for (var i = 0; i < count; i++) {
+        var bodyNode = doc.body.childNodes.item(0);
         doc.body.removeChild(bodyNode);
-        resultElement.appendChild(bodyNode);
+        resultElement.appendChild(bodyNode);        
     }
+
     doc.body.appendChild(resultElement);
     
     // Move all styles in <head/> into the new <div/> 
