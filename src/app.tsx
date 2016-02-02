@@ -13,7 +13,7 @@ function sortBy(key?: (any) => any, reverse?: boolean) {
 interface AppProps extends React.Props<App> {
 }
 
-enum ShowState { Mail, Calendar, Contacts, Notes };
+enum ShowState { Welcome, Mail, Calendar, Contacts, Notes };
 
 interface AppState {
     messages?: Kurve.Message[];
@@ -40,7 +40,7 @@ class App extends React.Component<AppProps,AppState> {
     constructor() {
         super();
         console.log('App initializing');
-        this.state = { messages: [], messageIdToIndex: {}, events: [], eventIdToIndex: {}, show: ShowState.Mail };
+        this.state = { messages: [], messageIdToIndex: {}, events: [], eventIdToIndex: {}, show: ShowState.Welcome };
 
         var here = document.location;
         this.identity = new Kurve.Identity("b8dd3290-662a-4f91-92b9-3e70fbabe04e",
@@ -65,14 +65,15 @@ class App extends React.Component<AppProps,AppState> {
             this.LoggedIn()
         }
         this.UpdateLoginState();
-        this.ShowMail();
     }
 
     public render() {
+        var welcome = (this.state.show == ShowState.Welcome) ? <div className="jumbotron"> <h2> { "Welcome" }</h2> <p> { "Please login to access your information" } </p> </div> : null;
         var mail = (this.state.show == ShowState.Mail) ? <Mail data={ this.state.messages } mailboxes={["inbox", "sent items"]}/> : null;
         var calendar = (this.state.show == ShowState.Calendar) ? <Calendar data={ this.state.events } /> : null;
         return (
             <div>
+                { welcome }
                 { mail } 
                 { calendar }
             </div>
@@ -122,9 +123,8 @@ class App extends React.Component<AppProps,AppState> {
                 idMap[event.data["id"]] = newEvents.push(event); // add it to the list and record index.
             }
         });
-        if (newEvents.length >= 40 || !events.nextLink) {
-            this.setState({ events: newEvents, eventIdToIndex: idMap, messages: this.state.messages, messageIdToIndex: this.state.messageIdToIndex });
-        } else {
+        this.setState({ events: newEvents, eventIdToIndex: idMap });  // We have new data so update state and it will cause a render.
+        if (newEvents.length < 40 && events.nextLink) {
             events.nextLink().then((moreEvents) => {
                 this.ProcessAdditionalEvents(newEvents, idMap, moreEvents);
             });
@@ -153,13 +153,13 @@ class App extends React.Component<AppProps,AppState> {
                 idMap[item.data["id"]] = newList.push(item); // add it to the list and record index.
             }
         });
-        if (newList.length >= 40 || !result.nextLink) {
-            this.setState({ events: this.state.events, eventIdToIndex: this.state.eventIdToIndex, messages: newList, messageIdToIndex: idMap });
-        } else {
+
+        this.setState({ messages: newList, messageIdToIndex: idMap });
+        if (newList.length < 40 && result.nextLink) {
             result.nextLink().then((moreEvents) => {
                 this.ProcessAdditionalMessages(newList, idMap, moreEvents);
             });
-        }
+        }    
     }
 
     public UpdateLoginState() {
@@ -174,7 +174,8 @@ class App extends React.Component<AppProps,AppState> {
 
     public LoggedIn() {
         console.log('Successful login.');
-        this.UpdateLoginState();        
+        this.UpdateLoginState();
+        this.setState({ show: ShowState.Mail });                
         this.GetMe();
     }
 
