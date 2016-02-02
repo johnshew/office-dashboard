@@ -74,11 +74,7 @@
     </div>
 
     <div class="container-fluid tight">
-        <div class="row tight">
-            <div id="Mail"></div>
-            <div id="Calendar"></div>
-            <div id="Contacts"></div>
-            <div id="Notes"></div>
+        <div id="App" class="row tight">
         </div>
         <div id="Loading" class="row tight" style="display: none">
             <p>Welcome. Please login.</p>
@@ -94,54 +90,56 @@
             </div>
         </div>
 
-        <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
-        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+    </div>
 
-        <script>
-            var forceInPlaceLogin = false;
-            var forceDebugConsole = false;
+    <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
 
-            (function () {
-                var params = document.location.search.replace(/.*?\?/, "").split("&").map(function (kv) { return kv.split('='); }).reduce(function (prev, kva) { prev[kva[0]] = (!kva[1]) ? true : kva[1]; return prev }, {});
-                if (forceDebugConsole || params["console"]) {
-                    var logger = document.getElementById('DebugLog');
-                    document.getElementById('DebugConsole').style.display = "";
-                    underlying = console.log;
-                    console.log = function (...args) {
-                        message = args && args[0];
-                        if (message) {
-                            try {
-                                message = typeof message == "string" ? message : JSON.stringify(message);
-                            }
-                            catch (err) {
-                                message = "[Could not stringify object]";
-                            };
+    <script>
+        var forceInPlaceLogin = false;
+        var forceDebugConsole = false;
+
+        (function () {
+            var params = document.location.search.replace(/.*?\?/, "").split("&").map(function (kv) { return kv.split('='); }).reduce(function (prev, kva) { prev[kva[0]] = (!kva[1]) ? true : kva[1]; return prev }, {});
+            if (forceDebugConsole || params["console"]) {
+                var logger = document.getElementById('DebugLog');
+                document.getElementById('DebugConsole').style.display = "";
+                underlying = console.log;
+                console.log = function (...args) {
+                    message = args && args[0];
+                    if (message) {
+                        try {
+                            message = typeof message == "string" ? message : JSON.stringify(message);
                         }
-                        if (message) { logger.innerHTML += '<p>' + message + '</p>'; }
-                        underlying.apply(console, args);
-                    };
-                    var cmd = document.getElementById('DebugCmd');
-                    cmd.onchange = function () {
-                        var result = ""
-                        try { result = eval(cmd.value); } catch (err) { result = "Unable to evaluate " + cmd.value + " with error " + err.toString(); }
-                        console.log(result);
-                        try { cmd.scrollIntoView(); } catch (err) { }
+                        catch (err) {
+                            message = "[Could not stringify object]";
+                        };
                     }
+                    if (message) { logger.innerHTML += '<p>' + message + '</p>'; }
+                    underlying.apply(console, args);
+                };
+                var cmd = document.getElementById('DebugCmd');
+                cmd.onchange = function () {
+                    var result = ""
+                    try { result = eval(cmd.value); } catch (err) { result = "Unable to evaluate " + cmd.value + " with error " + err.toString(); }
+                    console.log(result);
+                    try { cmd.scrollIntoView(); } catch (err) { }
                 }
-            })();
+            }
+        })();
 
-            console.log('Starting app');
-        </script>
-        <script src="./kurve.js"></script>
-        <script src="./bundle.js"></script>
-        <script>
-            // Here to keep jquery out of main react app.  Ultimately may move away from bootstrap to a React navigation bar.
-            $(function () {
-                $('.navbar-nav li').click(function () {
-                    $(this).addClass('active').siblings().removeClass('active');
-                });
+        console.log('Starting app');
+    </script>
+    <script src="./kurve.js"></script>
+    <script src="./bundle.js"></script>
+    <script>
+        // Here to keep jquery out of main react app.  Ultimately may move away from bootstrap to a React navigation bar.
+        $(function () {
+            $('.navbar-nav li').click(function () {
+                $(this).addClass('active').siblings().removeClass('active');
             });
-        </script>
+        });
+    </script>
 </body>
 
 </html>

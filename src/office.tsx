@@ -406,7 +406,7 @@ interface CalendarState {
 
 export class Calendar extends React.Component<CalendarProps, CalendarState>
 {
-    private values: any[];
+    //private values: any[];
     constructor(props, state) {
         super(props, state);
         this.state = { selected: null };

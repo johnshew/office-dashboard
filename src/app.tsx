@@ -10,12 +10,25 @@ function sortBy(key?: (any) => any, reverse?: boolean) {
     }
 }
 
-class App {
+interface AppProps extends React.Props<App> {
+}
+
+enum ShowState { Mail, Calendar, Contacts, Notes };
+
+interface AppState {
+    messages?: Kurve.Message[];
+    messageIdToIndex?: Object;
+    events?: Kurve.Event[];
+    eventIdToIndex?: Object;
+    show?: ShowState;
+}
+
+class App extends React.Component<AppProps,AppState> {
     private identity: Kurve.Identity;
     private graph: Kurve.Graph;
     private me: Kurve.User;
-    private messages: Kurve.Messages;
-    private calendarEvents: Kurve.Events;
+    private eventIdToIndex: {};
+
     private loginNewWindow: boolean;
     private timerHandle: any;
 
@@ -25,26 +38,27 @@ class App {
     private notes = document.getElementById('Notes');
 
     constructor() {
+        super();
         console.log('App initializing');
+        this.state = { messages: [], messageIdToIndex: {}, events: [], eventIdToIndex: {}, show: ShowState.Mail };
 
         var here = document.location;
         this.identity = new Kurve.Identity("b8dd3290-662a-4f91-92b9-3e70fbabe04e",
             here.protocol + '//' + here.host + here.pathname.substring(0, here.pathname.lastIndexOf('/') + 1) + '../public/login.html');
         this.graph = new Kurve.Graph({ identity: this.identity });
         this.me = null;
-        this.messages = null;
 
         var params = document.location.search.replace(/.*?\?/, "").split("&").map(function (kv) { return kv.split('='); }).reduce(function (prev, kva) { prev[kva[0]] = (!kva[1]) ? true : kva[1]; return prev }, {});
 
         this.loginNewWindow = !window["forceInPlaceLogin"] && !params["inplace"];
         console.log('In place login is ' + !this.loginNewWindow);
 
-        document.getElementById("DoLogin").onclick = (e) => app.Login();
-        document.getElementById("DoLogout").onclick = (e) => app.Logout();
-        document.getElementById("ShowMail").onclick = (e) => app.ShowMail();
-        document.getElementById("ShowCalendar").onclick = (e) => app.ShowCalendar();
-        document.getElementById("ShowContacts").onclick = (e) => app.ShowContacts();
-        document.getElementById("ShowNotes").onclick = (e) => app.ShowNotes();
+        document.getElementById("DoLogin").onclick = (e) => this.Login();
+        document.getElementById("DoLogout").onclick = (e) => this.Logout();
+        document.getElementById("ShowMail").onclick = (e) => this.ShowMail();
+        document.getElementById("ShowCalendar").onclick = (e) => this.ShowCalendar();
+        document.getElementById("ShowContacts").onclick = (e) => this.ShowContacts();
+        document.getElementById("ShowNotes").onclick = (e) => this.ShowNotes();
 
         console.log('Checking for identity redirect');
         if (this.identity.checkForIdentityRedirect()) {
@@ -53,6 +67,18 @@ class App {
         this.UpdateLoginState();
         this.ShowMail();
     }
+
+    public render() {
+        var mail = (this.state.show == ShowState.Mail) ? <Mail data={ this.state.messages } mailboxes={["inbox", "sent items"]}/> : null;
+        var calendar = (this.state.show == ShowState.Calendar) ? <Calendar data={ this.state.events } /> : null;
+        return (
+            <div>
+                { mail } 
+                { calendar }
+            </div>
+            );
+    }
+    
 
     public GetMe(): Kurve.User {
         if (this.me) {
@@ -83,11 +109,27 @@ class App {
             .then((events) => {
                 console.log('Got calendar.  Now rendering.');
                 // calendar.data.sort(sortBy((item: Kurve.Event) => Date.parse(item.data.start.dateTime)));
-                this.calendarEvents = events;
-                this.RenderCalendar();
+                this.ProcessAdditionalEvents([], {}, events);
             });
     }
 
+    private ProcessAdditionalEvents(newEvents: Kurve.Event[], idMap: Object, events: Kurve.Events) {
+        events.data.map((event) => {
+            var index = idMap[event.data["id"]];
+            if (index) {
+                newEvents[index] = event; // do an update.
+            } else {
+                idMap[event.data["id"]] = newEvents.push(event); // add it to the list and record index.
+            }
+        });
+        if (newEvents.length >= 40 || !events.nextLink) {
+            this.setState({ events: newEvents, eventIdToIndex: idMap, messages: this.state.messages, messageIdToIndex: this.state.messageIdToIndex });
+        } else {
+            events.nextLink().then((moreEvents) => {
+                this.ProcessAdditionalEvents(newEvents, idMap, moreEvents);
+            });
+        }
+    }
     public GetMessages() {
         if (!this.me) {
             this.GetMe();
@@ -97,12 +139,29 @@ class App {
         this.me.messagesAsync()
             .then((messages) => {
                 console.log('Got messages.  Now rendering.');
-                this.messages = messages;
-                this.RenderMail();
+                this.ProcessAdditionalMessages([], {}, messages);
+                
             });
     }
 
-    
+    private ProcessAdditionalMessages(newList: Kurve.Message[], idMap: Object, result: Kurve.Messages) {
+        result.data.map((item) => {
+            var index = idMap[item.data["id"]];
+            if (index) {
+                newList[index] = item; // do an update.
+            } else {
+                idMap[item.data["id"]] = newList.push(item); // add it to the list and record index.
+            }
+        });
+        if (newList.length >= 40 || !result.nextLink) {
+            this.setState({ events: this.state.events, eventIdToIndex: this.state.eventIdToIndex, messages: newList, messageIdToIndex: idMap });
+        } else {
+            result.nextLink().then((moreEvents) => {
+                this.ProcessAdditionalMessages(newList, idMap, moreEvents);
+            });
+        }
+    }
+
     public UpdateLoginState() {
         if (this.identity.isLoggedIn()) {
             document.getElementById("DoLogin").style.display = "none";
@@ -148,25 +207,11 @@ class App {
     }
 
     private ShowMail() {
-        this.mail.style.display = "";
-        this.calendar.style.display = this.contacts.style.display = this.notes.style.display = "none";
+        this.setState({ show: ShowState.Mail });
     }
 
     private ShowCalendar() {
-        this.calendar.style.display = "";
-        this.mail.style.display = this.contacts.style.display = this.notes.style.display = "none";
-    }
-
-    private RenderMail() {
-        if (this.messages) {
-            ReactDOM.render(<Mail data={ this.messages.data } mailboxes={["inbox", "sent items"]}/>, this.mail);
-        }
-    }
-
-    private RenderCalendar() {
-        if (this.calendarEvents) {
-            ReactDOM.render(<Calendar data={ this.calendarEvents.data } />, this.calendar);
-        }
+        this.setState({ show: ShowState.Calendar });
     }
 
     private ShowContacts() {
@@ -270,8 +315,11 @@ export class Tools {
 
 }
 
-var app = new App();
-window["myapp"] = app;
+ReactDOM.render(<App />, document.getElementById("App"));
+
+// var app = new App();
+// window["myapp"] = app;
+
 Tools.Hook(window, 'open', (args) => {
     console.log("window.open(url=" + args[0] + ")")
 });
