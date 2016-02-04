@@ -98,7 +98,9 @@ export class EventSummary extends React.Component<EventSummaryProps, any> {
         var small = Combine(smallStyle, noOverflowStyle, tightStyle, this.props.style);
         var smallBold = Combine(small, emphasisStyle);
         var d = this.props.item.data;
-        var startTime = new Date(d.start.dateTime).toLocaleTimeString().replace(/\:\d\d /, " ");
+        if (d.start.timeZone != "UTC") throw "Unexpected date format";
+        
+        var startTime = new Date(d.start.dateTime + 'Z').toLocaleTimeString().replace(/\u200E/g, "").replace(/:\d\d\s/, " ");
         var span = new DateSpan(d.end.dateTime, d.start.dateTime);
         var duration = ((span.days != 0) ? span.days + " days " : "") + (span.hours != 0 ? span.hours + " hours " : "") + (span.minutes != 0 ? span.minutes + " mins " : "");        
         var location = d.location && d.location["displayName"];
