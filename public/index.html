@@ -12,7 +12,7 @@
 
     <script>
         window.onerror = function (errorMsg, url, lineNumber) {
-            alert((url ? url + ' ' : '') + (lineNumber ? lineNumber : '') + '\r\n' + errorMsg);
+            alert((lineNumber ? lineNumber : '') + '\r\n' + errorMsg + '\r\n' + (url ? url + ' ' : '')); 
         }
         // Show page load alerts on Tesla browser
     </script>
@@ -104,9 +104,9 @@
             if (forceDebugConsole || params["console"]) {
                 var logger = document.getElementById('DebugLog');
                 document.getElementById('DebugConsole').style.display = "";
-                underlying = console.log;
-                console.log = function (...args) {
-                    message = args && args[0];
+                log = console.log;
+                console.log = function () {
+                    message = arguments && arguments[0];
                     if (message) {
                         try {
                             message = typeof message == "string" ? message : JSON.stringify(message);
@@ -116,7 +116,7 @@
                         };
                     }
                     if (message) { logger.innerHTML += '<p>' + message + '</p>'; }
-                    underlying.apply(console, args);
+                    log.apply(console, arguments);
                 };
                 var cmd = document.getElementById('DebugCmd');
                 cmd.onchange = function () {

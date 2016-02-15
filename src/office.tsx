@@ -247,10 +247,12 @@ interface MessageViewProps extends React.Props<MessageView> {
 
 export class MessageView extends React.Component<MessageViewProps, any>
 {
-    private check(text: string) {
+    private Header : HTMLDivElement;
+    
+/*    private check(text: string) {
         return (text != null) ? text : "";
     }
-
+*/
     private toLine() {
         var x: any[] = this.props.message.data.toRecipients;
         return x.reduce((p, c) => {
@@ -258,6 +260,10 @@ export class MessageView extends React.Component<MessageViewProps, any>
             return result;
         }, null);
         return "";
+    }
+    
+    public scrollToTop() {
+        try { this.Header.scrollIntoView(); } catch(err) { }
     }
 
     render() {
@@ -273,7 +279,7 @@ export class MessageView extends React.Component<MessageViewProps, any>
         var body = data.body && this.props.message.data.body["content"] || ""; //TODO Fix Kurve
         return (
             <div>
-              <div className="well" style={  { padding: 10 } }>
+              <div ref={(c)=>{this.Header = c;}}  className="well" style={  { padding: 10 } }>
                 <p style={ big }>{from}</p>
                 <p style={ smallEmphasis }>{subject}</p>
                 <p style={ small }>{toRecipients}</p>
@@ -347,6 +353,8 @@ interface MailState {
 export class Mail extends React.Component<MailProps, MailState>
 {
     private values: any[];
+    private mailViewRef : any;
+    private messageView : MessageView;
 
     constructor(props, state) {
         super(props, state);
@@ -362,6 +370,7 @@ export class Mail extends React.Component<MailProps, MailState>
 
     private handleSelection = (id: string) => {
         this.setState({ selected: id });
+        this.messageView.scrollToTop();                
     }
 
     private selectedMessage(): Kurve.Message {
@@ -378,11 +387,11 @@ export class Mail extends React.Component<MailProps, MailState>
             <div>
             <div className="col-xm-12 col-sm-6 col-lg-3" style={ mailListStyle }>
                 <div>
-                    <MailList onSelection={ this.handleSelection } selected={this.state.selected } data={ this.props.data } />
+                    <MailList onSelection={ this.handleSelection } selected={ this.state.selected } data={ this.props.data } />
                     </div>
                 </div>
             <div className="col-sm-12 col-sm-6 col-lg-9" style={ mailViewStyle }>
-                <MessageView message={this.selectedMessage() }/>
+                <MessageView ref={ (c)=>this.messageView=c } message={this.selectedMessage() }/>
                 </div>
                 </div>
         );

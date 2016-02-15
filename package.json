@@ -17,7 +17,7 @@
     "watchify": "^3.6.1"
   },
   "scripts": {
-    "start": "http-server public -o --cors -p 8000",
+    "start": "http-server . -o --cors -p 8000",
     "build": "browserify src/app.tsx typings/tsd.d.ts    -d -p tsify -o public/bundle.js ",
     "watch": "watchify   src/app.tsx typings/tsd.d.ts -v -d -p tsify -o public/bundle.js",
     "test": "echo \"Error: no test specified\" && exit 1"

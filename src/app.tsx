@@ -32,11 +32,6 @@ class App extends React.Component<AppProps,AppState> {
     private loginNewWindow: boolean;
     private timerHandle: any;
 
-    private mail = document.getElementById('Mail');
-    private calendar = document.getElementById('Calendar');
-    private contacts = document.getElementById('Contacts');
-    private notes = document.getElementById('Notes');
-
     constructor() {
         super();
         console.log('App initializing');
@@ -316,10 +311,8 @@ export class Tools {
 
 }
 
-ReactDOM.render(<App />, document.getElementById("App"));
-
-// var app = new App();
-// window["myapp"] = app;
+var app = ReactDOM.render(<App />, document.getElementById("App"));
+window["myapp"] = app;
 
 Tools.Hook(window, 'open', (args) => {
     console.log("window.open(url=" + args[0] + ")")
