@@ -1,6 +1,7 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import { Mail, Calendar} from './office';
+import { Settings, SettingsValues } from './settings';
 
 function sortBy(key?: (any) => any, reverse?: boolean) {
     var direction = !reverse ? 1 : -1;
@@ -21,6 +22,7 @@ interface AppState {
     events?: Kurve.Event[];
     eventIdToIndex?: Object;
     show?: ShowState;
+    settings? : SettingsValues;
 }
 
 class App extends React.Component<AppProps,AppState> {
@@ -35,7 +37,7 @@ class App extends React.Component<AppProps,AppState> {
     constructor() {
         super();
         console.log('App initializing');
-        this.state = { messages: [], messageIdToIndex: {}, events: [], eventIdToIndex: {}, show: ShowState.Welcome };
+        this.state = { messages: [], messageIdToIndex: {}, events: [], eventIdToIndex: {}, show: ShowState.Welcome, settings : { noScroll: true, inplace : false, console : false, refreshIntervalSeconds : 0 } };
 
         var here = document.location;
         this.identity = new Kurve.Identity("b8dd3290-662a-4f91-92b9-3e70fbabe04e",
@@ -71,6 +73,7 @@ class App extends React.Component<AppProps,AppState> {
                 { welcome }
                 { mail } 
                 { calendar }
+                <Settings onChange={ (v)=> { console.log(JSON.stringify(v)); this.setState({ settings: v})} } values={ this.state.settings }/>
             </div>
             );
     }
@@ -317,4 +320,3 @@ window["myapp"] = app;
 Tools.Hook(window, 'open', (args) => {
     console.log("window.open(url=" + args[0] + ")")
 });
-

@@ -1,4 +1,5 @@
 import * as React from 'react';
+//var React = require('react');
 
 var div = React.createElement.bind(null, 'div')
 var button = React.createElement.bind(null, 'button')
