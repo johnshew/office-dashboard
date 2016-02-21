@@ -1,5 +1,6 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
+import * as Utilities from './utilities';
 import { Mail, Calendar} from './office';
 import { Settings, SettingsValues } from './settings';
 
@@ -242,81 +243,9 @@ class App extends React.Component<AppProps,AppState> {
 }
 
 
-class Storage {
-    constructor() { }
-    public setItem(key: string, data: any) {
-        if (localStorage) {
-            try {
-                localStorage.setItem(key, JSON.stringify({ data: data }));
-            }
-            catch (e) {
-                console.log("localStorage error " + e);
-            }
-        }
-    }
-
-    public static getItem(key: string) : any {
-        if (localStorage) {
-            try {
-                var data = JSON.parse(localStorage.getItem(key));
-                return data && data.data;
-            }
-            catch (e) {
-                console.log('localStorage read error ' + e);
-            }
-        }
-        return null;
-    }
-}
-
-export class Tools {
-
-    public static Hook(rootObject: any, functionToHook: string, hookingFunction: (...optionalParams: any[]) => void): void {
-        var previousFunction = rootObject[functionToHook];
-
-        rootObject[functionToHook] = (...optionalParams: any[]) => {
-            hookingFunction(optionalParams);
-            previousFunction.apply(rootObject, optionalParams);
-        }
-        return previousFunction;
-    }
-
-
-    public static CreateCookie(name: string, value: string, days: number): void {
-        var expires: string;
-        if (days) {
-            var date = new Date();
-            date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-            expires = "; expires=" + date.toUTCString();
-        } else {
-            expires = "";
-        }
-
-        document.cookie = name + "=" + value + expires + "; path=/";
-    }
-
-    public static ReadCookie(name: string): string {
-        var nameEQ = name + "=";
-        var ca = document.cookie.split(';');
-        for (var i = 0; i < ca.length; i++) {
-            var c = ca[i];
-            while (c.charAt(0) === ' ') {
-                c = c.substring(1, c.length);
-            }
-
-            if (c.indexOf(nameEQ) === 0) {
-                return c.substring(nameEQ.length, c.length);
-            }
-        }
-        return "";
-    }
-
-
-}
-
 var app = ReactDOM.render(<App />, document.getElementById("App"));
 window["myapp"] = app;
 
-Tools.Hook(window, 'open', (args) => {
+Utilities.Hook(window, 'open', (args) => {
     console.log("window.open(url=" + args[0] + ")")
 });

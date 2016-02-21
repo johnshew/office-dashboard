@@ -1,6 +1,9 @@
 import * as React from 'react';
+import * as Utilities from './utilities';
 import { SelectBox } from './selectbox';
 import * as ScopedStyles from './scopedStylePolyfill';
+
+var Combine = Utilities.Combine;
 
 const noOverflowStyle: React.CSSProperties = {
     overflow: 'hidden',
@@ -53,16 +56,6 @@ const mailListStyle: React.CSSProperties = {
     paddingRight: 0,
     paddingLeft: 0
 }
-
-function Combine(...styles: React.CSSProperties[]): React.CSSProperties {  // Essentially Object.Assign(x,y,...)
-    return styles.reduce((previous, style) => {
-        return (style != null) ? Object.keys(style).reduce((previous, key) => {
-            previous[key] = style[key]; return previous;
-        }, previous)
-            : previous;
-    }, {});
-}
-
 
 interface EventSummaryProps extends React.Props<EventSummary> {
     key: string;

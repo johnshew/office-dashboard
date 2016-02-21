@@ -102,7 +102,7 @@
         if (!parentSheet) {
             // Likely that the style tag has not yet been inserted into DOM.
             throw new TypeError('Style node has no ' + Compatibility.sheet + ' property, ' +
-                (!par ? 'cause is that supplied style tag is not present in DOM, ' : '') +
+                (!par ? 'because is that supplied style tag is not present in DOM, ' : '') +
                 'cannot continue.');
         }
 
