@@ -4,18 +4,12 @@ import * as Utilities from './utilities';
 import { Mail, Calendar} from './office';
 import { Settings, SettingsValues } from './settings';
 
-function sortBy(key?: (any) => any, reverse?: boolean) {
-    var direction = !reverse ? 1 : -1;
-    return (a: any, b: any) => {
-        var x = key(a), y = key(b);
-        return direction * ((x as any > y as any) - (y as any > x as any));
-    }
-}
+
+enum ShowState { Welcome, Mail, Calendar, Contacts, Notes };
 
 interface AppProps extends React.Props<App> {
 }
 
-enum ShowState { Welcome, Mail, Calendar, Contacts, Notes };
 
 interface AppState {
     messages?: Kurve.Message[];
@@ -23,22 +17,25 @@ interface AppState {
     events?: Kurve.Event[];
     eventIdToIndex?: Object;
     show?: ShowState;
-    settings? : SettingsValues;
+    settings?: SettingsValues;
 }
 
-class App extends React.Component<AppProps,AppState> {
+class App extends React.Component<AppProps, AppState> {
     private identity: Kurve.Identity;
     private graph: Kurve.Graph;
     private me: Kurve.User;
     private eventIdToIndex: {};
+    private storage: Utilities.Storage;
 
-    private loginNewWindow: boolean;
+    // private loginNewWindow: boolean;
     private timerHandle: any;
 
     constructor() {
         super();
         console.log('App initializing');
-        this.state = { messages: [], messageIdToIndex: {}, events: [], eventIdToIndex: {}, show: ShowState.Welcome, settings : { noScroll: true, inplace : false, console : false, refreshIntervalSeconds : 0 } };
+        var InitialState = { messages: [], messageIdToIndex: {}, events: [], eventIdToIndex: {}, show: ShowState.Welcome, settings: { noScroll: true, inplace: false, console: false, refreshIntervalSeconds: 0 } };
+        this.state = InitialState;
+        Utilities.ObjectAssign(this.state.settings,Utilities.Storage.getItem("settings")); // replace defaults with anything we find in storage.
 
         var here = document.location;
         this.identity = new Kurve.Identity("b8dd3290-662a-4f91-92b9-3e70fbabe04e",
@@ -46,10 +43,11 @@ class App extends React.Component<AppProps,AppState> {
         this.graph = new Kurve.Graph({ identity: this.identity });
         this.me = null;
 
-        var params = document.location.search.replace(/.*?\?/, "").split("&").map(function (kv) { return kv.split('='); }).reduce(function (prev, kva) { prev[kva[0]] = (!kva[1]) ? true : kva[1]; return prev }, {});
+        var params = document.location.search.replace(/.*?\?/, "").split("&").map(function(kv) { return kv.split('='); }).reduce(function(prev, kva) { prev[kva[0]] = (!kva[1]) ? true : kva[1]; return prev }, {});
 
-        this.loginNewWindow = !window["forceInPlaceLogin"] && !params["inplace"];
-        console.log('In place login is ' + !this.loginNewWindow);
+        if (window["forceInPlaceLogin"] === true || params["inplace"] === true) { this.state.settings.inplace = true; } // Override settings
+         
+        console.log('Inline login is ' + this.state.settings.inplace);
 
         document.getElementById("DoLogin").onclick = (e) => this.Login();
         document.getElementById("DoLogout").onclick = (e) => this.Logout();
@@ -72,13 +70,19 @@ class App extends React.Component<AppProps,AppState> {
         return (
             <div>
                 { welcome }
-                { mail } 
+                { mail }
                 { calendar }
-                <Settings onChange={ (v)=> { console.log(JSON.stringify(v)); this.setState({ settings: v})} } values={ this.state.settings }/>
-            </div>
-            );
+                <Settings onChange={ this.handleSettingsChange } values={ this.state.settings }/>
+                </div>
+        );
     }
-    
+
+    handleSettingsChange = (updated: SettingsValues) => {
+        console.log(JSON.stringify(updated));
+        var settings = Utilities.ObjectAssign({},this.state.settings,updated);
+        this.setState({ settings: settings });
+        Utilities.Storage.setItem("settings",settings);
+    }
 
     public GetMe(): Kurve.User {
         if (this.me) {
@@ -139,7 +143,7 @@ class App extends React.Component<AppProps,AppState> {
             .then((messages) => {
                 console.log('Got messages.  Now rendering.');
                 this.ProcessAdditionalMessages([], {}, messages);
-                
+
             });
     }
 
@@ -158,7 +162,7 @@ class App extends React.Component<AppProps,AppState> {
             result.nextLink().then((moreEvents) => {
                 this.ProcessAdditionalMessages(newList, idMap, moreEvents);
             });
-        }    
+        }
     }
 
     public UpdateLoginState() {
@@ -174,7 +178,7 @@ class App extends React.Component<AppProps,AppState> {
     public LoggedIn() {
         console.log('Successful login.');
         this.UpdateLoginState();
-        this.setState({ show: ShowState.Mail });                
+        this.setState({ show: ShowState.Mail });
         this.GetMe();
     }
 
@@ -185,7 +189,7 @@ class App extends React.Component<AppProps,AppState> {
 
     public Login() {
         console.log('Login called');
-        if (this.loginNewWindow) {
+        if (!this.state.settings.inplace) {
             this.identity.loginAsync()
                 .then(() => {
                     this.LoggedIn();
@@ -222,7 +226,7 @@ class App extends React.Component<AppProps,AppState> {
 
     }
 
-    private RefreshFromCloud(delay : number) {
+    private RefreshFromCloud(delay: number) {
         clearTimeout(this.timerHandle);
         this.timerHandle = setTimeout(() => {
             this.RefreshTick();
@@ -238,7 +242,7 @@ class App extends React.Component<AppProps,AppState> {
             this.GetMessages();
             this.GetCalendarEvents();
         }
-        this.RefreshFromCloud(2 * 60 * 1000); 
+        this.RefreshFromCloud(2 * 60 * 1000);
     }
 }
 

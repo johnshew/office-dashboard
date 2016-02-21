@@ -2,7 +2,8 @@ import * as React from 'react';
 
 export class Storage {
     constructor() { }
-    public setItem(key: string, data: any) {
+    
+    public static setItem(key: string, data: any) {
         if (localStorage) {
             try {
                 localStorage.setItem(key, JSON.stringify({ data: data }));
@@ -101,4 +102,12 @@ export function Combine(...styles: React.CSSProperties[]): React.CSSProperties {
         }, previous)
             : previous;
     }, {});
+}
+
+export function sortBy(key?: (any) => any, reverse?: boolean) {
+    var direction = !reverse ? 1 : -1;
+    return (a: any, b: any) => {
+        var x = key(a), y = key(b);
+        return direction * ((x as any > y as any) - (y as any > x as any));
+    }
 }
