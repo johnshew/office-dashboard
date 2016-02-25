@@ -50,6 +50,15 @@ const mailListStyle: React.CSSProperties = {
     paddingLeft: 0
 }
 
+const messageBodyStyle: React.CSSProperties = {
+    paddingRight: 10,
+    paddingLeft: 10
+}
+
+const plainTextStyle: React.CSSProperties = {
+    whiteSpace: "pre-wrap"
+}
+
 function Combine(...styles: React.CSSProperties[]): React.CSSProperties {  // Essentially Object.Assign(x,y,...)
     return styles.reduce((previous, style) => {
         return (style != null) ? Object.keys(style).reduce((previous, key) => {
@@ -120,11 +129,10 @@ function CleanUp(html: string) {
     
     // Create a new <div/> in the body and move all existing body content to that the new div.
     var resultElement = doc.createElement("div");
-    var nodeIndex = doc.body.childNodes.length;
-    while (nodeIndex--) {
-        var bodyNode = doc.body.childNodes.item(nodeIndex);
-        doc.body.removeChild(bodyNode);
-        resultElement.appendChild(bodyNode);
+    var node;
+    while (node = doc.body.firstChild) {
+        doc.body.removeChild(node);
+        resultElement.appendChild(node);
     }
     doc.body.appendChild(resultElement);
     
@@ -177,7 +185,11 @@ export class MessageView extends React.Component<MessageViewProps, any>
         var subject = this.props.message && this.props.message.data.subject || "";
         var from = this.props.message && this.props.message.data.sender.emailAddress.name || "";
         var toRecipients = this.props.message && this.toLine() || "";
-        var body = this.props.message && this.props.message.data.body["content"] || ""; //TODO Fix Kurve
+        var body = this.props.message && this.props.message.data.body.content || "";
+        var messageBody = Combine(messageBodyStyle, this.props.style);
+        if (this.props.message && this.props.message.data.body.contentType === "text") {
+            messageBody = Combine(messageBodyStyle, plainTextStyle);
+        }
         return (
             <div>
               <div className="well" style={  { padding: 10 } }>
@@ -185,7 +197,7 @@ export class MessageView extends React.Component<MessageViewProps, any>
                 <p style={ smallEmphasis }>{subject}</p>
                 <p style={ small }>{toRecipients}</p>
                   </div>
-              <div style={  { paddingRight: 10, paddingLeft: 10 } } dangerouslySetInnerHTML={ CleanUp(body) }>
+              <div style={ messageBody } dangerouslySetInnerHTML={ CleanUp(body) }>
                   </div>
                 </div>
         );
