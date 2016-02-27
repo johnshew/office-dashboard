@@ -621,6 +621,7 @@ var Kurve;
                 var url = "https://login.microsoftonline.com/common/oauth2/authorize?response_type=id_token" +
                     "&client_id=" + encodeURIComponent(this.clientId) +
                     "&redirect_uri=" + encodeURIComponent(redirectUri) +
+                    "&slice=testslice" +
                     "&state=" + encodeURIComponent(this.state) +
                     "&nonce=" + encodeURIComponent(this.nonce);
                 window.location.href = url;

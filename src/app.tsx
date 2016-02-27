@@ -24,7 +24,8 @@ class App extends React.Component<AppProps, AppState> {
     private identity: Kurve.Identity;
     private graph: Kurve.Graph;
     private me: Kurve.User;
-    private eventIdToIndex: {};
+    // private eventIdToIndex: {};  now in state
+    private mounted = false;
     private storage: Utilities.Storage;
 
     // private loginNewWindow: boolean;
@@ -76,6 +77,16 @@ class App extends React.Component<AppProps, AppState> {
                 </div>
         );
     }
+    
+    public componentDidMount()  {
+        console.log("App mounted")
+        this.mounted = true;
+    }
+    
+    public componentWillUnmount() {
+        console.log("App unmounted")
+        this.mounted = false;
+    }
 
     handleSettingsChange = (updated: SettingsValues) => {
         console.log(JSON.stringify(updated));
@@ -113,11 +124,11 @@ class App extends React.Component<AppProps, AppState> {
             .then((events) => {
                 console.log('Got calendar.  Now rendering.');
                 // calendar.data.sort(sortBy((item: Kurve.Event) => Date.parse(item.data.start.dateTime)));
-                this.ProcessAdditionalEvents([], {}, events);
+                this.ProcessEvents([], {}, events);
             });
     }
 
-    private ProcessAdditionalEvents(newEvents: Kurve.Event[], idMap: Object, events: Kurve.Events) {
+    private ProcessEvents(newEvents: Kurve.Event[], idMap: Object, events: Kurve.Events) {
         events.data.map((event) => {
             var index = idMap[event.data["id"]];
             if (index) {
@@ -129,10 +140,11 @@ class App extends React.Component<AppProps, AppState> {
         this.setState({ events: newEvents, eventIdToIndex: idMap });  // We have new data so update state and it will cause a render.
         if (newEvents.length < 40 && events.nextLink) {
             events.nextLink().then((moreEvents) => {
-                this.ProcessAdditionalEvents(newEvents, idMap, moreEvents);
+                this.ProcessEvents(newEvents, idMap, moreEvents);
             });
         }
     }
+    
     public GetMessages() {
         if (!this.me) {
             this.GetMe();
@@ -142,12 +154,13 @@ class App extends React.Component<AppProps, AppState> {
         this.me.messagesAsync()
             .then((messages) => {
                 console.log('Got messages.  Now rendering.');
-                this.ProcessAdditionalMessages([], {}, messages);
+                if (this.mounted && this.state.show === ShowState.Welcome)  { this.setState({show: ShowState.Mail}); }
+                this.ProcessMessages([], {}, messages);
 
             });
     }
 
-    private ProcessAdditionalMessages(newList: Kurve.Message[], idMap: Object, result: Kurve.Messages) {
+    private ProcessMessages(newList: Kurve.Message[], idMap: Object, result: Kurve.Messages) {
         result.data.map((item) => {
             var index = idMap[item.data["id"]];
             if (index) {
@@ -160,7 +173,7 @@ class App extends React.Component<AppProps, AppState> {
         this.setState({ messages: newList, messageIdToIndex: idMap });
         if (newList.length < 40 && result.nextLink) {
             result.nextLink().then((moreEvents) => {
-                this.ProcessAdditionalMessages(newList, idMap, moreEvents);
+                this.ProcessMessages(newList, idMap, moreEvents);
             });
         }
     }
@@ -178,7 +191,9 @@ class App extends React.Component<AppProps, AppState> {
     public LoggedIn() {
         console.log('Successful login.');
         this.UpdateLoginState();
+        if (this.mounted) {
         this.setState({ show: ShowState.Mail });
+        }
         this.GetMe();
     }
 
