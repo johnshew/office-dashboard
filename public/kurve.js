@@ -1,3 +1,9 @@
+var __extends = (this && this.__extends) || function (d, b) {
+for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+function __() { this.constructor = d; }
+__.prototype = b.prototype;
+d.prototype = new __();
+};
 // Adapted from the original source: https://github.com/DirtyHairy/typescript-deferred
 // Copyright (c) Microsoft. All rights reserved. Licensed under the MIT license. See full license at the bottom of this file.
 var Kurve;
@@ -1627,3 +1633,7 @@ var Kurve;
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  
 //   
 //*********************************************************   
+
+if (((typeof window != "undefined" && window.module) || (typeof module != "undefined")) && typeof module.exports != "undefined") {
+    module.exports = Kurve;
+};

@@ -198,9 +198,13 @@ declare module Kurve {
         name: string;
         address: string;
     }
+    interface ItemBody {
+        contentType: string;
+        content: string;
+    }
     class MessageDataModel {
         bccRecipients: string[];
-        body: Object;
+        body: ItemBody;
         bodyPreview: string;
         categories: string[];
         ccRecipients: string[];
@@ -238,10 +242,6 @@ declare module Kurve {
         nextLink: (callback?: (messages: Messages, error: Error) => void, odataQuery?: string) => Promise<Messages, Error>;
         constructor(graph: Kurve.Graph, _data: Message[]);
         data: Message[];
-    }
-    interface ItemBody {
-        contentType: string;
-        content: string;
     }
     interface Attendee {
         status: ResponseStatus;
