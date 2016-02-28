@@ -36,7 +36,7 @@ class App extends React.Component<AppProps, AppState> {
         console.log('App initializing');
         var InitialState = { messages: [], messageIdToIndex: {}, events: [], eventIdToIndex: {}, show: ShowState.Welcome, settings: { noScroll: true, inplace: false, console: false, refreshIntervalSeconds: 0 } };
         this.state = InitialState;
-        Utilities.ObjectAssign(this.state.settings,Utilities.Storage.getItem("settings")); // replace defaults with anything we find in storage.
+        Utilities.ObjectAssign(this.state.settings, Utilities.Storage.getItem("settings")); // replace defaults with anything we find in storage.
 
         var here = document.location;
         this.identity = new Kurve.Identity("b8dd3290-662a-4f91-92b9-3e70fbabe04e",
@@ -46,10 +46,13 @@ class App extends React.Component<AppProps, AppState> {
 
         var params = document.location.search.replace(/.*?\?/, "").split("&").map(function(kv) { return kv.split('='); }).reduce(function(prev, kva) { prev[kva[0]] = (!kva[1]) ? true : kva[1]; return prev }, {});
 
-        if (window["forceInPlaceLogin"] === true || params["inplace"] === true) { this.state.settings.inplace = true; } // Override settings
-         
+        if (window["forceInPlaceLogin"] === true || params["inplace"] === true) { this.state.settings.inplace = true; } // Override settings        
+        if (window["forceDebugConsole"] === true || params["console"] === true) { this.state.settings.console = true; }
+        this.CheckConsole();
+        
         console.log('Inline login is ' + this.state.settings.inplace);
-
+        console.log('Local console is ' + this.state.settings.console);            
+        
         document.getElementById("DoLogin").onclick = (e) => this.Login();
         document.getElementById("DoLogout").onclick = (e) => this.Logout();
         document.getElementById("ShowMail").onclick = (e) => this.ShowMail();
@@ -77,12 +80,12 @@ class App extends React.Component<AppProps, AppState> {
                 </div>
         );
     }
-    
-    public componentDidMount()  {
+
+    public componentDidMount() {
         console.log("App mounted")
         this.mounted = true;
     }
-    
+
     public componentWillUnmount() {
         console.log("App unmounted")
         this.mounted = false;
@@ -90,10 +93,16 @@ class App extends React.Component<AppProps, AppState> {
 
     handleSettingsChange = (updated: SettingsValues) => {
         console.log(JSON.stringify(updated));
-        var settings = Utilities.ObjectAssign({},this.state.settings,updated);
+        var settings = Utilities.ObjectAssign({}, this.state.settings, updated);
         this.setState({ settings: settings });
-        Utilities.Storage.setItem("settings",settings);
+        Utilities.Storage.setItem("settings", settings);
+        this.CheckConsole();
     }
+
+    public CheckConsole()
+    {
+        if (this.state.settings.console && !Utilities.LocalConsole) { Utilities.LocalConsoleInitialize(); }
+    }        
 
     public GetMe(): Kurve.User {
         if (this.me) {
@@ -144,7 +153,7 @@ class App extends React.Component<AppProps, AppState> {
             });
         }
     }
-    
+
     public GetMessages() {
         if (!this.me) {
             this.GetMe();
@@ -154,7 +163,7 @@ class App extends React.Component<AppProps, AppState> {
         this.me.messagesAsync()
             .then((messages) => {
                 console.log('Got messages.  Now rendering.');
-                if (this.mounted && this.state.show === ShowState.Welcome)  { this.setState({show: ShowState.Mail}); }
+                if (this.mounted && this.state.show === ShowState.Welcome) { this.setState({ show: ShowState.Mail }); }
                 this.ProcessMessages([], {}, messages);
 
             });
@@ -192,13 +201,12 @@ class App extends React.Component<AppProps, AppState> {
         console.log('Successful login.');
         this.UpdateLoginState();
         if (this.mounted) {
-        this.setState({ show: ShowState.Mail });
+            this.setState({ show: ShowState.Mail });
         }
         this.GetMe();
     }
 
     public IsLoggedIn(): boolean {
-        this.StopRefreshFromCloud();
         return this.identity.isLoggedIn();
     }
 
@@ -265,6 +273,6 @@ class App extends React.Component<AppProps, AppState> {
 var app = ReactDOM.render(<App />, document.getElementById("App"));
 window["myapp"] = app;
 
-Utilities.Hook(window, 'open', (args) => {
+Utilities.Hook(window, 'open', (...args : any[]) => {
     console.log("window.open(url=" + args[0] + ")")
 });

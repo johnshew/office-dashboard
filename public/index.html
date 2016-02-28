@@ -87,7 +87,7 @@
             <div id="DebugConsole" class="row tight" style="display: none">
                 <div id="DebugLog" style="margin: 10px; padding: 10px; background: SkyBlue"></div>
                 <div style="margin: 0px; padding: 10px">
-                    <input id="DebugCmd" type="text" placeholder="> " style="width: 100%" />
+                    <input id="DebugCommand" type="text" placeholder="> " style="width: 100%" />
                 </div>
             </div>
         </div>
@@ -102,36 +102,7 @@
     <script>
         var forceInPlaceLogin = false;
         var forceDebugConsole = false;
-
-        (function () {
-            var params = document.location.search.replace(/.*?\?/, "").split("&").map(function (kv) { return kv.split('='); }).reduce(function (prev, kva) { prev[kva[0]] = (!kva[1]) ? true : kva[1]; return prev }, {});
-            if (forceDebugConsole || params["console"]) {
-                var logger = document.getElementById('DebugLog');
-                document.getElementById('DebugConsole').style.display = "";
-                log = console.log;
-                console.log = function () {
-                    message = arguments && arguments[0];
-                    if (message) {
-                        try {
-                            message = typeof message == "string" ? message : JSON.stringify(message);
-                        }
-                        catch (err) {
-                            message = "[Could not stringify object]";
-                        };
-                    }
-                    if (message) { logger.innerHTML += '<p>' + message + '</p>'; }
-                    log.apply(console, arguments);
-                };
-                var cmd = document.getElementById('DebugCmd');
-                cmd.onchange = function () {
-                    var result = ""
-                    try { result = eval(cmd.value); } catch (err) { result = "Unable to evaluate " + cmd.value + " with error " + err.toString(); }
-                    console.log(result);
-                    try { cmd.scrollIntoView(); } catch (err) { }
-                }
-            }
-        })();
-
+        
         console.log('Starting app');
     
         // Keeping jquery out of main react app.  Ultimately may move away from a bootstrap to a React navigation bar in which case this will go away.
