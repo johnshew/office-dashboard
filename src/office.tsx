@@ -253,7 +253,7 @@ export class MessageView extends React.Component<MessageViewProps, any>
         return (text != null) ? text : "";
     }
 */
-    private mailboxLine(mailboxes: Kurve.Mailbox[], style: React.CSSProperties, prefix: string) {
+    private mailboxLine(mailboxes: Kurve.Recipient[], style: React.CSSProperties, prefix: string) {
        var mailboxLine = mailboxes.reduce((p, c) => { return (p ? p + "; " : "") + c.emailAddress.name; }, null);
        if (mailboxLine) {
            return <p style={ style }> { prefix }: { mailboxLine }</p>;

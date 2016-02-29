@@ -217,19 +217,19 @@ declare module Kurve {
         name: string;
         address: string;
     }
-    interface Mailbox {
+    interface Recipient {
         emailAddress: EmailAddress;
     }
     class MessageDataModel {
-        bccRecipients: Mailbox[];
+        bccRecipients: Recipient[];
         body: ItemBody;
         bodyPreview: string;
         categories: string[];
-        ccRecipients: Mailbox[];
+        ccRecipients: Recipient[];
         changeKey: string;
         conversationId: string;
         createdDateTime: string;
-        from: any;
+        from: Recipient;
         graph: any;
         hasAttachments: boolean;
         id: string;
@@ -241,11 +241,11 @@ declare module Kurve {
         lastModifiedDateTime: string;
         parentFolderId: string;
         receivedDateTime: string;
-        replyTo: any[];
-        sender: any;
+        replyTo: Recipient[];
+        sender: Recipient;
         sentDateTime: string;
         subject: string;
-        toRecipients: Mailbox[];
+        toRecipients: Recipient[];
         webLink: string;
     }
     class Message {
@@ -269,9 +269,6 @@ declare module Kurve {
     interface DateTimeTimeZone {
         dateTime: string;
         timeZone: string;
-    }
-    interface Recipient {
-        emailAddress: EmailAddress;
     }
     interface PatternedRecurrence {
     }
