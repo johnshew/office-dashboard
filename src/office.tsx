@@ -253,10 +253,10 @@ export class MessageView extends React.Component<MessageViewProps, any>
         return (text != null) ? text : "";
     }
 */
-    private mailboxLine(mailboxes: Kurve.Recipient[], style: React.CSSProperties, prefix: string) {
-       var mailboxLine = mailboxes.reduce((p, c) => { return (p ? p + "; " : "") + c.emailAddress.name; }, null);
-       if (mailboxLine) {
-           return <p style={ style }> { prefix }: { mailboxLine }</p>;
+    private recipients(mailboxes: Kurve.Recipient[], style: React.CSSProperties, prefix: string) {
+       var recipientList = mailboxes.reduce((p, c) => { return (p ? p + "; " : "") + c.emailAddress.name; }, null);
+       if (recipientList) {
+           return <p style={ style }> { prefix }: { recipientList }</p>;
        }
        return null;
     }
@@ -285,9 +285,9 @@ export class MessageView extends React.Component<MessageViewProps, any>
               <div ref={(c)=>{this.Header = c;}}  className="well" style={  { padding: 10 } }>
                 <p style={ big }>{from}</p>
                 <p style={ smallEmphasis }>{subject}</p>
-                { this.mailboxLine(data.toRecipients , small, "To" ) }
-                { this.mailboxLine(data.ccRecipients , small, "Cc" ) }
-                { this.mailboxLine(data.bccRecipients, small, "Bcc") }
+                { this.recipients(data.toRecipients , small, "To" ) }
+                { this.recipients(data.ccRecipients , small, "Cc" ) }
+                { this.recipients(data.bccRecipients, small, "Bcc") }
               </div>
               <div style={ messageBody } dangerouslySetInnerHTML={ CleanUp(body) }>
               </div>
