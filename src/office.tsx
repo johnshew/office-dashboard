@@ -3,7 +3,7 @@ import * as Utilities from './utilities';
 import { SelectBox } from './selectbox';
 import * as ScopedStyles from './scopedStylePolyfill';
 
-var Combine = Utilities.Combine;
+import Combine = Utilities.Combine;
 
 const noOverflowStyle: React.CSSProperties = {
     overflow: 'hidden',
@@ -253,13 +253,9 @@ export class MessageView extends React.Component<MessageViewProps, any>
         return (text != null) ? text : "";
     }
 */
-    private toLine() {
-        var x: any[] = this.props.message.data.toRecipients;
-        return x.reduce((p, c) => {
-            var result = ((p != null) ? p + '; ' : 'To: ') + c.emailAddress.name;
-            return result;
-        }, null);
-        return "";
+    private mailboxLine(mailboxes: Kurve.Mailbox[], style: React.CSSProperties, prefix: string) {
+       var mailboxLine = mailboxes.reduce((p, c) => { return c.emailAddress.name + (p ? ';' : ''); }, null);
+       return mailboxLine && <p style={ style }> { prefix }: {mailboxLine}</p> || "";
     }
     
     public scrollToTop() {
@@ -276,7 +272,6 @@ export class MessageView extends React.Component<MessageViewProps, any>
         if (!data) { return null; }
         var subject =  data.subject || "";
         var from =  data.sender && data.sender.emailAddress && data.sender.emailAddress.name || "";
-        var toRecipients = this.toLine() || "";
         var body = data.body && data.body.content || "";
         var isText = data.body && data.body.contentType === "text";
         if (isText) {
@@ -287,11 +282,13 @@ export class MessageView extends React.Component<MessageViewProps, any>
               <div ref={(c)=>{this.Header = c;}}  className="well" style={  { padding: 10 } }>
                 <p style={ big }>{from}</p>
                 <p style={ smallEmphasis }>{subject}</p>
-                <p style={ small }>{toRecipients}</p>
-                  </div>
+                { this.mailboxLine(data.toRecipients , small, "To" ) }
+                { this.mailboxLine(data.ccRecipients , small, "Cc" ) }
+                { this.mailboxLine(data.bccRecipients, small, "Bcc") }
+              </div>
               <div style={ messageBody } dangerouslySetInnerHTML={ CleanUp(body) }>
-                  </div>
-                </div>
+              </div>
+            </div>
         );
     }
 }

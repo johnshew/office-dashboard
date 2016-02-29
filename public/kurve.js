@@ -234,19 +234,19 @@ var Kurve;
     })();
     Kurve.IdToken = IdToken;
     var Identity = (function () {
-        function Identity(clientId, tokenProcessingUri, version) {
+        function Identity(identitySettings) {
             var _this = this;
-            if (clientId === void 0) { clientId = ""; }
-            if (tokenProcessingUri === void 0) { tokenProcessingUri = ""; }
             this.authContext = null;
             this.config = null;
             this.isCallback = false;
-            this.clientId = clientId;
-            this.tokenProcessorUrl = tokenProcessingUri;
+            this.policy = "";
+            this.tenant = "";
+            this.clientId = identitySettings.clientId;
+            this.tokenProcessorUrl = identitySettings.tokenProcessingUri;
             this.req = new XMLHttpRequest();
             this.tokenCache = {};
-            if (version)
-                this.version = version;
+            if (identitySettings.version)
+                this.version = identitySettings.version;
             else
                 this.version = OAuthVersion.v1;
             //Callback handler from other windows
@@ -352,6 +352,7 @@ var Kurve;
             var decodedTokenJSON = JSON.parse(decodedToken);
             var expiryDate = new Date(new Date('01/01/1970 0:0 UTC').getTime() + parseInt(decodedTokenJSON.exp) * 1000);
             this.idToken = new IdToken();
+            this.idToken.FullToken = decodedTokenJSON;
             this.idToken.Token = idToken;
             this.idToken.Expiry = expiryDate;
             this.idToken.UPN = decodedTokenJSON.upn;
@@ -566,7 +567,7 @@ var Kurve;
                     "&op=token", "_blank");
             }
         };
-        Identity.prototype.loginAsync = function (scopes) {
+        Identity.prototype.loginAsync = function (loginSettings) {
             var d = new Kurve.Deferred();
             this.login(function (error) {
                 if (error) {
@@ -575,14 +576,24 @@ var Kurve;
                 else {
                     d.resolve(null);
                 }
-            }, scopes);
+            }, loginSettings);
             return d.promise;
         };
-        Identity.prototype.login = function (callback, scopes) {
+        Identity.prototype.login = function (callback, loginSettings) {
             this.loginCallback = callback;
-            if (scopes && this.version === OAuthVersion.v1) {
+            if (!loginSettings)
+                loginSettings = {};
+            if (loginSettings.policy)
+                this.policy = loginSettings.policy;
+            if (loginSettings.scopes && this.version === OAuthVersion.v1) {
                 var e = new Error();
                 e.text = "Scopes can only be used with OAuth v2.";
+                callback(e);
+                return;
+            }
+            if (loginSettings.policy && !loginSettings.tenant) {
+                var e = new Error();
+                e.text = "In order to use policy (AAD B2C) a tenant must be specified as well.";
                 callback(e);
                 return;
             }
@@ -593,9 +604,19 @@ var Kurve;
                 "&state=" + encodeURIComponent(this.state) +
                 "&nonce=" + encodeURIComponent(this.nonce) +
                 "&version=" + encodeURIComponent(this.version.toString()) +
-                "&op=login";
-            if (scopes) {
-                loginURL += "&scopes=" + encodeURIComponent(scopes.join(" "));
+                "&op=login" +
+                "&p=" + encodeURIComponent(this.policy);
+            if (loginSettings.tenant) {
+                loginURL += "&tenant=" + encodeURIComponent(loginSettings.tenant);
+            }
+            if (this.version === OAuthVersion.v2) {
+                if (!loginSettings.scopes)
+                    loginSettings.scopes = [];
+                if (loginSettings.scopes.indexOf("profile") < 0)
+                    loginSettings.scopes.push("profile");
+                if (loginSettings.scopes.indexOf("openid") < 0)
+                    loginSettings.scopes.push("openid");
+                loginURL += "&scopes=" + encodeURIComponent(loginSettings.scopes.join(" "));
             }
             window.open(loginURL, "_blank");
         };
@@ -621,7 +642,6 @@ var Kurve;
                 var url = "https://login.microsoftonline.com/common/oauth2/authorize?response_type=id_token" +
                     "&client_id=" + encodeURIComponent(this.clientId) +
                     "&redirect_uri=" + encodeURIComponent(redirectUri) +
-                    "&slice=testslice" +
                     "&state=" + encodeURIComponent(this.state) +
                     "&nonce=" + encodeURIComponent(this.nonce);
                 window.location.href = url;
@@ -892,12 +912,6 @@ var Kurve;
         return Users;
     })();
     Kurve.Users = Users;
-    var EmailAddress = (function () {
-        function EmailAddress() {
-        }
-        return EmailAddress;
-    })();
-    Kurve.EmailAddress = EmailAddress;
     var MessageDataModel = (function () {
         function MessageDataModel() {
         }

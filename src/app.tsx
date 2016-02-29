@@ -39,8 +39,11 @@ class App extends React.Component<AppProps, AppState> {
         Utilities.ObjectAssign(this.state.settings, Utilities.Storage.getItem("settings")); // replace defaults with anything we find in storage.
 
         var here = document.location;
-        this.identity = new Kurve.Identity("b8dd3290-662a-4f91-92b9-3e70fbabe04e",
-            here.protocol + '//' + here.host + here.pathname.substring(0, here.pathname.lastIndexOf('/') + 1) + '../public/login.html');
+        this.identity = new Kurve.Identity({
+            clientId: "b8dd3290-662a-4f91-92b9-3e70fbabe04e",
+            tokenProcessingUri: here.protocol + '//' + here.host + here.pathname.substring(0, here.pathname.lastIndexOf('/') + 1) + '../public/login.html',
+            version: null
+        });
         this.graph = new Kurve.Graph({ identity: this.identity });
         this.me = null;
 

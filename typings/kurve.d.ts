@@ -46,6 +46,7 @@ declare module Kurve {
         GivenName: string;
         Name: string;
         PreferredUsername: string;
+        FullToken: any;
     }
     class Identity {
         authContext: any;
@@ -64,7 +65,13 @@ declare module Kurve {
         private tokenCache;
         private logonUser;
         private refreshTimer;
-        constructor(clientId?: string, tokenProcessingUri?: string, version?: OAuthVersion);
+        private policy;
+        private tenant;
+        constructor(identitySettings: {
+            clientId: string;
+            tokenProcessingUri: string;
+            version: OAuthVersion;
+        });
         checkForIdentityRedirect(): boolean;
         private decodeIdToken(idToken);
         private decodeAccessToken(accessToken, resource?, scopes?);
@@ -76,8 +83,16 @@ declare module Kurve {
         getAccessToken(resource: string, callback: (token: string, error: Error) => void): void;
         getAccessTokenForScopesAsync(scopes: string[], promptForConsent?: boolean): Promise<string, Error>;
         getAccessTokenForScopes(scopes: string[], promptForConsent: boolean, callback: (token: string, error: Error) => void): void;
-        loginAsync(scopes?: string[]): Promise<void, Error>;
-        login(callback: (error: Error) => void, scopes?: string[]): void;
+        loginAsync(loginSettings?: {
+            scopes?: string[];
+            policy?: string;
+            tenant?: string;
+        }): Promise<void, Error>;
+        login(callback: (error: Error) => void, loginSettings?: {
+            scopes?: string[];
+            policy?: string;
+            tenant?: string;
+        }): void;
         loginNoWindowAsync(toUrl?: string): Promise<void, Error>;
         loginNoWindow(callback: (error: Error) => void, toUrl?: string): void;
         logOut(): void;
@@ -194,20 +209,23 @@ declare module Kurve {
         constructor(graph: Kurve.Graph, _data: User[]);
         data: User[];
     }
-    class EmailAddress {
-        name: string;
-        address: string;
-    }
     interface ItemBody {
         contentType: string;
         content: string;
     }
+    interface EmailAddress {
+        name: string;
+        address: string;
+    }
+    interface Mailbox {
+        emailAddress: EmailAddress;
+    }
     class MessageDataModel {
-        bccRecipients: string[];
+        bccRecipients: Mailbox[];
         body: ItemBody;
         bodyPreview: string;
         categories: string[];
-        ccRecipients: string[];
+        ccRecipients: Mailbox[];
         changeKey: string;
         conversationId: string;
         createdDateTime: string;
@@ -227,7 +245,7 @@ declare module Kurve {
         sender: any;
         sentDateTime: string;
         subject: string;
-        toRecipients: string[];
+        toRecipients: Mailbox[];
         webLink: string;
     }
     class Message {
