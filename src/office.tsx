@@ -254,8 +254,11 @@ export class MessageView extends React.Component<MessageViewProps, any>
     }
 */
     private mailboxLine(mailboxes: Kurve.Mailbox[], style: React.CSSProperties, prefix: string) {
-       var mailboxLine = mailboxes.reduce((p, c) => { return c.emailAddress.name + (p ? ';' : ''); }, null);
-       return mailboxLine && <p style={ style }> { prefix }: {mailboxLine}</p> || "";
+       var mailboxLine = mailboxes.reduce((p, c) => { return (p ? p + "; " : "") + c.emailAddress.name; }, null);
+       if (mailboxLine) {
+           return <p style={ style }> { prefix }: { mailboxLine }</p>;
+       }
+       return null;
     }
     
     public scrollToTop() {
