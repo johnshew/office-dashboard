@@ -166,9 +166,11 @@ export function ShortTimeString(dateString: string)
     var date = new Date(dateString);
 
     if (date.toDateString() === today.toDateString()) {
-        var hours = date.getHours() + 1;
+        var hours = date.getHours();
         var suffix = " AM";
-        if (hours > 12) {
+        if (hours == 0) {
+            hours = 12;
+        } else if (hours >= 12) {
             suffix = " PM";
             hours -= 12;       
         }
