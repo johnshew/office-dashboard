@@ -76,20 +76,23 @@
 
     <!-- Modal HTML -->
 
+    <div id="LookHere" style="position: absolute; top: 50px; bottom: 0px; overflow: hidden">
 
-    <div class="container-fluid tight">
+        <div class="container-fluid tight">
 
-        <div id="App" class="row tight">
-        </div>
+            <div id="App" class="row tight">
+            </div>
 
-        <!-- Div for mini console on Tesla browser -->
-        <div class="row tight">
-            <div id="DebugConsole" class="row tight" style="display: none">
-                <div id="DebugLog" style="margin: 10px; padding: 10px; background: SkyBlue"></div>
-                <div style="margin: 0px; padding: 10px">
-                    <input id="DebugCommand" type="text" placeholder="> " style="width: 100%" />
+            <!-- Div for mini console on Tesla browser -->
+            <div class="row tight">
+                <div id="DebugConsole" class="row tight" style="width=100%; overflow: auto; display: none">
+                    <div id="DebugLog" style="margin: 10px; padding: 10px; background: SkyBlue"></div>
+                    <div style="margin: 0px; padding: 10px">
+                        <input id="DebugCommand" type="text" placeholder="> " style="width: 100%" />
+                    </div>
                 </div>
             </div>
+
         </div>
 
     </div>

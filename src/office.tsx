@@ -66,11 +66,11 @@ const mailViewStyle: React.CSSProperties = {
     paddingLeft: 0
 }
 
-const mailListStyle: React.CSSProperties = {
-    minHeight: "100vh",
+const mailListStyle: React.CSSProperties = {    
     borderRight: "thin solid",
     paddingRight: 0,
-    paddingLeft: 0
+    paddingLeft: 0,
+    overflow: "auto"
 }
 
 const messageBodyStyle: React.CSSProperties = {
@@ -409,12 +409,12 @@ export class Mail extends React.Component<MailProps, MailState>
 
         return (
             <div>
-            <div className="col-xm-12 col-sm-6 col-lg-3" style={ mailListStyle }>
+            <div className="col-xs-12 col-sm-4 col-lg-3" style={ mailListStyle }>
                 <div>
                     <MailList onSelection={ this.handleSelection } selected={ this.state.selected } data={ this.props.data } />
                     </div>
                 </div>
-            <div className="col-sm-12 col-sm-6 col-lg-9" style={ mailViewStyle }>
+            <div className="col-xs-12 col-sm-8 col-lg-9" style={ mailViewStyle }>
                 <MessageView ref={ (c)=>this.messageView=c } message={this.selectedMessage() }/>
                 </div>
                 </div>
@@ -460,12 +460,12 @@ export class Calendar extends React.Component<CalendarProps, CalendarState>
 
         return (
             <div>
-                <div className="col-xm-12 col-sm-6 col-lg-3" style={ mailListStyle }>
+                <div className="col-xs-12 col-sm-4 col-lg-3" style={ mailListStyle }>
                     <div>
                         <EventList onSelection={ this.handleSelection } selected={this.state.selected } data={ this.props.data } />
                     </div>                    
                 </div>
-                <div className="col-sm-12 col-sm-6 col-lg-9" style={ mailViewStyle }>
+                <div className="col-xs-12 col-sm-8 col-lg-9" style={ mailViewStyle }>
                     <EventView event={this.selectedCalendarEvent() } />
                 </div>
             </div>);
