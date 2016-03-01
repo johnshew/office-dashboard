@@ -4,6 +4,7 @@ import { SelectBox } from './selectbox';
 import * as ScopedStyles from './scopedStylePolyfill';
 
 import Combine = Utilities.Combine;
+import ShortTimeString = Utilities.ShortTimeString;
 
 const noOverflowStyle: React.CSSProperties = {
     overflow: 'hidden',
@@ -17,6 +18,21 @@ const bigStyle: React.CSSProperties = {
 const smallStyle: React.CSSProperties = {
     height: '12pt',
     fontSize: '10pt'
+}
+
+const summaryPreviewStyle: React.CSSProperties = {
+    width: '75%',
+    float: 'left'
+}
+
+const summaryDateStyle: React.CSSProperties = {
+    width: '25%',
+    textAlign: 'right',
+    float: 'left'
+}
+
+const clearStyle: React.CSSProperties = {
+    clear: 'both'
 }
 
 const tightStyle: React.CSSProperties = {
@@ -168,10 +184,12 @@ export class MailSummary extends React.Component<MailSummaryProps, any> {
         var d = this.props.message.data;
         return (
             <div onClick={ this.handleClick } style={ (this.props.selected) ? selectedSummaryStyle : summaryStyle } >
-                <p style={ big }>{(d.sender) ? d.sender.emailAddress.name : ""}</p>
-                <p style={ smallBold }>{this.props.message.data.subject}</p>
-                <p style={ small }>{this.props.message.data.bodyPreview}</p>
-                </div>
+              <p style={ big }>{(d.sender) ? d.sender.emailAddress.name : ""}</p>
+              <p style={ smallBold }>{d.subject}</p>
+              <p style={ Combine(small, summaryPreviewStyle) }>{d.bodyPreview}</p>    
+              <p style={ Combine(small, summaryDateStyle) }>{ ShortTimeString(d.receivedDateTime) }</p>
+              <div style={ clearStyle }/>
+            </div>
         );
     }
 }
@@ -288,6 +306,7 @@ export class MessageView extends React.Component<MessageViewProps, any>
                 { this.recipients(data.toRecipients , small, "To" ) }
                 { this.recipients(data.ccRecipients , small, "Cc" ) }
                 { this.recipients(data.bccRecipients, small, "Bcc") }
+                <p style={ small }>{ ShortTimeString(data.receivedDateTime) }</p>
               </div>
               <div style={ messageBody } dangerouslySetInnerHTML={ CleanUp(body) }>
               </div>

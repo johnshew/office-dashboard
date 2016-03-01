@@ -157,3 +157,27 @@ export function LocalConsoleInitialize()
 {
     LocalConsole = new DebugConsole();
 }
+
+export enum Days { Mon = 1, Tue, Wed, Thu, Fri, Sat, Sun }
+
+export function ShortTimeString(dateString: string)
+{
+    var today = new Date();
+    var date = new Date(dateString);
+
+    if (date.toDateString() === today.toDateString()) {
+        var hours = date.getHours() + 1;
+        var suffix = " AM";
+        if (hours > 12) {
+            suffix = " PM";
+            hours -= 12;       
+        }
+        var minutes = date.getMinutes().toString();
+        if (minutes.length == 1) {
+            minutes = "0" + minutes;
+        }
+        return hours + ":" + minutes + suffix;
+    } else {
+        return Days[date.getDay()] + " " + date.getMonth() + "/" + date.getDate();        
+    }
+}
