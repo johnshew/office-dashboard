@@ -109,7 +109,7 @@ class DateSpan {
 
 export class EventSummary extends React.Component<EventSummaryProps, any> {
     private handleClick = (e: React.SyntheticEvent) => {
-        this.props.onSelect(this.props.event["id"]);
+        this.props.onSelect(this.props.event.id);
     };
     render() {
         var big = Combine(bigStyle, noOverflowStyle, tightStyle, this.props.style);
@@ -121,7 +121,7 @@ export class EventSummary extends React.Component<EventSummaryProps, any> {
         var startTime = new Date(d.start.dateTime + 'Z').toLocaleTimeString().replace(/\u200E/g, "").replace(/:\d\d\s/, " ");
         var span = new DateSpan(d.end.dateTime, d.start.dateTime);
         var duration = ((span.days != 0) ? span.days + " days " : "") + (span.hours != 0 ? span.hours + " hours " : "") + (span.minutes != 0 ? span.minutes + " mins " : "");        
-        var location = d.location && d.location["displayName"];
+        var location = d.location && d.location.displayName;
         var organizer = d.organizer && d.organizer.emailAddress && d.organizer.emailAddress.name;
         
         return (
@@ -156,7 +156,7 @@ export class EventList extends React.Component<EventListProps, any> {
             return (
                 <div>
                   { dateSeparator }
-                  <EventSummary onSelect={ this.handleSelect } selected={ this.props.selected === event["id"] } key={ event["id"]} event={ event } />
+                  <EventSummary onSelect={ this.handleSelect } selected={ this.props.selected === event.id } key={ event.id} event={ event } />
                 </div>
                 );
         });
@@ -292,8 +292,7 @@ export class MessageView extends React.Component<MessageViewProps, any>
         var subject =  message.subject || "";
         var from =  message.sender && message.sender.emailAddress && message.sender.emailAddress.name || "";
         var body = message.body && message.body.content || "";
-        var isText = message.body && message.body.contentType === "text";
-        if (isText) {
+        if (message.body && message.body.contentType === "text") {
             messageBody = Combine(messageBody, plainTextStyle);
         } 
         return (
@@ -339,12 +338,16 @@ export class EventView extends React.Component<EventViewProps, any>
         var small = Combine(smallStyle, noOverflowStyle, this.props.style);
         var smallEmphasis = Combine(smallStyle, emphasisStyle, noOverflowStyle, this.props.style);
         var smallScrolling = Combine(smallStyle, this.props.style);
-        var data = this.props.event && this.props.event;
-        if (!data) { return null; }
-        var subject = data.subject || "";
-        var organizer = data.organizer && data.organizer.emailAddress && data.organizer.emailAddress.name || "";
+        var messageBody = Combine(messageBodyStyle, this.props.style);
+        var event = this.props.event;
+        if (!event) { return null; }
+        var subject = event.subject || "";
+        var organizer = event.organizer && event.organizer.emailAddress && event.organizer.emailAddress.name || "";
         var attendees = this.attendees() || "";
-        var body = data.body && this.props.event.body["content"] || ""; //TODO Fix Kurve
+        var body = event.body && event.body.content || "";
+        if (event.body && event.body.contentType === "text") {
+            messageBody = Combine(messageBody, plainTextStyle);
+        } 
         return (
             <div>
               <div className="well" style={  { padding: 10 } }>
@@ -352,7 +355,7 @@ export class EventView extends React.Component<EventViewProps, any>
                 <p style={ smallEmphasis }>{subject}</p>
                 <p style={ small }>{attendees}</p>
               </div>
-              <div style={  { paddingRight: 10, paddingLeft: 10 } } dangerouslySetInnerHTML={ CleanUp(body) } />
+              <div style={ messageBody } dangerouslySetInnerHTML={ CleanUp(body) } />
             </div>
         );
     }
@@ -447,7 +450,7 @@ export class Calendar extends React.Component<CalendarProps, CalendarState>
     }
 
     private selectedCalendarEvent(): Kurve.EventDataModel {
-        var found = this.props.events.filter(event => (event["id"] === this.state.selected));
+        var found = this.props.events.filter(event => (event.id === this.state.selected));
         return (found.length > 0) ? found[0] : null;
     }
 

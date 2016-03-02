@@ -276,6 +276,10 @@ declare module Kurve {
         response: string;
         time: string;
     }
+    interface Location {
+        displayName: string;
+        address: any;
+    }
     class EventDataModel {
         attendees: Attendee[];
         body: ItemBody;
@@ -286,6 +290,7 @@ declare module Kurve {
         end: DateTimeTimeZone;
         hasAttachments: boolean;
         iCalUId: string;
+        id: string;
         IDBCursor: string;
         importance: string;
         isAllDay: boolean;
