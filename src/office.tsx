@@ -84,7 +84,7 @@ const plainTextStyle: React.CSSProperties = {
 
 interface EventSummaryProps extends React.Props<EventSummary> {
     key: string;
-    item: Kurve.Event;
+    event: Kurve.Event;
     style?: Object;
     selected?: boolean;
     onSelect?(messageId: string);
@@ -109,13 +109,13 @@ class DateSpan {
 
 export class EventSummary extends React.Component<EventSummaryProps, any> {
     private handleClick = (e: React.SyntheticEvent) => {
-        this.props.onSelect(this.props.item.data["id"]);
+        this.props.onSelect(this.props.event.data["id"]);
     };
     render() {
         var big = Combine(bigStyle, noOverflowStyle, tightStyle, this.props.style);
         var small = Combine(smallStyle, noOverflowStyle, tightStyle, this.props.style);
         var smallBold = Combine(small, emphasisStyle);
-        var d = this.props.item.data;
+        var d = this.props.event.data;
         if (d.start.timeZone != "UTC") throw "Unexpected date format";
         
         var startTime = new Date(d.start.dateTime + 'Z').toLocaleTimeString().replace(/\u200E/g, "").replace(/:\d\d\s/, " ");
@@ -135,7 +135,7 @@ export class EventSummary extends React.Component<EventSummaryProps, any> {
 }
 
 interface EventListProps extends React.Props<EventList> {
-    data: Kurve.Event[];
+    events: Kurve.Event[];
     selected?: string;
     onSelection?(id: string);
 }
@@ -149,18 +149,18 @@ export class EventList extends React.Component<EventListProps, any> {
     };
     render() {
         var lastDate = "";
-        var items = this.props.data.map((item) => {
-            var date = new Date(item.data.start.dateTime);
-            var dateSeperator = ((date.toDateString() != lastDate) ? <div style= { informationStyle }> { date.toDateString() } </div> : <div></div>);
+        var eventSummaries = this.props.events.map(event => {
+            var date = new Date(event.data.start.dateTime);
+            var dateSeparator = ((date.toDateString() != lastDate) ? <div style= { informationStyle }>{ date.toDateString() }</div> : <div/>);
             lastDate = date.toDateString();
-            return (<div>
-                { dateSeperator }
-                <EventSummary  onSelect= { this.handleSelect } selected= { this.props.selected === item.data["id"]}  key= { item.data["id"]} item= { item } />
+            return (
+                <div>
+                  { dateSeparator }
+                  <EventSummary onSelect={ this.handleSelect } selected={ this.props.selected === event.data["id"] } key={ event.data["id"]} event={ event } />
                 </div>
                 );
-        
         });
-        return <div> { items } </div>;
+        return <div>{ eventSummaries }</div>;
     }
 }
 
@@ -188,14 +188,14 @@ export class MailSummary extends React.Component<MailSummaryProps, any> {
               <p style={ smallBold }>{d.subject}</p>
               <p style={ Combine(small, summaryPreviewStyle) }>{d.bodyPreview}</p>    
               <p style={ Combine(small, summaryDateStyle) }>{ ShortTimeString(d.receivedDateTime) }</p>
-              <div style={ clearStyle }/>
+              <div style={ clearStyle }/>
             </div>
         );
     }
 }
 
 interface MailListProps extends React.Props<MailList> {
-    data: Kurve.Message[];
+    messages: Kurve.Message[];
     selected?: string;
     onSelection?(id: string);
 }
@@ -208,12 +208,10 @@ export class MailList extends React.Component<MailListProps, any> {
         this.props.onSelection(id);
     };
     render() {
-        var messageNodes = this.props.data.map((message) => {
-            return (<MailSummary  onSelect={this.handleSelect} selected={ this.props.selected === message.data.id}  key={message.data.id} message={message}/>);
-        });
-        return <div>
-            { messageNodes }
-            </div>;
+        var messageSummaries = this.props.messages.map(message =>
+            <MailSummary onSelect={this.handleSelect} selected={ this.props.selected === message.data.id} key={message.data.id} message={message}/>
+        );
+        return <div>{ messageSummaries }</div>;
     }
 }
 
@@ -308,8 +306,7 @@ export class MessageView extends React.Component<MessageViewProps, any>
                 { this.recipients(data.bccRecipients, small, "Bcc") }
                 <p style={ small }>{ ShortTimeString(data.receivedDateTime) }</p>
               </div>
-              <div style={ messageBody } dangerouslySetInnerHTML={ CleanUp(body) }>
-              </div>
+              <div style={ messageBody } dangerouslySetInnerHTML={ CleanUp(body) } />
             </div>
         );
     }
@@ -354,17 +351,16 @@ export class EventView extends React.Component<EventViewProps, any>
                 <p style={ big }>{organizer}</p>
                 <p style={ smallEmphasis }>{subject}</p>
                 <p style={ small }>{attendees}</p>
-                  </div>
-              <div style={  { paddingRight: 10, paddingLeft: 10 } } dangerouslySetInnerHTML={ CleanUp(body) }>
-                  </div>
-                </div>
+              </div>
+              <div style={  { paddingRight: 10, paddingLeft: 10 } } dangerouslySetInnerHTML={ CleanUp(body) } />
+            </div>
         );
     }
 }
 
 
 interface MailProps extends React.Props<Mail> {
-    data: Kurve.Message[];
+    messages: Kurve.Message[];
     mailboxes: string[];
 }
 
@@ -394,30 +390,29 @@ export class Mail extends React.Component<MailProps, MailState>
 
     private handleSelection = (id: string) => {
         this.setState({ selected: id });
-        this.messageView.scrollToTop();                
+        this.messageView.scrollToTop();
     }
 
     private selectedMessage(): Kurve.Message {
-        var found = this.props.data.filter((message) => (message.data.id === this.state.selected));
+        var found = this.props.messages.filter((message) => (message.data.id === this.state.selected));
         return (found.length > 0) ? found[0] : null;
     }
 
     render() {
-        var options = this.props.mailboxes.map((mailboxName) => {
-            return <option value={mailboxName}>{mailboxName}</option>
-        });
-
+/*
+        var options = this.props.mailboxes.map(mailboxName =>
+            <option value={mailboxName}>{mailboxName}</option>
+        );
+*/
         return (
             <div>
-            <div className="col-xm-12 col-sm-6 col-lg-3" style={ mailListStyle }>
-                <div>
-                    <MailList onSelection={ this.handleSelection } selected={ this.state.selected } data={ this.props.data } />
-                    </div>
-                </div>
-            <div className="col-sm-12 col-sm-6 col-lg-9" style={ mailViewStyle }>
+              <div className="col-xm-12 col-sm-6 col-lg-3" style={ mailListStyle }>
+                <MailList onSelection={ this.handleSelection } selected={ this.state.selected } messages={ this.props.messages } />
+              </div>
+              <div className="col-sm-12 col-sm-6 col-lg-9" style={ mailViewStyle }>
                 <MessageView ref={ (c)=>this.messageView=c } message={this.selectedMessage() }/>
-                </div>
-                </div>
+              </div>
+            </div>
         );
     }
 }
@@ -430,7 +425,7 @@ export class Mail extends React.Component<MailProps, MailState>
 
 
 interface CalendarProps extends React.Props<Calendar> {
-    data: Kurve.Event[];
+    events: Kurve.Event[];
 }
 
 interface CalendarState {
@@ -452,7 +447,7 @@ export class Calendar extends React.Component<CalendarProps, CalendarState>
     }
 
     private selectedCalendarEvent(): Kurve.Event {
-        var found = this.props.data.filter((message) => (message.data["id"] === this.state.selected));
+        var found = this.props.events.filter(event => (event.data["id"] === this.state.selected));
         return (found.length > 0) ? found[0] : null;
     }
 
@@ -461,14 +456,13 @@ export class Calendar extends React.Component<CalendarProps, CalendarState>
         return (
             <div>
                 <div className="col-xm-12 col-sm-6 col-lg-3" style={ mailListStyle }>
-                    <div>
-                        <EventList onSelection={ this.handleSelection } selected={this.state.selected } data={ this.props.data } />
-                    </div>                    
+                    <EventList onSelection={ this.handleSelection } selected={ this.state.selected } events={ this.props.events } />
                 </div>
                 <div className="col-sm-12 col-sm-6 col-lg-9" style={ mailViewStyle }>
                     <EventView event={this.selectedCalendarEvent() } />
                 </div>
-            </div>);
+            </div>
+            );
             
     }
 }
