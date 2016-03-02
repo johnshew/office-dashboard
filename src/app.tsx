@@ -3,6 +3,7 @@ import * as ReactDOM from 'react-dom';
 import * as Utilities from './utilities';
 import { Mail, Calendar} from './office';
 import { Settings, SettingsValues } from './settings';
+import { About } from './about';
 
 
 enum ShowState { Welcome, Mail, Calendar, Contacts, Notes };
@@ -80,6 +81,7 @@ class App extends React.Component<AppProps, AppState> {
                 { mail }
                 { calendar }
                 <Settings onChange={ this.handleSettingsChange } values={ this.state.settings }/>
+                <About/>
                 </div>
         );
     }
