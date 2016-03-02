@@ -272,7 +272,6 @@ class App extends React.Component<AppProps, AppState> {
     }
 }
 
-
 var app = ReactDOM.render(<App />, document.getElementById("App"));
 window["myapp"] = app;
 
