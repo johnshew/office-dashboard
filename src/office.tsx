@@ -61,26 +61,38 @@ const informationStyle = Combine(summaryStyle, {
     backgroundColor: "LightGrey"
 });
 
-const mailViewStyle: React.CSSProperties = {
-    paddingRight: 0,
-    paddingLeft: 0
-}
 
-const mailListStyle: React.CSSProperties = {    
+const listStyle: React.CSSProperties = {
+    height: "100%",
     borderRight: "thin solid",
     paddingRight: 0,
     paddingLeft: 0,
     overflow: "auto"
 }
 
-const messageBodyStyle: React.CSSProperties = {
+const mailViewStyle: React.CSSProperties = {
+    height: "100%",
+    paddingRight: 0,
+    paddingLeft: 0,
+    overflow: "auto"
+}
+
+const bodyStyle: React.CSSProperties = {
     paddingRight: 10,
-    paddingLeft: 10
+    paddingLeft: 10,
 }
 
 const plainTextStyle: React.CSSProperties = {
     whiteSpace: "pre-wrap"
 }
+
+const scrollingContentStyle: React.CSSProperties = {
+    position: "absolute", 
+    width: "100%", 
+    top: "50px", 
+    bottom: "0px"
+}
+
 
 interface EventSummaryProps extends React.Props<EventSummary> {
     key: string;
@@ -89,6 +101,7 @@ interface EventSummaryProps extends React.Props<EventSummary> {
     selected?: boolean;
     onSelect?(messageId: string);
 }
+
 
 class DateSpan {
     public days: number;
@@ -104,7 +117,7 @@ class DateSpan {
         this.days = Math.floor(this.hours / 24);
         this.hours -= this.days * 24;
         this.minutes -= ((this.days * 24) + this.hours) * 60;
-    }       
+    }
 }
 
 export class EventSummary extends React.Component<EventSummaryProps, any> {
@@ -117,19 +130,19 @@ export class EventSummary extends React.Component<EventSummaryProps, any> {
         var smallBold = Combine(small, emphasisStyle);
         var d = this.props.event;
         if (d.start.timeZone != "UTC") throw "Unexpected date format";
-        
+
         var startTime = new Date(d.start.dateTime + 'Z').toLocaleTimeString().replace(/\u200E/g, "").replace(/:\d\d\s/, " ");
         var span = new DateSpan(d.end.dateTime, d.start.dateTime);
-        var duration = ((span.days != 0) ? span.days + " days " : "") + (span.hours != 0 ? span.hours + " hours " : "") + (span.minutes != 0 ? span.minutes + " mins " : "");        
+        var duration = ((span.days != 0) ? span.days + " days " : "") + (span.hours != 0 ? span.hours + " hours " : "") + (span.minutes != 0 ? span.minutes + " mins " : "");
         var location = d.location && d.location.displayName;
         var organizer = d.organizer && d.organizer.emailAddress && d.organizer.emailAddress.name;
-        
+
         return (
             <div onClick={ this.handleClick } style={ (this.props.selected) ? selectedSummaryStyle : summaryStyle } >
                 <p style={ big }>{startTime + (duration ? " / " + duration : "") }</p>
                 { d.subject ? <p style={ smallBold }> { d.subject } </p> : null }
                 { location ? <p style={ small }>{ location }</p> : null}
-            </div>
+                </div>
         );
     }
 }
@@ -157,8 +170,8 @@ export class EventList extends React.Component<EventListProps, any> {
                 <div>
                   { dateSeparator }
                   <EventSummary onSelect={ this.handleSelect } selected={ this.props.selected === event.id } key={ event.id} event={ event } />
-                </div>
-                );
+                    </div>
+            );
         });
         return <div>{ eventSummaries }</div>;
     }
@@ -186,10 +199,10 @@ export class MailSummary extends React.Component<MailSummaryProps, any> {
             <div onClick={ this.handleClick } style={ (this.props.selected) ? selectedSummaryStyle : summaryStyle } >
               <p style={ big }>{(message.sender) ? message.sender.emailAddress.name : ""}</p>
               <p style={ smallBold }>{message.subject}</p>
-              <p style={ Combine(small, summaryPreviewStyle) }>{message.bodyPreview}</p>    
+              <p style={ Combine(small, summaryPreviewStyle) }>{message.bodyPreview}</p>
               <p style={ Combine(small, summaryDateStyle) }>{ ShortTimeString(message.receivedDateTime) }</p>
               <div style={ clearStyle }/>
-            </div>
+                </div>
         );
     }
 }
@@ -263,22 +276,22 @@ interface MessageViewProps extends React.Props<MessageView> {
 
 export class MessageView extends React.Component<MessageViewProps, any>
 {
-    private Header : HTMLDivElement;
+    private Header: HTMLDivElement;
     
-/*    private check(text: string) {
-        return (text != null) ? text : "";
-    }
-*/
+    /*    private check(text: string) {
+            return (text != null) ? text : "";
+        }
+    */
     private recipients(mailboxes: Kurve.Recipient[], style: React.CSSProperties, prefix: string) {
-       var recipientList = mailboxes.reduce((p, c) => { return (p ? p + "; " : "") + c.emailAddress.name; }, null);
-       if (recipientList) {
-           return <p style={ style }> { prefix }: { recipientList }</p>;
-       }
-       return null;
+        var recipientList = mailboxes.reduce((p, c) => { return (p ? p + "; " : "") + c.emailAddress.name; }, null);
+        if (recipientList) {
+            return <p style={ style }> { prefix }: { recipientList }</p>;
+        }
+        return null;
     }
-    
+
     public scrollToTop() {
-        try { this.Header.scrollIntoView(); } catch(err) { }
+        try { this.Header.scrollIntoView(); } catch (err) { }
     }
 
     render() {
@@ -286,27 +299,27 @@ export class MessageView extends React.Component<MessageViewProps, any>
         var small = Combine(smallStyle, noOverflowStyle, this.props.style);
         var smallEmphasis = Combine(smallStyle, emphasisStyle, noOverflowStyle, this.props.style);
         var smallScrolling = Combine(smallStyle, this.props.style);
-        var messageBody = Combine(messageBodyStyle, this.props.style);
+        var messageBody = Combine(bodyStyle, this.props.style);
         var message = this.props.message;
         if (!message) { return null; }
-        var subject =  message.subject || "";
-        var from =  message.sender && message.sender.emailAddress && message.sender.emailAddress.name || "";
+        var subject = message.subject || "";
+        var from = message.sender && message.sender.emailAddress && message.sender.emailAddress.name || "";
         var body = message.body && message.body.content || "";
         if (message.body && message.body.contentType === "text") {
             messageBody = Combine(messageBody, plainTextStyle);
-        } 
+        }
         return (
             <div>
-              <div ref={(c)=>{this.Header = c;}}  className="well" style={  { padding: 10 } }>
+              <div ref={(c) => { this.Header = c; } }  className="well" style={  { padding: 10 } }>
                 <p style={ big }>{from}</p>
                 <p style={ smallEmphasis }>{subject}</p>
-                { this.recipients(message.toRecipients , small, "To" ) }
-                { this.recipients(message.ccRecipients , small, "Cc" ) }
+                { this.recipients(message.toRecipients, small, "To") }
+                { this.recipients(message.ccRecipients, small, "Cc") }
                 { this.recipients(message.bccRecipients, small, "Bcc") }
                 <p style={ small }>{ ShortTimeString(message.receivedDateTime) }</p>
-              </div>
+                  </div>
               <div style={ messageBody } dangerouslySetInnerHTML={ CleanUp(body) } />
-            </div>
+                </div>
         );
     }
 }
@@ -327,7 +340,7 @@ export class EventView extends React.Component<EventViewProps, any>
     private attendees() {
         var x = this.props.event.attendees;
         return x.reduce((p, a) => {
-            var result = ((p != null) ? p + '; ' : '') + a. emailAddress.name;
+            var result = ((p != null) ? p + '; ' : '') + a.emailAddress.name;
             return result;
         }, null);
         return "";
@@ -338,7 +351,7 @@ export class EventView extends React.Component<EventViewProps, any>
         var small = Combine(smallStyle, noOverflowStyle, this.props.style);
         var smallEmphasis = Combine(smallStyle, emphasisStyle, noOverflowStyle, this.props.style);
         var smallScrolling = Combine(smallStyle, this.props.style);
-        var messageBody = Combine(messageBodyStyle, this.props.style);
+        var messageBody = Combine(bodyStyle, this.props.style);
         var event = this.props.event;
         if (!event) { return null; }
         var subject = event.subject || "";
@@ -347,16 +360,16 @@ export class EventView extends React.Component<EventViewProps, any>
         var body = event.body && event.body.content || "";
         if (event.body && event.body.contentType === "text") {
             messageBody = Combine(messageBody, plainTextStyle);
-        } 
+        }
         return (
             <div>
               <div className="well" style={  { padding: 10 } }>
                 <p style={ big }>{organizer}</p>
                 <p style={ smallEmphasis }>{subject}</p>
                 <p style={ small }>{attendees}</p>
-              </div>
+                  </div>
               <div style={ messageBody } dangerouslySetInnerHTML={ CleanUp(body) } />
-            </div>
+                </div>
         );
     }
 }
@@ -365,6 +378,7 @@ export class EventView extends React.Component<EventViewProps, any>
 interface MailProps extends React.Props<Mail> {
     messages: Kurve.MessageDataModel[];
     mailboxes: string[];
+    scroll: boolean;
 }
 
 interface MailState {
@@ -376,8 +390,8 @@ interface MailState {
 export class Mail extends React.Component<MailProps, MailState>
 {
     private values: any[];
-    private mailViewRef : any;
-    private messageView : MessageView;
+    private mailViewRef: any;
+    private messageView: MessageView;
 
     constructor(props, state) {
         super(props, state);
@@ -402,20 +416,21 @@ export class Mail extends React.Component<MailProps, MailState>
     }
 
     render() {
-/*
-        var options = this.props.mailboxes.map(mailboxName =>
-            <option value={mailboxName}>{mailboxName}</option>
-        );
-*/
+        /*
+                var options = this.props.mailboxes.map(mailboxName =>
+                    <option value={mailboxName}>{mailboxName}</option>
+                );
+        */
+        var contentLayoutStyle = (this.props.scroll) ? scrollingContentStyle : {}; 
         return (
-            <div>
-              <div className="col-xs-12 col-sm-4 col-lg-3" style={ mailListStyle }>
+            <div style={ contentLayoutStyle }>
+              <div className="col-xs-12 col-sm-4 col-lg-3" style={ listStyle }>
                 <MailList onSelection={ this.handleSelection } selected={ this.state.selected } messages={ this.props.messages } />
-              </div>
+                  </div>
               <div className="col-xs-12 col-sm-8 col-lg-9" style={ mailViewStyle }>
-                <MessageView ref={ (c)=>this.messageView=c } message={this.selectedMessage() }/>
-              </div>
-            </div>
+                <MessageView ref={ (c) => this.messageView = c } message={this.selectedMessage() }/>
+                  </div>
+                </div>
         );
     }
 }
@@ -429,6 +444,7 @@ export class Mail extends React.Component<MailProps, MailState>
 
 interface CalendarProps extends React.Props<Calendar> {
     events: Kurve.EventDataModel[];
+    scroll: boolean;
 }
 
 interface CalendarState {
@@ -455,18 +471,18 @@ export class Calendar extends React.Component<CalendarProps, CalendarState>
     }
 
     render() {
-
+        var contentLayoutStyle = (this.props.scroll) ? scrollingContentStyle : {}; 
         return (
-            <div>
-                <div className="col-xs-12 col-sm-4 col-lg-3" style={ mailListStyle }>
+            <div style={ contentLayoutStyle }>
+                <div className="col-xs-12 col-sm-4 col-lg-3" style={ listStyle }>
                     <EventList onSelection={ this.handleSelection } selected={ this.state.selected } events={ this.props.events } />
-                </div>
+                    </div>
                 <div className="col-xs-12 col-sm-8 col-lg-9" style={ mailViewStyle }>
                     <EventView event={this.selectedCalendarEvent() } />
+                    </div>
                 </div>
-            </div>
-            );
-            
+        );
+
     }
 }
 
