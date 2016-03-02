@@ -35,7 +35,7 @@ class App extends React.Component<AppProps, AppState> {
     constructor() {
         super();
         console.log('App initializing');
-        var InitialState = { messages: [], messageIdToIndex: {}, events: [], eventIdToIndex: {}, show: ShowState.Welcome, settings: { noScroll: true, inplace: false, console: false, refreshIntervalSeconds: 0 } };
+        var InitialState = { messages: [], messageIdToIndex: {}, events: [], eventIdToIndex: {}, show: ShowState.Welcome, settings: { scroll: false, inplace: false, console: false, refreshIntervalSeconds: 0 } };
         this.state = InitialState;
         Utilities.ObjectAssign(this.state.settings, Utilities.Storage.getItem("settings")); // replace defaults with anything we find in storage.
 
@@ -73,8 +73,8 @@ class App extends React.Component<AppProps, AppState> {
 
     public render() {
         var welcome = (this.state.show == ShowState.Welcome) ? <div className="jumbotron"> <h2> { "Welcome" }</h2> <p> { "Please login to access your information" } </p> </div> : null;
-        var mail = (this.state.show == ShowState.Mail) ? <Mail messages={ this.state.messages } scroll={ !this.state.settings.noScroll } mailboxes={["inbox", "sent items"]}/> : null;
-        var calendar = (this.state.show == ShowState.Calendar) ? <Calendar events={ this.state.events } scroll={ !this.state.settings.noScroll } /> : null;
+        var mail = (this.state.show == ShowState.Mail) ? <Mail messages={ this.state.messages } scroll={ this.state.settings.scroll } mailboxes={["inbox", "sent items"]}/> : null;
+        var calendar = (this.state.show == ShowState.Calendar) ? <Calendar events={ this.state.events } scroll={ this.state.settings.scroll } /> : null;
         return (
             <div>
                 { welcome }

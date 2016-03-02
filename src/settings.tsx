@@ -3,7 +3,7 @@ import * as Utilities from './utilities';
 import { SelectBox } from './selectbox';
 
 export interface SettingsValues {
-    noScroll: boolean;
+    scroll: boolean;
     inplace: boolean;
     console: boolean;
     refreshIntervalSeconds: number;
@@ -25,9 +25,9 @@ export class Settings extends React.Component<SettingsProps, any> {
         this.state = {}
     }
 
-    private handleNoScrollChange = (event) => {
+    private handleScrollChange = (event) => {
         var values = Utilities.ObjectAssign({}, this.props.values);
-        values.noScroll = event.target.checked;
+        values.scroll = event.target.checked;
         this.props.onChange(values);
     }
     private handleConsoleChange = (event) => {
@@ -59,7 +59,7 @@ export class Settings extends React.Component<SettingsProps, any> {
                                 <h4 className="modal-title">Settings</h4>
                                 </div>
                             <div className="modal-body">
-                                <input type="checkbox" checked={ values.noScroll } onChange={ this.handleNoScrollChange }/> Disable Scrolling <br/>
+                                <input type="checkbox" checked={ values.scroll } onChange={ this.handleScrollChange }/> Enable Scrolling <br/>
                                 <input type="checkbox" checked={ values.inplace } onChange={ this.handleInPlaceChange }/> Login without a new window <br/>
                                 <input type="checkbox" checked={ values.console } onChange={ this.handleConsoleChange }/> Show local debug console <br/>
                                 <input type="textbox" value={ (values.refreshIntervalSeconds === null) ? "" : values.refreshIntervalSeconds.toString() } onChange={ this.handleRefreshChange }/> Refresh interval (seconds) <br/>
