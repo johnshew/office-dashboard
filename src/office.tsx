@@ -70,7 +70,7 @@ const listStyle: React.CSSProperties = {
     overflow: "auto"
 }
 
-const mailViewStyle: React.CSSProperties = {
+const itemViewStyle: React.CSSProperties = {
     height: "100%",
     paddingRight: 0,
     paddingLeft: 0,
@@ -89,7 +89,7 @@ const plainTextStyle: React.CSSProperties = {
 const scrollingContentStyle: React.CSSProperties = {
     position: "absolute", 
     width: "100%", 
-    top: "50px", 
+    top: "51px", 
     bottom: "0px"
 }
 
@@ -427,7 +427,7 @@ export class Mail extends React.Component<MailProps, MailState>
               <div className="col-xs-12 col-sm-4 col-lg-3" style={ listStyle }>
                 <MailList onSelection={ this.handleSelection } selected={ this.state.selected } messages={ this.props.messages } />
                   </div>
-              <div className="col-xs-12 col-sm-8 col-lg-9" style={ mailViewStyle }>
+              <div className="col-xs-12 col-sm-8 col-lg-9" style={ itemViewStyle }>
                 <MessageView ref={ (c) => this.messageView = c } message={this.selectedMessage() }/>
                   </div>
                 </div>
@@ -477,7 +477,7 @@ export class Calendar extends React.Component<CalendarProps, CalendarState>
                 <div className="col-xs-12 col-sm-4 col-lg-3" style={ listStyle }>
                     <EventList onSelection={ this.handleSelection } selected={ this.state.selected } events={ this.props.events } />
                     </div>
-                <div className="col-xs-12 col-sm-8 col-lg-9" style={ mailViewStyle }>
+                <div className="col-xs-12 col-sm-8 col-lg-9" style={ itemViewStyle }>
                     <EventView event={this.selectedCalendarEvent() } />
                     </div>
                 </div>
