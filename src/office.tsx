@@ -188,7 +188,7 @@ export class MailSummary extends React.Component<MailSummaryProps, any> {
               <p style={ smallBold }>{d.subject}</p>
               <p style={ Combine(small, summaryPreviewStyle) }>{d.bodyPreview}</p>    
               <p style={ Combine(small, summaryDateStyle) }>{ ShortTimeString(d.receivedDateTime) }</p>
-              <div style={ clearStyle }/>
+              <div style={ clearStyle }/>
             </div>
         );
     }
