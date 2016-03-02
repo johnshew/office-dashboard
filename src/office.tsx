@@ -128,19 +128,19 @@ export class EventSummary extends React.Component<EventSummaryProps, any> {
         var big = Combine(bigStyle, noOverflowStyle, tightStyle, this.props.style);
         var small = Combine(smallStyle, noOverflowStyle, tightStyle, this.props.style);
         var smallBold = Combine(small, emphasisStyle);
-        var d = this.props.event;
-        if (d.start.timeZone != "UTC") throw "Unexpected date format";
+        var event = this.props.event;
+        if (event.start.timeZone != "UTC") throw "Unexpected date format";
 
-        var startTime = new Date(d.start.dateTime + 'Z').toLocaleTimeString().replace(/\u200E/g, "").replace(/:\d\d\s/, " ");
-        var span = new DateSpan(d.end.dateTime, d.start.dateTime);
+        var startTime = new Date(event.start.dateTime + 'Z').toLocaleTimeString().replace(/\u200E/g, "").replace(/:\d\d\s/, " ");
+        var span = new DateSpan(event.end.dateTime, event.start.dateTime);
         var duration = ((span.days != 0) ? span.days + " days " : "") + (span.hours != 0 ? span.hours + " hours " : "") + (span.minutes != 0 ? span.minutes + " mins " : "");
-        var location = d.location && d.location.displayName;
-        var organizer = d.organizer && d.organizer.emailAddress && d.organizer.emailAddress.name;
+        var location = event.location && event.location.displayName;
+        var organizer = event.organizer && event.organizer.emailAddress && event.organizer.emailAddress.name;
 
         return (
             <div onClick={ this.handleClick } style={ (this.props.selected) ? selectedSummaryStyle : summaryStyle } >
                 <p style={ big }>{startTime + (duration ? " / " + duration : "") }</p>
-                { d.subject ? <p style={ smallBold }> { d.subject } </p> : null }
+                { event.subject ? <p style={ smallBold }> { event.subject } </p> : null }
                 { location ? <p style={ small }>{ location }</p> : null}
                 </div>
         );
@@ -169,7 +169,7 @@ export class EventList extends React.Component<EventListProps, any> {
             return (
                 <div>
                   { dateSeparator }
-                  <EventSummary onSelect={ this.handleSelect } selected={ this.props.selected === event.id } key={ event.id} event={ event } />
+                  <EventSummary onSelect={ this.handleSelect } selected={ this.props.selected === event.id } key={ event.id } event={ event } />
                     </div>
             );
         });
