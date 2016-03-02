@@ -1196,7 +1196,7 @@ var Kurve;
         };
         Graph.prototype.eventsForUser = function (userPrincipalName, callback, odataQuery) {
             var scopes = [Scopes.Calendars.Read];
-            var urlString = this.buildUsersUrl() + "/" + userPrincipalName + "/events";
+            var urlString = this.buildUsersUrl() + "/" + userPrincipalName + "/calendarView";
             if (odataQuery)
                 urlString += "?" + odataQuery;
             this.getEvents(urlString, function (result, error) {

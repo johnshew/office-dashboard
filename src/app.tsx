@@ -132,11 +132,11 @@ class App extends React.Component<AppProps, AppState> {
         }
         console.log('Now getting calendar events.');
         var now = new Date(Date.now())
-        // https://graph.microsoft.com/v1.0/me/calendar/events?$select=subject,location,start,bodyPreview,organizer&$orderby=start/dateTime&$filter=start/dateTime gt '2016-01-20T00:00:00.0000000'
-        this.me.calendarAsync("$orderby=start/dateTime&$filter=start/dateTime gt '" + now.toUTCString() + "'")
+        var today = new Date();
+        var nextWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate()+7);
+        this.me.calendarAsync("$orderby=start/dateTime&startdateTime=" + now.toUTCString() + "&endDateTime=" + nextWeek.toUTCString())
             .then((events) => {
                 console.log('Got calendar.  Now rendering.');
-                // calendar.data.sort(sortBy((item: Kurve.Event) => Date.parse(item.data.start.dateTime)));
                 this.ProcessEvents([], {}, events);
             });
     }
