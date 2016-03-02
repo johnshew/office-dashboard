@@ -12,9 +12,9 @@ interface AppProps extends React.Props<App> {
 
 
 interface AppState {
-    messages?: Kurve.Message[];
+    messages?: Kurve.MessageDataModel[];
     messageIdToIndex?: Object;
-    events?: Kurve.Event[];
+    events?: Kurve.EventDataModel[];
     eventIdToIndex?: Object;
     show?: ShowState;
     settings?: SettingsValues;
@@ -140,13 +140,13 @@ class App extends React.Component<AppProps, AppState> {
             });
     }
 
-    private ProcessEvents(newEvents: Kurve.Event[], idMap: Object, events: Kurve.Events) {
+    private ProcessEvents(newEvents: Kurve.EventDataModel[], idMap: Object, events: Kurve.Events) {
         events.data.map(event => {
             var index = idMap[event.data["id"]];
             if (index) {
-                newEvents[index] = event; // do an update.
+                newEvents[index] = event.data; // do an update.
             } else {
-                idMap[event.data["id"]] = newEvents.push(event); // add it to the list and record index.
+                idMap[event.data["id"]] = newEvents.push(event.data); // add it to the list and record index.
             }
         });
         this.setState({ events: newEvents, eventIdToIndex: idMap });  // We have new data so update state and it will cause a render.
@@ -172,13 +172,13 @@ class App extends React.Component<AppProps, AppState> {
             });
     }
 
-    private ProcessMessages(newList: Kurve.Message[], idMap: Object, result: Kurve.Messages) {
+    private ProcessMessages(newList: Kurve.MessageDataModel[], idMap: Object, result: Kurve.Messages) {
         result.data.map(message => {
             var index = idMap[message.data.id];
             if (index) {
-                newList[index] = message; // do an update.
+                newList[index] = message.data; // do an update.
             } else {
-                idMap[message.data.id] = newList.push(message); // add it to the list and record index.
+                idMap[message.data.id] = newList.push(message.data); // add it to the list and record index.
             }
         });
 
