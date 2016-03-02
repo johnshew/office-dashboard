@@ -72,8 +72,8 @@ class App extends React.Component<AppProps, AppState> {
 
     public render() {
         var welcome = (this.state.show == ShowState.Welcome) ? <div className="jumbotron"> <h2> { "Welcome" }</h2> <p> { "Please login to access your information" } </p> </div> : null;
-        var mail = (this.state.show == ShowState.Mail) ? <Mail data={ this.state.messages } mailboxes={["inbox", "sent items"]}/> : null;
-        var calendar = (this.state.show == ShowState.Calendar) ? <Calendar data={ this.state.events } /> : null;
+        var mail = (this.state.show == ShowState.Mail) ? <Mail messages={ this.state.messages } mailboxes={["inbox", "sent items"]}/> : null;
+        var calendar = (this.state.show == ShowState.Calendar) ? <Calendar events={ this.state.events } /> : null;
         return (
             <div>
                 { welcome }
@@ -141,7 +141,7 @@ class App extends React.Component<AppProps, AppState> {
     }
 
     private ProcessEvents(newEvents: Kurve.Event[], idMap: Object, events: Kurve.Events) {
-        events.data.map((event) => {
+        events.data.map(event => {
             var index = idMap[event.data["id"]];
             if (index) {
                 newEvents[index] = event; // do an update.
@@ -173,19 +173,19 @@ class App extends React.Component<AppProps, AppState> {
     }
 
     private ProcessMessages(newList: Kurve.Message[], idMap: Object, result: Kurve.Messages) {
-        result.data.map((item) => {
-            var index = idMap[item.data["id"]];
+        result.data.map(message => {
+            var index = idMap[message.data.id];
             if (index) {
-                newList[index] = item; // do an update.
+                newList[index] = message; // do an update.
             } else {
-                idMap[item.data["id"]] = newList.push(item); // add it to the list and record index.
+                idMap[message.data.id] = newList.push(message); // add it to the list and record index.
             }
         });
 
         this.setState({ messages: newList, messageIdToIndex: idMap });
         if (newList.length < 40 && result.nextLink) {
-            result.nextLink().then((moreEvents) => {
-                this.ProcessMessages(newList, idMap, moreEvents);
+            result.nextLink().then(moreMessages => {
+                this.ProcessMessages(newList, idMap, moreMessages);
             });
         }
     }
