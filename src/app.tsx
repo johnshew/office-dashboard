@@ -117,7 +117,7 @@ class App extends React.Component<AppProps, AppState> {
             .then((result) => {
                 console.log("Got me.");
                 this.me = result;
-                this.RefreshFromCloud(100);
+                this.RefreshFromCloud(1); // do it now, note that zero would mean never.
             })
             .fail((error) => {
                 console.log("Get me failed.");
@@ -254,11 +254,14 @@ class App extends React.Component<AppProps, AppState> {
     }
 
     private RefreshFromCloud(delay: number) {
+        console.log("Setting next refresh to " + delay + "ms");
         clearTimeout(this.timerHandle);
+        if (delay === 0) return; // Zero means stop refresh 
         this.timerHandle = setTimeout(() => {
             this.RefreshTick();
         }, delay);
     }
+    
     private StopRefreshFromCloud() {
         clearTimeout(this.timerHandle);
     }
@@ -269,7 +272,7 @@ class App extends React.Component<AppProps, AppState> {
             this.GetMessages();
             this.GetCalendarEvents();
         }
-        this.RefreshFromCloud(2 * 60 * 1000);
+        this.RefreshFromCloud(this.state.settings.refreshIntervalSeconds * 1000);
     }
 }
 
