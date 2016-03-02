@@ -39,7 +39,15 @@ In the future we may move to React based navbars and dialogs which in turn would
 Consistent with the recommended approach to React, 
 the React components do not use any global CSS classes other than the grid system.  
 As noted above, we use the Bootstrap grid system to provide responsive layout. 
- 
+
+### Building the application
+
+After forking the repo
+    npm install
+    npm run typings
+    npm run build (or npm run watch)
+    npm run start (to run locally - remember to use http://localhost not http://127.0.0.1)
+    
 ### Tesla browser
 
 The Tesla browser is actually a reasonably modern HTML5 browser implementation based on webkit. With the use of the es5-shim it is able to support modern frameworks such React albiet slowly.
