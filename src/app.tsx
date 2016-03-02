@@ -35,8 +35,7 @@ class App extends React.Component<AppProps, AppState> {
     constructor() {
         super();
         console.log('App initializing');
-        var InitialState = { messages: [], messageIdToIndex: {}, events: [], eventIdToIndex: {}, show: ShowState.Welcome, settings: { scroll: false, inplace: false, console: false, refreshIntervalSeconds: 0 } };
-        this.state = InitialState;
+        this.state = { messages: [], messageIdToIndex: {}, events: [], eventIdToIndex: {}, show: ShowState.Welcome, settings: { scroll: false, inplace: false, testData: false, console: false, refreshIntervalSeconds: 0 } };
         Utilities.ObjectAssign(this.state.settings, Utilities.Storage.getItem("settings")); // replace defaults with anything we find in storage.
 
         var here = document.location;

@@ -6,17 +6,13 @@ export interface SettingsValues {
     scroll: boolean;
     inplace: boolean;
     console: boolean;
+    testData: boolean;
     refreshIntervalSeconds: number;
 }
-
-
 
 interface SettingsProps extends React.Props<Settings> {
     values: SettingsValues;
     onChange: (SettingsValue) => void;
-}
-
-interface SettingsState {
 }
 
 export class Settings extends React.Component<SettingsProps, any> {
@@ -40,11 +36,15 @@ export class Settings extends React.Component<SettingsProps, any> {
         values.inplace = event.target.checked;
         this.props.onChange(values);
     }
+    private handleTestDataChange = (event) => {
+        var values = Utilities.ObjectAssign({}, this.props.values);
+        values.testData = event.target.checked;
+        this.props.onChange(values);
+    }
     private handleRefreshChange = (event) => {
         var values = Utilities.ObjectAssign({}, this.props.values);
         var refresh = (event.target.value) ? parseInt(event.target.value) : null;
-        refresh = (refresh === NaN) ? null : refresh;
-        values.refreshIntervalSeconds = refresh;
+        values.refreshIntervalSeconds = (refresh === NaN) ? null : refresh;
         this.props.onChange(values);
     }
 
@@ -62,6 +62,7 @@ export class Settings extends React.Component<SettingsProps, any> {
                                 <input type="checkbox" checked={ values.scroll } onChange={ this.handleScrollChange }/> Enable Scrolling <br/>
                                 <input type="checkbox" checked={ values.inplace } onChange={ this.handleInPlaceChange }/> Login without a new window <br/>
                                 <input type="checkbox" checked={ values.console } onChange={ this.handleConsoleChange }/> Show local debug console <br/>
+                                <input type="checkbox" checked={ values.testData } onChange={ this.handleTestDataChange }/> Use Test Data <br/>
                                 <input type="textbox" value={ (values.refreshIntervalSeconds === null) ? "" : values.refreshIntervalSeconds.toString() } onChange={ this.handleRefreshChange }/> Refresh interval (seconds) <br/>
                                 </div>
                             <div className="modal-footer">
