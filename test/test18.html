@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset=utf-8 />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Holy Grail</title>
+    <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css">
+</head>
+
+<body style="margin:0">
+    <div style="height: 30px; background-color: lightgrey">
+        Header stuff
+    </div>
+
+    <div id="NoHeight">
+        <div style="position:absolute; width:100%;top: 30px; bottom: 0px">
+            <div style="height:100%; overflow-x: auto" class="col-xs-12 col-sm-3">
+                <div>
+                    Navigation
+                    <script>
+                        for (var i=0 ; i<25 ; ++i) {
+                    document.write("<br/> Nav " + i);
+                }
+                    </script>
+                </div>
+            </div>
+            <div style="height:100%; overflow-x: auto" class="col-xs-12 col-sm-6">
+                <div>
+                    Content
+                    <script>
+                        for (var i=0 ; i<100 ; ++i) {
+                    document.write("<br/>more content");
+                }
+                    </script>
+                </div>
+            </div>
+            <div style="height:100%; overflow-x: auto" class="col-xs-12 col-sm-3">
+                Ads
+                <script>
+                    for (var i=0 ; i<40 ; ++i) {
+                    document.write("<br/> Ad " + i);
+                }
+                </script>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>
