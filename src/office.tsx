@@ -95,7 +95,6 @@ const scrollingContentStyle: React.CSSProperties = {
 
 
 interface EventSummaryProps extends React.Props<EventSummary> {
-    key: string;
     event: Kurve.EventDataModel;
     style?: Object;
     selected?: boolean;
@@ -155,7 +154,7 @@ interface EventListProps extends React.Props<EventList> {
 
 export class EventList extends React.Component<EventListProps, any> {
     constructor(props, state) {
-        super(props, state);
+        super(props, state); 
     }
     private handleSelect = (id: string) => {
         this.props.onSelection(id);
@@ -163,13 +162,13 @@ export class EventList extends React.Component<EventListProps, any> {
     render() {
         var lastDate = "";
         var eventSummaries = this.props.events.map(event => {
-            var date = new Date(event.start.dateTime);
-            var dateSeparator = ((date.toDateString() != lastDate) ? <div style= { informationStyle }>{ date.toDateString() }</div> : <div/>);
-            lastDate = date.toDateString();
+            var date = new Date(event.start.dateTime).toDateString();
+            var dateSeparator = (date != lastDate) ? <div style= { informationStyle }>{ date }</div> : null;
+            lastDate = date;
             return (
-                <div>
+                <div key={ event.id }>
                   { dateSeparator }
-                  <EventSummary onSelect={ this.handleSelect } selected={ this.props.selected === event.id } key={ event.id } event={ event } />
+                  <EventSummary onSelect={ this.handleSelect } selected={ this.props.selected === event.id } event={ event } />
                     </div>
             );
         });
