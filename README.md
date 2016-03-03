@@ -22,6 +22,8 @@ Please use this link to report bugs or provide suggestions: https://github.com/j
 
 ## Information for developers
 
+Sources at https://github.com/johnshew/office-dashboard/
+
 This app was developed to: 
 * Demonstrate how to display information from http://graph.microsoft.io
 * Test http://github.com/MicrosoftDx/KurveJS
