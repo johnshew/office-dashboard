@@ -1,12 +1,24 @@
-# Office Dashboard
+# Office Dashboard for the Tesla
 
-A simple web application that shows your email and other information from Office 365.  
+A simple web application that shows your email and other information from Office 365, optimized for the Tesla dashboard computer.
 
 ## Try It	
 
-You can try the app here http://johnshew.github.io/office-dashboard/public/index.html.
+You can try the app here http://aka.ms/offdash.
 
-As you can see from the source, this is a pure HTML client app that operates directly against Microsoft servers ensuring no private data can be seen by third parties.
+## RELEASE NOTES - Release 0.1 – First Alpha
+ 
+This app provides a Tesla-friendly way to access your Office information.
+ 
+This is a pure client app that talks directly to Microsoft’s servers over HTTPS with READ-ONLY access so there is very little risk that your information will be compromised.
+ 
+There are several significant limitations and errors with this release:
+·       Embedded pictures (in either email or calendar) are not supported
+·       The email view shows all messages from every folder in your mailbox – including sent mail
+·       Attachments sometimes show up as separate messages
+·       Calendar meeting times are shown in military time
+ 
+Please use this link to report bugs or provide suggestions: https://github.com/johnshew/office-dashboard/issues
 
 ## Information for developers
 
@@ -21,7 +33,7 @@ THe app is a simple client-only web application that uses the React framework to
 ### Implementation notes
 
 The code to connect to the information in Office is in app.tsx. 
-It uses the KurveJS library to do most of the heavy lifting to connect to graph.microsoft.com.  
+It uses the KurveJS library to do most of the heavy lifting to connect to graph.microsoft.com. 
 Once the Office information is acquired and placed into app state it gets rendered by set of React components.
     
 The user interface is designed to work with both modern browsers and more limited browsers as found on TVs and the Tesla.  
