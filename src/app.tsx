@@ -35,7 +35,7 @@ class App extends React.Component<AppProps, AppState> {
     constructor() {
         super();
         console.log('App initializing');
-        this.state = { messages: [], messageIdToIndex: {}, events: [], eventIdToIndex: {}, show: ShowState.Welcome, settings: { scroll: false, inplace: false, testData: false, console: false, refreshIntervalSeconds: 0 } };
+        this.state = { messages: [], messageIdToIndex: {}, events: [], eventIdToIndex: {}, show: ShowState.Welcome, settings: { scroll: false, inplace: false, testData: false, console: false, refreshIntervalSeconds: 5*60 } };
         Utilities.ObjectAssign(this.state.settings, Utilities.Storage.getItem("settings")); // replace defaults with anything we find in storage.
 
         var here = document.location;
@@ -101,6 +101,7 @@ class App extends React.Component<AppProps, AppState> {
         this.setState({ settings: settings });
         Utilities.Storage.setItem("settings", settings);
         this.CheckConsole();
+        this.RefreshFromCloud(updated.refreshIntervalSeconds);
     }
 
     public CheckConsole()
