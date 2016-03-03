@@ -13,11 +13,12 @@ This app provides a Tesla-friendly way to access your Office information.
 This is a pure client app that talks directly to Microsoft’s servers over HTTPS with READ-ONLY access so there is very little risk that your information will be compromised.
  
 There are several significant limitations and errors with this release:
-·       Embedded pictures (in either email or calendar) are not supported
-·       The email view shows all messages from every folder in your mailbox – including sent mail
-·       Attachments sometimes show up as separate messages
-·       Calendar meeting times are shown in military time
-·       You have to hit login each time you go away and come back - we should persist the tokens
+
+* Embedded pictures (in either email or calendar) are not supported
+* The email view shows all messages from every folder in your mailbox – including sent mail
+* Attachments sometimes show up as separate messages
+* Calendar meeting times are shown in military time
+* You have to hit login each time you go away and come back - we should persist the tokens
 
  
 Please use this link to report bugs or provide suggestions: https://github.com/johnshew/office-dashboard/issues
@@ -49,7 +50,7 @@ Consistent with the recommended approach to React, the React components do not u
 
 ### Building the application
 
-After forking the repo
+After you fork the repo do the following:
 
     npm install
     npm run typings
