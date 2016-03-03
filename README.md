@@ -17,6 +17,8 @@ There are several significant limitations and errors with this release:
 ·       The email view shows all messages from every folder in your mailbox – including sent mail
 ·       Attachments sometimes show up as separate messages
 ·       Calendar meeting times are shown in military time
+·       You have to hit login each time you go away and come back - we should persist the tokens
+
  
 Please use this link to report bugs or provide suggestions: https://github.com/johnshew/office-dashboard/issues
 
