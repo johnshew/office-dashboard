@@ -13,10 +13,13 @@ This app provides a Tesla-friendly way to access your Office information.
 This is a pure client app that talks directly to Microsoft’s servers over HTTPS with READ-ONLY access so there is very little risk that your information will be compromised.
  
 There are several significant limitations and errors with this release:
-·       Embedded pictures (in either email or calendar) are not supported
-·       The email view shows all messages from every folder in your mailbox – including sent mail
-·       Attachments sometimes show up as separate messages
-·       Calendar meeting times are shown in military time
+
+* Embedded pictures (in either email or calendar) are not supported
+* The email view shows all messages from every folder in your mailbox – including sent mail
+* Attachments sometimes show up as separate messages
+* Calendar meeting times are shown in military time
+* You have to hit login each time you go away and come back - we should persist the tokens
+
  
 Please use this link to report bugs or provide suggestions: https://github.com/johnshew/office-dashboard/issues
 
@@ -29,8 +32,6 @@ This app was developed to:
 * Test http://github.com/MicrosoftDx/KurveJS
 * Learn more about React and how to use React with Typescript 
 * Make it easy to catch up on mail and other Office information using the browser in Tesla http://tesla.com. 
-
-THe app is a simple client-only web application that uses the React framework to display information from Office by connecting to graph.microsoft.com.  
 
 ### Implementation notes
 
@@ -49,17 +50,15 @@ Consistent with the recommended approach to React, the React components do not u
 
 ### Building the application
 
-After forking the repo
+After you fork the repo do the following:
 
     npm install
     npm run typings
     npm run build (or npm run watch)
     npm run start (to run locally - remember to use http://localhost not http://127.0.0.1)
-    
+ 
 ### Tesla browser
 
-The Tesla browser is actually a reasonably modern HTML5 browser implementation based on webkit. With the use of the es5-shim it is able to support modern frameworks such React albiet slowly.
+The Tesla browser is a reasonably modern HTML5 browser implementation based on webkit. With the use of the es5-shim it is able to support modern frameworks such as React - albiet slowly.
 
-That said it is a pretty challenging environment to debug in. Consequently, in the settings you can enable a simple debug console window that displays information written to console.log and provides an immediate command window.
-
-Also note that we modified VorlonJS to be able to work well with the Tesla.
+That said the car is a pretty challenging environment to debug web pages. To help with this, in the settings you can enable a simple debug console window that displays information written to console.log and provides an immediate command window.  If you need more debug capabilties we updated VorlonJS (http://vorlonjs.com) to be able to work well on the Tesla.
