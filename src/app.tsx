@@ -135,7 +135,7 @@ class App extends React.Component<AppProps, AppState> {
         var now = new Date(Date.now())
         var today = new Date();
         var nextWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate()+7);
-        this.me.calendarAsync("$orderby=start/dateTime&startdateTime=" + now.toUTCString() + "&endDateTime=" + nextWeek.toUTCString())
+        this.me.calendarAsync("$orderby=start/dateTime&startDateTime=" + now.toISOString() + "&endDateTime=" + nextWeek.toISOString())
             .then((events) => {
                 console.log('Got calendar.  Now rendering.');
                 this.ProcessEvents([], {}, events);
