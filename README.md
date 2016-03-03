@@ -30,8 +30,6 @@ This app was developed to:
 * Learn more about React and how to use React with Typescript 
 * Make it easy to catch up on mail and other Office information using the browser in Tesla http://tesla.com. 
 
-THe app is a simple client-only web application that uses the React framework to display information from Office by connecting to graph.microsoft.com.  
-
 ### Implementation notes
 
 The code to connect to the information in Office is in app.tsx. It uses the KurveJS library to do most of the heavy lifting to connect to graph.microsoft.com. 
@@ -55,11 +53,9 @@ After forking the repo
     npm run typings
     npm run build (or npm run watch)
     npm run start (to run locally - remember to use http://localhost not http://127.0.0.1)
-    
+ 
 ### Tesla browser
 
-The Tesla browser is actually a reasonably modern HTML5 browser implementation based on webkit. With the use of the es5-shim it is able to support modern frameworks such React albiet slowly.
+The Tesla browser is a reasonably modern HTML5 browser implementation based on webkit. With the use of the es5-shim it is able to support modern frameworks such as React - albiet slowly.
 
-That said it is a pretty challenging environment to debug in. Consequently, in the settings you can enable a simple debug console window that displays information written to console.log and provides an immediate command window.
-
-Also note that we modified VorlonJS to be able to work well with the Tesla.
+That said the car is a pretty challenging environment to debug web pages. To help with this, in the settings you can enable a simple debug console window that displays information written to console.log and provides an immediate command window.  If you need more debug capabilties we updated VorlonJS (http://vorlonjs.com) to be able to work well on the Tesla.
