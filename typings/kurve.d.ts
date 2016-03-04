@@ -182,12 +182,16 @@ declare module Kurve {
         userPrincipalName: string;
         id: string;
     }
+    enum EventEndpoint {
+        events = 0,
+        calendarView = 1,
+    }
     class User {
         private graph;
         private _data;
         constructor(graph: Kurve.Graph, _data: UserDataModel);
         data: UserDataModel;
-        events(callback: (items: Events, error: Error) => void, odataQuery?: string): void;
+        events(callback: (events: Events, error: Error) => void, odataQuery?: string): void;
         eventsAsync(odataQuery?: string): Promise<Events, Error>;
         memberOf(callback: (groups: Groups, Error) => void, Error: any, odataQuery?: string): void;
         memberOfAsync(odataQuery?: string): Promise<Messages, Error>;
@@ -199,13 +203,13 @@ declare module Kurve {
         profilePhotoAsync(): Promise<ProfilePhoto, Error>;
         profilePhotoValue(callback: (val: any, error: Error) => void): void;
         profilePhotoValueAsync(): Promise<any, Error>;
-        calendar(callback: (calendarItems: Events, error: Error) => void, odataQuery?: string): void;
-        calendarAsync(odataQuery?: string): Promise<Events, Error>;
+        calendarView(callback: (events: Events, error: Error) => void, odataQuery?: string): void;
+        calendarViewAsync(odataQuery?: string): Promise<Events, Error>;
     }
     class Users {
         protected graph: Kurve.Graph;
         protected _data: User[];
-        nextLink: (callback?: (users: Kurve.Users, error: Error) => void, odataQuery?: string) => Promise<Users, Error>;
+        nextLink: (callback?: (users: Kurve.Users, error: Error) => void) => Promise<Users, Error>;
         constructor(graph: Kurve.Graph, _data: User[]);
         data: User[];
     }
@@ -257,7 +261,7 @@ declare module Kurve {
     class Messages {
         protected graph: Kurve.Graph;
         protected _data: Message[];
-        nextLink: (callback?: (messages: Messages, error: Error) => void, odataQuery?: string) => Promise<Messages, Error>;
+        nextLink: (callback?: (messages: Messages, error: Error) => void) => Promise<Messages, Error>;
         constructor(graph: Kurve.Graph, _data: Message[]);
         data: Message[];
     }
@@ -323,8 +327,9 @@ declare module Kurve {
     class Events {
         protected graph: Kurve.Graph;
         protected _data: Event[];
-        nextLink: (callback?: (events: Events, error: Error) => void, odataQuery?: string) => Promise<Events, Error>;
-        constructor(graph: Kurve.Graph, _data: Event[]);
+        private endpoint;
+        nextLink: (callback?: (events: Events, error: Error) => void) => Promise<Events, Error>;
+        constructor(graph: Kurve.Graph, endpoint: EventEndpoint, _data: Event[]);
         data: Event[];
     }
     class Contact {
@@ -353,7 +358,7 @@ declare module Kurve {
     class Groups {
         protected graph: Kurve.Graph;
         protected _data: Group[];
-        nextLink: (callback?: (groups: Kurve.Groups, error: Error) => void, odataQuery?: string) => Promise<Groups, Error>;
+        nextLink: (callback?: (groups: Kurve.Groups, error: Error) => void) => Promise<Groups, Error>;
         constructor(graph: Kurve.Graph, _data: Group[]);
         data: Group[];
     }
@@ -382,8 +387,8 @@ declare module Kurve {
         groups(callback: (groups: any, error: Error) => void, odataQuery?: string): void;
         messagesForUserAsync(userPrincipalName: string, odataQuery?: string): Promise<Messages, Error>;
         messagesForUser(userPrincipalName: string, callback: (messages: Messages, error: Error) => void, odataQuery?: string): void;
-        eventsForUserAsync(userPrincipalName: string, odataQuery?: string): Promise<Events, Error>;
-        eventsForUser(userPrincipalName: string, callback: (messages: Events, error: Error) => void, odataQuery?: string): void;
+        eventsForUserAsync(userPrincipalName: string, endpoint: EventEndpoint, odataQuery?: string): Promise<Events, Error>;
+        eventsForUser(userPrincipalName: string, endpoint: EventEndpoint, callback: (messages: Events, error: Error) => void, odataQuery?: string): void;
         memberOfForUserAsync(userPrincipalName: string, odataQuery?: string): Promise<Messages, Error>;
         memberOfForUser(userPrincipalName: string, callback: (groups: Kurve.Groups, error: Error) => void, odataQuery?: string): void;
         managerForUserAsync(userPrincipalName: string, odataQuery?: string): Promise<User, Error>;
@@ -400,14 +405,15 @@ declare module Kurve {
         private getUsers(urlString, callback, scopes?, basicProfileOnly?);
         private getUser(urlString, callback, scopes?);
         private addAccessTokenAndSend(xhr, callback, scopes?);
-        private getMessages(urlString, callback, odataQuery?, scopes?);
-        private getEvents(urlString, callback, odataQuery?, scopes?);
-        private getGroups(urlString, callback, odataQuery?, scopes?);
+        private getMessages(urlString, callback, scopes?);
+        private getEvents(urlString, endpoint, callback, scopes?);
+        private getGroups(urlString, callback, scopes?);
         private getGroup(urlString, callback, scopes?);
         private getPhoto(urlString, callback, scopes?);
         private getPhotoValue(urlString, callback, scopes?);
-        private buildMeUrl();
-        private buildUsersUrl();
-        private buildGroupsUrl();
+        private buildUrl(root, path, odataQuery?);
+        private buildMeUrl(path?, odataQuery?);
+        private buildUsersUrl(path?, odataQuery?);
+        private buildGroupsUrl(path?, odataQuery?);
     }
 }

@@ -841,6 +841,11 @@ var Kurve;
         return UserDataModel;
     })();
     Kurve.UserDataModel = UserDataModel;
+    (function (EventEndpoint) {
+        EventEndpoint[EventEndpoint["events"] = 0] = "events";
+        EventEndpoint[EventEndpoint["calendarView"] = 1] = "calendarView";
+    })(Kurve.EventEndpoint || (Kurve.EventEndpoint = {}));
+    var EventEndpoint = Kurve.EventEndpoint;
     var User = (function () {
         function User(graph, _data) {
             this.graph = graph;
@@ -853,10 +858,10 @@ var Kurve;
         });
         // These are all passthroughs to the graph
         User.prototype.events = function (callback, odataQuery) {
-            this.graph.eventsForUser(this._data.userPrincipalName, callback, odataQuery);
+            this.graph.eventsForUser(this._data.userPrincipalName, EventEndpoint.events, callback, odataQuery);
         };
         User.prototype.eventsAsync = function (odataQuery) {
-            return this.graph.eventsForUserAsync(this._data.userPrincipalName, odataQuery);
+            return this.graph.eventsForUserAsync(this._data.userPrincipalName, EventEndpoint.events, odataQuery);
         };
         User.prototype.memberOf = function (callback, Error, odataQuery) {
             this.graph.memberOfForUser(this._data.userPrincipalName, callback, odataQuery);
@@ -888,11 +893,11 @@ var Kurve;
         User.prototype.profilePhotoValueAsync = function () {
             return this.graph.profilePhotoValueForUserAsync(this._data.userPrincipalName);
         };
-        User.prototype.calendar = function (callback, odataQuery) {
-            this.graph.eventsForUser(this._data.userPrincipalName, callback, odataQuery);
+        User.prototype.calendarView = function (callback, odataQuery) {
+            this.graph.eventsForUser(this._data.userPrincipalName, EventEndpoint.calendarView, callback, odataQuery);
         };
-        User.prototype.calendarAsync = function (odataQuery) {
-            return this.graph.eventsForUserAsync(this._data.userPrincipalName, odataQuery);
+        User.prototype.calendarViewAsync = function (odataQuery) {
+            return this.graph.eventsForUserAsync(this._data.userPrincipalName, EventEndpoint.calendarView, odataQuery);
         };
         return User;
     })();
@@ -970,9 +975,10 @@ var Kurve;
     })();
     Kurve.Event = Event;
     var Events = (function () {
-        function Events(graph, _data) {
+        function Events(graph, endpoint, _data) {
             this.graph = graph;
             this._data = _data;
+            this.endpoint = endpoint;
         }
         Object.defineProperty(Events.prototype, "data", {
             get: function () {
@@ -1062,12 +1068,7 @@ var Kurve;
         };
         Graph.prototype.me = function (callback, odataQuery) {
             var scopes = [Scopes.User.Read];
-            var urlString = this.buildMeUrl() + "/";
-            if (odataQuery) {
-                urlString += "?" + odataQuery;
-            }
-            if (odataQuery)
-                urlString += "?" + odataQuery;
+            var urlString = this.buildMeUrl("", odataQuery);
             this.getUser(urlString, callback, this.scopesForV2(scopes));
         };
         Graph.prototype.userAsync = function (userId, odataQuery, basicProfileOnly) {
@@ -1090,9 +1091,7 @@ var Kurve;
                 scopes = [Scopes.User.ReadBasicAll];
             else
                 scopes = [Scopes.User.ReadAll];
-            var urlString = this.buildUsersUrl() + "/" + userId;
-            if (odataQuery)
-                urlString += "?" + odataQuery;
+            var urlString = this.buildUsersUrl(userId, odataQuery);
             this.getUser(urlString, callback, this.scopesForV2(scopes));
         };
         Graph.prototype.usersAsync = function (odataQuery, basicProfileOnly) {
@@ -1115,9 +1114,7 @@ var Kurve;
                 scopes = [Scopes.User.ReadBasicAll];
             else
                 scopes = [Scopes.User.ReadAll];
-            var urlString = this.buildUsersUrl() + "/";
-            if (odataQuery)
-                urlString += "?" + odataQuery;
+            var urlString = this.buildUsersUrl("", odataQuery);
             this.getUsers(urlString, callback, this.scopesForV2(scopes), basicProfileOnly);
         };
         //Groups
@@ -1135,9 +1132,7 @@ var Kurve;
         };
         Graph.prototype.group = function (groupId, callback, odataQuery) {
             var scopes = [Scopes.Group.ReadAll];
-            var urlString = this.buildGroupsUrl() + "/" + groupId;
-            if (odataQuery)
-                urlString += "?" + odataQuery;
+            var urlString = this.buildGroupsUrl(groupId, odataQuery);
             this.getGroup(urlString, callback, this.scopesForV2(scopes));
         };
         Graph.prototype.groupsAsync = function (odataQuery) {
@@ -1154,10 +1149,8 @@ var Kurve;
         };
         Graph.prototype.groups = function (callback, odataQuery) {
             var scopes = [Scopes.Group.ReadAll];
-            var urlString = this.buildGroupsUrl() + "/";
-            if (odataQuery)
-                urlString += "?" + odataQuery;
-            this.getGroups(urlString, callback, odataQuery, this.scopesForV2(scopes));
+            var urlString = this.buildGroupsUrl("", odataQuery);
+            this.getGroups(urlString, callback, this.scopesForV2(scopes));
         };
         // Messages For User
         Graph.prototype.messagesForUserAsync = function (userPrincipalName, odataQuery) {
@@ -1174,17 +1167,13 @@ var Kurve;
         };
         Graph.prototype.messagesForUser = function (userPrincipalName, callback, odataQuery) {
             var scopes = [Scopes.Mail.Read];
-            var urlString = this.buildUsersUrl() + "/" + userPrincipalName + "/messages";
-            if (odataQuery)
-                urlString += "?" + odataQuery;
-            this.getMessages(urlString, function (result, error) {
-                callback(result, error);
-            }, odataQuery, this.scopesForV2(scopes));
+            var urlString = this.buildUsersUrl(userPrincipalName + "/messages", odataQuery);
+            this.getMessages(urlString, function (result, error) { return callback(result, error); }, this.scopesForV2(scopes));
         };
-        // Messages For User
-        Graph.prototype.eventsForUserAsync = function (userPrincipalName, odataQuery) {
+        // Events For User
+        Graph.prototype.eventsForUserAsync = function (userPrincipalName, endpoint, odataQuery) {
             var d = new Kurve.Deferred();
-            this.eventsForUser(userPrincipalName, function (items, error) {
+            this.eventsForUser(userPrincipalName, endpoint, function (items, error) {
                 if (error) {
                     d.reject(error);
                 }
@@ -1194,14 +1183,10 @@ var Kurve;
             }, odataQuery);
             return d.promise;
         };
-        Graph.prototype.eventsForUser = function (userPrincipalName, callback, odataQuery) {
+        Graph.prototype.eventsForUser = function (userPrincipalName, endpoint, callback, odataQuery) {
             var scopes = [Scopes.Calendars.Read];
-            var urlString = this.buildUsersUrl() + "/" + userPrincipalName + "/calendarView";
-            if (odataQuery)
-                urlString += "?" + odataQuery;
-            this.getEvents(urlString, function (result, error) {
-                callback(result, error);
-            }, odataQuery, this.scopesForV2(scopes));
+            var urlString = this.buildUsersUrl(userPrincipalName + "/" + EventEndpoint[endpoint], odataQuery);
+            this.getEvents(urlString, endpoint, function (result, error) { return callback(result, error); }, this.scopesForV2(scopes));
         };
         // Groups/Relationships For User
         Graph.prototype.memberOfForUserAsync = function (userPrincipalName, odataQuery) {
@@ -1218,10 +1203,8 @@ var Kurve;
         };
         Graph.prototype.memberOfForUser = function (userPrincipalName, callback, odataQuery) {
             var scopes = [Scopes.Group.ReadAll];
-            var urlString = this.buildUsersUrl() + "/" + userPrincipalName + "/memberOf";
-            if (odataQuery)
-                urlString += "?" + odataQuery;
-            this.getGroups(urlString, callback, odataQuery, this.scopesForV2(scopes));
+            var urlString = this.buildUsersUrl(userPrincipalName + "/memberOf", odataQuery);
+            this.getGroups(urlString, callback, this.scopesForV2(scopes));
         };
         Graph.prototype.managerForUserAsync = function (userPrincipalName, odataQuery) {
             var d = new Kurve.Deferred();
@@ -1237,9 +1220,7 @@ var Kurve;
         };
         Graph.prototype.managerForUser = function (userPrincipalName, callback, odataQuery) {
             var scopes = [Scopes.Directory.ReadAll];
-            var urlString = this.buildUsersUrl() + "/" + userPrincipalName + "/manager";
-            if (odataQuery)
-                urlString += "?" + odataQuery;
+            var urlString = this.buildUsersUrl(userPrincipalName + "/manager", odataQuery);
             this.getUser(urlString, callback, this.scopesForV2(scopes));
         };
         Graph.prototype.directReportsForUserAsync = function (userPrincipalName, odataQuery) {
@@ -1256,9 +1237,7 @@ var Kurve;
         };
         Graph.prototype.directReportsForUser = function (userPrincipalName, callback, odataQuery) {
             var scopes = [Scopes.Directory.ReadAll];
-            var urlString = this.buildUsersUrl() + "/" + userPrincipalName + "/directReports";
-            if (odataQuery)
-                urlString += "?" + odataQuery;
+            var urlString = this.buildUsersUrl(userPrincipalName + "/directReports", odataQuery);
             this.getUsers(urlString, callback, this.scopesForV2(scopes));
         };
         Graph.prototype.profilePhotoForUserAsync = function (userPrincipalName) {
@@ -1275,7 +1254,7 @@ var Kurve;
         };
         Graph.prototype.profilePhotoForUser = function (userPrincipalName, callback) {
             var scopes = [Scopes.User.ReadBasicAll];
-            var urlString = this.buildUsersUrl() + "/" + userPrincipalName + "/photo";
+            var urlString = this.buildUsersUrl(userPrincipalName + "/photo");
             this.getPhoto(urlString, callback, this.scopesForV2(scopes));
         };
         Graph.prototype.profilePhotoValueForUserAsync = function (userPrincipalName) {
@@ -1292,7 +1271,7 @@ var Kurve;
         };
         Graph.prototype.profilePhotoValueForUser = function (userPrincipalName, callback) {
             var scopes = [Scopes.User.ReadBasicAll];
-            var urlString = this.buildUsersUrl() + "/" + userPrincipalName + "/photo/$value";
+            var urlString = this.buildUsersUrl(userPrincipalName + "/photo/$value");
             this.getPhotoValue(urlString, callback, this.scopesForV2(scopes));
         };
         //http verbs
@@ -1364,25 +1343,26 @@ var Kurve;
                 //implement nextLink
                 var nextLink = usersODATA['@odata.nextLink'];
                 if (nextLink) {
-                    users.nextLink = (function (callback) {
+                    users.nextLink = function (callback) {
                         var scopes = [];
                         if (basicProfileOnly)
                             scopes = [Scopes.User.ReadBasicAll];
                         else
                             scopes = [Scopes.User.ReadAll];
                         var d = new Kurve.Deferred();
-                        _this.getUsers(nextLink, (function (result, error) {
-                            if (callback)
+                        _this.getUsers(nextLink, function (result, error) {
+                            if (callback) {
                                 callback(result, error);
+                            }
                             else if (error) {
                                 d.reject(error);
                             }
                             else {
                                 d.resolve(result);
                             }
-                        }), _this.scopesForV2(scopes), basicProfileOnly);
+                        }, _this.scopesForV2(scopes), basicProfileOnly);
                         return d.promise;
-                    });
+                    };
                 }
                 callback(users, null);
             }), null, scopes);
@@ -1439,12 +1419,9 @@ var Kurve;
                 }
             }
         };
-        Graph.prototype.getMessages = function (urlString, callback, odataQuery, scopes) {
+        Graph.prototype.getMessages = function (urlString, callback, scopes) {
             var _this = this;
-            var url = urlString;
-            if (odataQuery)
-                urlString += "?" + odataQuery;
-            this.get(url, (function (result, errorGet) {
+            this.get(urlString, (function (result, errorGet) {
                 if (errorGet) {
                     callback(null, errorGet);
                     return;
@@ -1460,32 +1437,31 @@ var Kurve;
                 var messages = new Kurve.Messages(_this, resultsArray.map(function (o) {
                     return new Message(_this, o);
                 }));
-                if (messagesODATA['@odata.nextLink']) {
-                    messages.nextLink = function (callback, odataQuery) {
+                var nextLink = messagesODATA['@odata.nextLink'];
+                if (nextLink) {
+                    messages.nextLink = function (callback) {
                         var scopes = [Scopes.Mail.Read];
                         var d = new Kurve.Deferred();
-                        _this.getMessages(messagesODATA['@odata.nextLink'], function (messages, error) {
-                            if (callback)
+                        _this.getMessages(nextLink, function (messages, error) {
+                            if (callback) {
                                 callback(messages, error);
+                            }
                             else if (error) {
                                 d.reject(error);
                             }
                             else {
                                 d.resolve(messages);
                             }
-                        }, odataQuery, _this.scopesForV2(scopes));
+                        }, _this.scopesForV2(scopes));
                         return d.promise;
                     };
                 }
                 callback(messages, null);
             }), null, scopes);
         };
-        Graph.prototype.getEvents = function (urlString, callback, odataQuery, scopes) {
+        Graph.prototype.getEvents = function (urlString, endpoint, callback, scopes) {
             var _this = this;
-            var url = urlString;
-            if (odataQuery)
-                urlString += "?" + odataQuery;
-            this.get(url, (function (result, errorGet) {
+            this.get(urlString, (function (result, errorGet) {
                 if (errorGet) {
                     callback(null, errorGet);
                     return;
@@ -1498,35 +1474,32 @@ var Kurve;
                     return;
                 }
                 var resultsArray = (odata.value ? odata.value : [odata]);
-                var items = new Kurve.Events(_this, resultsArray.map(function (o) {
-                    return new Event(_this, o);
-                }));
-                if (odata['@odata.nextLink']) {
-                    items.nextLink = function (callback, odataQuery) {
+                var events = new Kurve.Events(_this, endpoint, resultsArray.map(function (o) { return new Event(_this, o); }));
+                var nextLink = odata['@odata.nextLink'];
+                if (nextLink) {
+                    events.nextLink = function (callback) {
                         var scopes = [Scopes.Mail.Read];
                         var d = new Kurve.Deferred();
-                        _this.getEvents(odata['@odata.nextLink'], function (stuff, error) {
-                            if (callback)
+                        _this.getEvents(nextLink, endpoint, function (stuff, error) {
+                            if (callback) {
                                 callback(stuff, error);
+                            }
                             else if (error) {
                                 d.reject(error);
                             }
                             else {
                                 d.resolve(stuff);
                             }
-                        }, odataQuery, _this.scopesForV2(scopes));
+                        }, _this.scopesForV2(scopes));
                         return d.promise;
                     };
                 }
-                callback(items, null);
+                callback(events, null);
             }), null, scopes);
         };
-        Graph.prototype.getGroups = function (urlString, callback, odataQuery, scopes) {
+        Graph.prototype.getGroups = function (urlString, callback, scopes) {
             var _this = this;
-            var url = urlString;
-            if (odataQuery)
-                urlString += "?" + odataQuery;
-            this.get(url, (function (result, errorGet) {
+            this.get(urlString, (function (result, errorGet) {
                 if (errorGet) {
                     callback(null, errorGet);
                     return;
@@ -1543,23 +1516,23 @@ var Kurve;
                     return new Group(_this, o);
                 }));
                 var nextLink = groupsODATA['@odata.nextLink'];
-                //implement nextLink
                 if (nextLink) {
-                    groups.nextLink = (function (callback) {
+                    groups.nextLink = function (callback) {
                         var scopes = [Scopes.Group.ReadAll];
                         var d = new Kurve.Deferred();
-                        _this.getGroups(nextLink, (function (result, error) {
-                            if (callback)
+                        _this.getGroups(nextLink, function (result, error) {
+                            if (callback) {
                                 callback(result, error);
+                            }
                             else if (error) {
                                 d.reject(error);
                             }
                             else {
                                 d.resolve(result);
                             }
-                        }), odataQuery, _this.scopesForV2(scopes));
+                        }, _this.scopesForV2(scopes));
                         return d.promise;
-                    });
+                    };
                 }
                 callback(groups, null);
             }), null, scopes);
@@ -1609,14 +1582,20 @@ var Kurve;
                 callback(result, null);
             }, "blob", scopes);
         };
-        Graph.prototype.buildMeUrl = function () {
-            return this.baseUrl + "me";
+        Graph.prototype.buildUrl = function (root, path, odataQuery) {
+            return this.baseUrl + root + path + (odataQuery ? "?" + odataQuery : "");
         };
-        Graph.prototype.buildUsersUrl = function () {
-            return this.baseUrl + "/users";
+        Graph.prototype.buildMeUrl = function (path, odataQuery) {
+            if (path === void 0) { path = ""; }
+            return this.buildUrl("me/", path, odataQuery);
         };
-        Graph.prototype.buildGroupsUrl = function () {
-            return this.baseUrl + "/groups";
+        Graph.prototype.buildUsersUrl = function (path, odataQuery) {
+            if (path === void 0) { path = ""; }
+            return this.buildUrl("users/", path, odataQuery);
+        };
+        Graph.prototype.buildGroupsUrl = function (path, odataQuery) {
+            if (path === void 0) { path = ""; }
+            return this.buildUrl("groups/", path, odataQuery);
         };
         return Graph;
     })();
