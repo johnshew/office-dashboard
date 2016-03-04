@@ -1,12 +1,12 @@
 # Office Dashboard for the Tesla
 
-A simple web application that shows your email and other information from Office 365, optimized for the Tesla dashboard computer.
+A simple web application that shows your email and other information from Office 365.
 
-## Try It	
+The application is optimized for the Tesla dashboard screen but it works well on desktop and larger mobile devices. 
 
 You can try the app here http://aka.ms/offdash.
 
-## RELEASE NOTES
+## Release Notes
 
 ### Release 0.1 – Public Alpha
  
@@ -26,7 +26,7 @@ There are several significant limitations and issues in this release:
 
 Please use this link to report bugs or provide suggestions: https://github.com/johnshew/office-dashboard/issues
 
-## INFORMATION FOR DEVELOPERS
+## Information for Developers
 
 This app was developed to: 
 * Demonstrate how to display information from http://graph.microsoft.io
