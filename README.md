@@ -38,18 +38,19 @@ The source is available at https://github.com/johnshew/office-dashboard/
 
 ### Implementation Notes
 
-The code to connect to the information in Office is in app.tsx. It uses the KurveJS library to do most of the heavy lifting to connect to graph.microsoft.com. 
-Once the Office information is acquired and placed into app state it gets rendered by set of React components.
+The code to connect to the information in Office can be found in app.tsx. It uses the KurveJS library to do most of the heavy lifting to connect to Azure Active Directory and graph.microsoft.com. 
+
+Once the information is acquired from Office and placed into app state it gets rendered by set of user interface components.
     
-The user interface is designed to work with both modern browsers and more limited browsers as found on TVs and the Tesla. For these more limited browsers the application provides a layout option (in Settings) that is flat without any scrolling regions other than the page itself. 
+The user interface is designed to work with both modern browsers and as well as more limited browsers as found on TVs and the Tesla. For these more limited browsers the application provides a layout option (in Settings) that is flat without any scrolling regions other than the page itself. 
 
-The user interface is rendered by a set of React components that understand the graph.microsoft.com data models. Other than using Kurve for these data model definitions, the user interface is fully independent of how the Office information is acquired.  
+The user interface components are build using React.  These components work with the graph.microsoft.com data models. We use the Kurve library for data model definitions.  However, the user interface components do not depend on Kurve (or any other implementation) to acquire the information that is rendered.
 
-The Office React components may potentially be useful to build other applications. If there is interest in this we will factor them out into a seperate Office React library that this application will use.
+These Office React components may potentially be useful to build other applications. If there is interest in this we will factor them out into a seperate Office React library that this application will use.
 
-In terms of UX technologies, the current implementation leverages Bootstrap 3 for the navbar, dialogs, and grid system. In the future we may move to React based navbars and dialogs which in turn would mean we can remove the dependency on the Bootstrap javascript library and the associated jquery library.   
+In terms of other user interface technologies, the current implementation leverages Bootstrap 3 for the navbar, dialogs, and grid system. In the future we may move to React based navbars and dialogs which in turn would mean we can remove the dependency on the Bootstrap javascript library and the associated jquery library.   
 
-Consistent with the recommended approach to React, the React components do not use any global CSS classes other than the grid system. As noted above, we use the Bootstrap grid system to provide responsive layout. 
+Consistent with the recommended approach to React, the React components do not use any global CSS classes other than the grid system. As noted above, we use the Bootstrap grid system.  Bootstrap is used to provide responsive layout. 
 
 ### Building the application
 
@@ -62,6 +63,10 @@ After you fork the repo do the following:
  
 ### Working with the Tesla browser
 
-The Tesla browser is a reasonably modern HTML5 browser implementation based on webkit. With the use of the es5-shim it is able to support modern frameworks such as React - but in general it is pretty slow.  Also, the browser does a much faster at scrolling an entire page rather than scrolling a div - you can see this by enabling scrolling in the setting dialog. 
+The Tesla browser is a reasonably modern HTML5 browser implementation based on webkit. With the use of the es5-shim the Browser can support modern frameworks such as React. So in general it is easy to develop a modern web app for the Tesla.  
 
-That said the car is a pretty challenging environment to debug web pages. To help with this, in the settings you can enable a simple debug console window that displays information written to console.log and provides an immediate command window.  If you need more debug capabilties we updated VorlonJS (http://vorlonjs.com) to be able to work well on the Tesla.
+That said it is important to recognize that the Browser is pretty slow at rendering so don't make your user interface too complicated. In particular note that the Tesla browser is faster at scrolling an entire page relative to scrolling the contents of a div.  You can see this in the app by enabling scrolling in the settings dialog. 
+
+It can be pretty challenging to debug web pages in the Tesla. To help developers working on this app, in the settings you can enable a simple debug console window that displays information written to console.log and it provides an immediate command window.  
+
+If you need more sophisticated debug capabilties note that we updated VorlonJS (http://vorlonjs.com) to work well on the Tesla.
