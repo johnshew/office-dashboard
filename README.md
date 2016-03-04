@@ -6,26 +6,27 @@ A simple web application that shows your email and other information from Office
 
 You can try the app here http://aka.ms/offdash.
 
-## RELEASE NOTES - Release 0.1 – First Alpha
+## RELEASE NOTES
+
+### Release 0.1 – Public Alpha
  
 This app provides a Tesla-friendly way to access your Office information.
  
 This is a pure client app that talks directly to Microsoft’s servers over HTTPS with READ-ONLY access so there is very little risk that your information will be compromised.
  
-There are several significant limitations and errors with this release:
+There are several significant limitations and issues in this release:
 
 * Embedded pictures (in either email or calendar) are not supported
 * The email view shows all messages from every folder in your mailbox – including sent mail
 * Attachments sometimes show up as separate messages
 * Calendar meeting times are shown in military time
-* You have to hit login each time you go away and come back - we should persist the tokens
+* You have to login every time you go back to the app - we should persist the tokens
+* Loading the messages takes a little while on Tesla and there is no message indicating it is loading
+* The settings options are too small to be easily used is the Tesla
 
- 
 Please use this link to report bugs or provide suggestions: https://github.com/johnshew/office-dashboard/issues
 
-## Information for developers
-
-Sources at https://github.com/johnshew/office-dashboard/
+## INFORMATION FOR DEVELOPERS
 
 This app was developed to: 
 * Demonstrate how to display information from http://graph.microsoft.io
@@ -33,7 +34,9 @@ This app was developed to:
 * Learn more about React and how to use React with Typescript 
 * Make it easy to catch up on mail and other Office information using the browser in Tesla http://tesla.com. 
 
-### Implementation notes
+The source is available at https://github.com/johnshew/office-dashboard/
+
+### Implementation Notes
 
 The code to connect to the information in Office is in app.tsx. It uses the KurveJS library to do most of the heavy lifting to connect to graph.microsoft.com. 
 Once the Office information is acquired and placed into app state it gets rendered by set of React components.
@@ -57,8 +60,8 @@ After you fork the repo do the following:
     npm run build (or npm run watch)
     npm run start (to run locally - remember to use http://localhost not http://127.0.0.1)
  
-### Tesla browser
+### Working with the Tesla browser
 
-The Tesla browser is a reasonably modern HTML5 browser implementation based on webkit. With the use of the es5-shim it is able to support modern frameworks such as React - albiet slowly.
+The Tesla browser is a reasonably modern HTML5 browser implementation based on webkit. With the use of the es5-shim it is able to support modern frameworks such as React - but in general it is pretty slow.  Also, the browser does a much faster at scrolling an entire page rather than scrolling a div - you can see this by enabling scrolling in the setting dialog. 
 
 That said the car is a pretty challenging environment to debug web pages. To help with this, in the settings you can enable a simple debug console window that displays information written to console.log and provides an immediate command window.  If you need more debug capabilties we updated VorlonJS (http://vorlonjs.com) to be able to work well on the Tesla.
