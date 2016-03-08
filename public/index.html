@@ -56,6 +56,9 @@
                     <li style="display: none"><a id="ShowNotes" href="#">Notes</a></li>
                 </ul>
                 <ul class="nav navbar-nav navbar-right">
+                    <li class="refreshButton">
+                        <a id="RefreshCurrentView" href="#" style="display: none;"><i class="glyphicon glyphicon-refresh"></i></a>
+                    </li>
                     <li class="dropdown">
                         <a class="dropdown-toggle" role="button" data-toggle="dropdown" href="#">
                             <i class="glyphicon glyphicon-user">&nbsp;<span id="UsernameText"></span></i>&nbsp;<span class="caret"></span>
@@ -109,6 +112,10 @@
         $(function () {
             $('.navbar-nav li').click(function () {
                 $(this).addClass('active').siblings().removeClass('active');
+
+                if ($(this).hasClass('refreshButton')) {
+                    $(this).removeClass('active');
+                }
             });
         });
     </script>
