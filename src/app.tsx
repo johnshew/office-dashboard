@@ -171,7 +171,8 @@ class App extends React.Component<AppProps, AppState> {
                 console.log('Got calendar.  Now rendering.');
                 this.ProcessEvents([], {}, events);
                 this.setState({ fetchingCalendar: false });
-            }, (err) => {
+            })
+            .fail((error) => {
                 this.setState({ fetchingCalendar: false });
             });
     }
@@ -207,7 +208,7 @@ class App extends React.Component<AppProps, AppState> {
                 if (this.mounted && this.state.show === ShowState.Welcome) { this.setState({ show: ShowState.Mail }); }
                 this.ProcessMessages([], {}, messages);
                 this.setState({ fetchingMail: false });
-            }, (err) => {
+            }).fail((error) => {
                 this.setState({ fetchingMail: false });
             });
     }
