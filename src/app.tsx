@@ -179,11 +179,11 @@ class App extends React.Component<AppProps, AppState> {
 
     private ProcessEvents(newEvents: Kurve.EventDataModel[], idMap: Object, events: Kurve.Events) {
         events.data.map(event => {
-            var index = idMap[event.data["id"]];
+            var index = idMap[event.data.id];
             if (index) {
                 newEvents[index] = event.data; // do an update.
             } else {
-                idMap[event.data["id"]] = newEvents.push(event.data); // add it to the list and record index.
+                idMap[event.data.id] = newEvents.push(event.data); // add it to the list and record index.
             }
         });
         this.setState({ events: newEvents, eventIdToIndex: idMap });  // We have new data so update state and it will cause a render.
