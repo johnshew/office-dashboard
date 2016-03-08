@@ -31,6 +31,11 @@
             margin-right: 0px;
             padding: 0px;
         }
+        
+        .profile-picture {
+            display: none;
+            height: 50px;
+        }
     </style>
 
 
@@ -61,7 +66,9 @@
                     </li>
                     <li class="dropdown">
                         <a class="dropdown-toggle" role="button" data-toggle="dropdown" href="#">
-                            <i class="glyphicon glyphicon-user">&nbsp;<span id="UsernameText"></span></i>&nbsp;<span class="caret"></span>
+                            <span id="UsernameText"></span>&nbsp;
+                            <span class="caret"></span>
+                            <i class="glyphicon glyphicon-user profile-icon"></i>
                         </a>
                         <ul id="account-menu" class="dropdown-menu" role="menu">
                             <li><a id="DoLogout" href="#">Logout</a></li>
@@ -70,6 +77,7 @@
                         </ul>
                     </li>
                     <li><a id="DoLogin" href="#">Login</a></li>
+                    <li><img class="profile-picture"></img></li>
                 </ul>
             </div>
         </div>

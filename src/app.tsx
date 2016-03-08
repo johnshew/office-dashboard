@@ -148,6 +148,7 @@ class App extends React.Component<AppProps, AppState> {
                 console.log("Got me.");
                 this.me = result;
                 this.RefreshFromCloud(1); // do it now, note that zero would mean never.
+                return this.UpdateProfileInfo();
             })
             .fail((error) => {
                 console.log("Get me failed.");
@@ -294,6 +295,25 @@ class App extends React.Component<AppProps, AppState> {
     private ShowNotes() {
 
     }
+    
+    private UpdateProfileInfo() {
+        document.querySelector("#UsernameText").textContent = this.me.data.displayName;
+        return this.me.profilePhotoValueAsync()
+            .then((profilePhoto) => {
+                return this.ShowProfilePicture(profilePhoto);
+            })
+            .fail((err) => {
+                console.log("Get profilePhotoValueAsync failed.")
+            });
+    }
+
+    private ShowProfilePicture(profilePhoto) {
+        var profileImage = document.querySelector(".nav .profile-picture");
+        var profileIcon = document.querySelector(".nav .profile-icon");
+        profileImage.setAttribute("src", window.URL.createObjectURL(profilePhoto));
+        profileIcon.setAttribute("style", "display: none");
+        profileImage.setAttribute("style", "display: block");
+    } 
 
     private RefreshFromCloud(delay: number) {
         console.log("Setting next refresh to " + delay + "ms");
