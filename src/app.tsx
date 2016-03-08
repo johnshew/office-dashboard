@@ -18,7 +18,6 @@ enum ShowState { Welcome, Mail, Calendar, Contacts, Notes };
 interface AppProps extends React.Props<App> {
 }
 
-
 interface AppState {
     fetchingMail? : Boolean;
     fetchingCalendar? : Boolean;
@@ -325,9 +324,9 @@ class App extends React.Component<AppProps, AppState> {
                     break;
                 case ShowState.Calendar:
                     this.GetCalendarEvents();
+                    break;
             }
         }
-
     }
 }
 
