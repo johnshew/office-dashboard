@@ -5,14 +5,22 @@ import { Mail, Calendar} from './office';
 import { Settings, SettingsValues } from './settings';
 import { About } from './about';
 
+const loadingMessageStyle: React.CSSProperties = {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    padding: 10,
+    fontWeight: 'bold'
+};
 
 enum ShowState { Welcome, Mail, Calendar, Contacts, Notes };
 
 interface AppProps extends React.Props<App> {
 }
 
-
 interface AppState {
+    fetchingMail? : Boolean;
+    fetchingCalendar? : Boolean;
     messages?: Kurve.MessageDataModel[];
     messageIdToIndex?: Object;
     events?: Kurve.EventDataModel[];
@@ -35,7 +43,24 @@ class App extends React.Component<AppProps, AppState> {
     constructor() {
         super();
         console.log('App initializing');
-        this.state = { messages: [], messageIdToIndex: {}, events: [], eventIdToIndex: {}, show: ShowState.Welcome, settings: { scroll: false, inplace: true, testData: false, console: false, refreshIntervalSeconds: 5*60 } };
+
+        this.state = {
+            fetchingMail: false,
+            fetchingCalendar: false,
+            messages: [],
+            messageIdToIndex: {},
+            events: [],
+            eventIdToIndex: {},
+            show: ShowState.Welcome,
+            settings: {
+                scroll: false,
+                inplace: true,
+                testData: false,
+                console: false,
+                refreshIntervalSeconds: 5*60
+            }
+        };
+
         Utilities.ObjectAssign(this.state.settings, Utilities.Storage.getItem("settings")); // replace defaults with anything we find in storage.
 
         var here = document.location;
@@ -49,19 +74,20 @@ class App extends React.Component<AppProps, AppState> {
 
         var params = document.location.search.replace(/.*?\?/, "").split("&").map(function(kv) { return kv.split('='); }).reduce(function(prev, kva) { prev[kva[0]] = (!kva[1]) ? true : kva[1]; return prev }, {});
 
-        if (window["forceInPlaceLogin"] === true || params["inplace"] === true) { this.state.settings.inplace = true; } // Override settings        
+        if (window["forceInPlaceLogin"] === true || params["inplace"] === true) { this.state.settings.inplace = true; } // Override settings
         if (window["forceDebugConsole"] === true || params["console"] === true) { this.state.settings.console = true; }
         this.CheckConsole();
-        
+
         console.log('Inline login is ' + this.state.settings.inplace);
-        console.log('Local console is ' + this.state.settings.console);            
-        
+        console.log('Local console is ' + this.state.settings.console);
+
         document.getElementById("DoLogin").onclick = (e) => this.Login();
         document.getElementById("DoLogout").onclick = (e) => this.Logout();
         document.getElementById("ShowMail").onclick = (e) => this.ShowMail();
         document.getElementById("ShowCalendar").onclick = (e) => this.ShowCalendar();
         document.getElementById("ShowContacts").onclick = (e) => this.ShowContacts();
         document.getElementById("ShowNotes").onclick = (e) => this.ShowNotes();
+        document.getElementById("RefreshCurrentView").onclick = (e) => this.RefreshCurrentView();
 
         console.log('Checking for identity redirect');
         if (this.identity.checkForIdentityRedirect()) {
@@ -74,14 +100,17 @@ class App extends React.Component<AppProps, AppState> {
         var welcome = (this.state.show == ShowState.Welcome) ? <div className="jumbotron"> <h2> { "Welcome" }</h2> <p> { "Please login to access your information" } </p> </div> : null;
         var mail = (this.state.show == ShowState.Mail) ? <Mail messages={ this.state.messages } scroll={ this.state.settings.scroll } mailboxes={["inbox", "sent items"]}/> : null;
         var calendar = (this.state.show == ShowState.Calendar) ? <Calendar events={ this.state.events } scroll={ this.state.settings.scroll } /> : null;
+        var loadingMessage = (this.state.fetchingMail || this.state.fetchingCalendar) ? <div style={ loadingMessageStyle }>Loading...</div> : null;
+
         return (
             <div>
+                { loadingMessage }
                 { welcome }
                 { mail }
                 { calendar }
                 <Settings onChange={ this.handleSettingsChange } values={ this.state.settings }/>
                 <About/>
-                </div>
+            </div>
         );
     }
 
@@ -107,7 +136,7 @@ class App extends React.Component<AppProps, AppState> {
     public CheckConsole()
     {
         if (this.state.settings.console && !Utilities.LocalConsole) { Utilities.LocalConsoleInitialize(); }
-    }        
+    }
 
     public GetMe(): Kurve.User {
         if (this.me) {
@@ -135,10 +164,16 @@ class App extends React.Component<AppProps, AppState> {
         var now = new Date(Date.now())
         var today = new Date();
         var nextWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate()+7);
+        this.setState({ fetchingCalendar: true });
+
         this.me.calendarViewAsync("$orderby=start/dateTime&startDateTime=" + now.toISOString() + "&endDateTime=" + nextWeek.toISOString())
             .then((events) => {
                 console.log('Got calendar.  Now rendering.');
                 this.ProcessEvents([], {}, events);
+                this.setState({ fetchingCalendar: false });
+            })
+            .fail((error) => {
+                this.setState({ fetchingCalendar: false });
             });
     }
 
@@ -165,12 +200,16 @@ class App extends React.Component<AppProps, AppState> {
             return;
         }
         console.log('Now getting messages.');
+        this.setState({ fetchingMail: true });
+
         this.me.messagesAsync()
             .then((messages) => {
                 console.log('Got messages.  Now rendering.');
                 if (this.mounted && this.state.show === ShowState.Welcome) { this.setState({ show: ShowState.Mail }); }
                 this.ProcessMessages([], {}, messages);
-
+                this.setState({ fetchingMail: false });
+            }).fail((error) => {
+                this.setState({ fetchingMail: false });
             });
     }
 
@@ -196,9 +235,11 @@ class App extends React.Component<AppProps, AppState> {
         if (this.identity.isLoggedIn()) {
             document.getElementById("DoLogin").style.display = "none";
             document.getElementById("DoLogout").style.display = "inherit";
+            document.getElementById("RefreshCurrentView").style.display = "inherit";
         } else {
             document.getElementById("DoLogin").style.display = "inherit";
             document.getElementById("DoLogout").style.display = "none";
+            document.getElementById("RefreshCurrentView").style.display = "none";
         }
     }
 
@@ -257,12 +298,12 @@ class App extends React.Component<AppProps, AppState> {
     private RefreshFromCloud(delay: number) {
         console.log("Setting next refresh to " + delay + "ms");
         clearTimeout(this.timerHandle);
-        if (delay === 0) return; // Zero means stop refresh 
+        if (delay === 0) return; // Zero means stop refresh
         this.timerHandle = setTimeout(() => {
             this.RefreshTick();
         }, delay);
     }
-    
+
     private StopRefreshFromCloud() {
         clearTimeout(this.timerHandle);
     }
@@ -274,6 +315,19 @@ class App extends React.Component<AppProps, AppState> {
             this.GetCalendarEvents();
         }
         this.RefreshFromCloud(this.state.settings.refreshIntervalSeconds * 1000);
+    }
+
+    private RefreshCurrentView() {
+        if (this.IsLoggedIn()) {
+            switch (this.state.show) {
+                case ShowState.Mail:
+                    this.GetMessages();
+                    break;
+                case ShowState.Calendar:
+                    this.GetCalendarEvents();
+                    break;
+            }
+        }
     }
 }
 
