@@ -295,7 +295,7 @@ class App extends React.Component<AppProps, AppState> {
     private ShowNotes() {
 
     }
-    
+
     private UpdateProfileInfo() {
         document.querySelector("#UsernameText").textContent = this.me.data.displayName;
         return this.me.profilePhotoValueAsync()
@@ -313,7 +313,7 @@ class App extends React.Component<AppProps, AppState> {
         profileImage.setAttribute("src", window.URL.createObjectURL(profilePhoto));
         profileIcon.setAttribute("style", "display: none");
         profileImage.setAttribute("style", "display: block");
-    } 
+    }
 
     private RefreshFromCloud(delay: number) {
         console.log("Setting next refresh to " + delay + "ms");

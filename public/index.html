@@ -12,7 +12,7 @@
 
     <script>
         window.onerror = function (errorMsg, url, lineNumber) {
-            alert((lineNumber ? lineNumber : '') + '\r\n' + errorMsg + '\r\n' + (url ? url + ' ' : '')); 
+            alert((lineNumber ? lineNumber : '') + '\r\n' + errorMsg + '\r\n' + (url ? url + ' ' : ''));
         }
         // Show page load alerts on Tesla browser
     </script>
@@ -31,14 +31,12 @@
             margin-right: 0px;
             padding: 0px;
         }
-        
+
         .profile-picture {
             display: none;
             height: 50px;
         }
     </style>
-
-
 </head>
 
 <body>
@@ -84,10 +82,7 @@
         <!-- /container -->
     </div>
 
-
     <!-- Modal HTML -->
-
-
     <div class="container-fluid tight">
 
         <div id="App" class="row tight">
@@ -109,13 +104,12 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
     <script src="./kurve.js"></script>
 
-
     <script>
         var forceInPlaceLogin = false;
         var forceDebugConsole = false;
-        
+
         console.log('Starting app');
-    
+
         // Keeping jquery out of main react app.  Ultimately may move away from a bootstrap to a React navigation bar in which case this will go away.
         $(function () {
             $('.navbar-nav li').click(function () {
