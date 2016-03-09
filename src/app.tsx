@@ -142,6 +142,9 @@ class App extends React.Component<AppProps, AppState> {
                 this.RefreshFromCloud(1); // do it now, note that zero would mean never.
             })
             .fail((error) => {
+                if (error.status == 401) {
+                    this.clearAccessTokenAndReload();
+                }
                 console.log("Get me failed.");
             });
         return null;
@@ -165,6 +168,9 @@ class App extends React.Component<AppProps, AppState> {
                 this.setState({ fetchingCalendar: false });
             })
             .fail((error) => {
+                if (error.status == 401) {
+                    this.clearAccessTokenAndReload();
+                }
                 this.setState({ fetchingCalendar: false });
             });
     }
@@ -201,6 +207,9 @@ class App extends React.Component<AppProps, AppState> {
                 this.ProcessMessages([], {}, messages);
                 this.setState({ fetchingMail: false });
             }).fail((error) => {
+                if (error.status == 401) {
+                    this.clearAccessTokenAndReload();
+                }
                 this.setState({ fetchingMail: false });
             });
     }
@@ -263,8 +272,7 @@ class App extends React.Component<AppProps, AppState> {
     }
 
     public Logout() {
-        this.accessToken = null;
-        Utilities.Storage.removeItem("accessToken");
+        this.clearAccessTokenAndReload();
         this.identity.logOut();
         this.UpdateLoginState();
     };
@@ -294,6 +302,12 @@ class App extends React.Component<AppProps, AppState> {
                     console.log("Error getting accessToken.");
                 });
         }
+    }
+
+    private clearAccessTokenAndReload() {
+        this.accessToken = null;
+        Utilities.Storage.removeItem("accessToken");
+        location.reload();
     }
 
     private handleMultiChange = (e) => {
