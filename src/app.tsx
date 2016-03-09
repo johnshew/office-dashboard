@@ -6,7 +6,7 @@ import { Settings, SettingsValues } from './settings';
 import { About } from './about';
 
 const loadingMessageStyle: React.CSSProperties = {
-    position: 'absolute',
+    position: 'fixed',
     bottom: 0,
     right: 0,
     padding: 10,
