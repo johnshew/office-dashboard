@@ -9,7 +9,7 @@ export class Storage {
                 localStorage.setItem(key, JSON.stringify({ data: data }));
             }
             catch (e) {
-                console.log("localStorage error " + e);
+                console.log("localStorage setItem error " + e);
             }
         }
     }
@@ -21,10 +21,21 @@ export class Storage {
                 return data && data.data;
             }
             catch (e) {
-                console.log('localStorage read error ' + e);
+                console.log('localStorage getItem error ' + e);
             }
         }
         return null;
+    }
+
+    public static removeItem(key: string) {
+        if (localStorage) {
+            try {
+                localStorage.removeItem(key);
+            }
+            catch (e) {
+                console.log("localStorage removeItem error " + e);
+            }
+        }
     }
 }
 
@@ -113,22 +124,22 @@ export function sortBy(key?: (any) => any, reverse?: boolean) {
 }
 
 export class DebugConsole {
-    
+
     console : HTMLDivElement;
     logger : HTMLDivElement;
     command : HTMLInputElement;
-    
+
 
     public constructor() {
         this.console = document.getElementById("DebugConsole") as HTMLDivElement;
-        this.command = document.getElementById("DebugCommand") as HTMLInputElement; 
+        this.command = document.getElementById("DebugCommand") as HTMLInputElement;
         this.logger = document.getElementById("DebugLog") as HTMLDivElement;
-        
+
         if (!this.console || !this.command || !this.logger) { alert("Unable to initialize local console"); return; }
-        
+
         Hook(console, "log", this.Log );
-        
-        this.console.style.display = "";        
+
+        this.console.style.display = "";
         this.command.onchange = () => {
             var result = ""
             try { result = eval(this.command.value); } catch (err) { result = "Unable to evaluate " + this.command.value + " with error " + err.toString(); }
@@ -137,7 +148,7 @@ export class DebugConsole {
         }
     }
 
-    public Log = (...args : any[]) => {        
+    public Log = (...args : any[]) => {
         var message = args && args[0];
         if (message) {
             try {
@@ -172,7 +183,7 @@ export function ShortTimeString(dateString: string)
             hours = 12;
         } else if (hours >= 12) {
             suffix = " PM";
-            hours -= 12;       
+            hours -= 12;
         }
         var minutes = date.getMinutes().toString();
         if (minutes.length == 1) {
@@ -180,6 +191,6 @@ export function ShortTimeString(dateString: string)
         }
         return hours + ":" + minutes + suffix;
     } else {
-        return Days[date.getDay()] + " " + date.getMonth() + "/" + date.getDate();        
+        return Days[date.getDay()] + " " + date.getMonth() + "/" + date.getDate();
     }
 }

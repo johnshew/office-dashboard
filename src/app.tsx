@@ -30,12 +30,13 @@ interface AppState {
 }
 
 class App extends React.Component<AppProps, AppState> {
+    private defaultResourceID: string = "https://graph.microsoft.com";
+    private accessToken: string;
     private identity: Kurve.Identity;
     private graph: Kurve.Graph;
     private me: Kurve.User;
     // private eventIdToIndex: {};  now in state
     private mounted = false;
-    private storage: Utilities.Storage;
 
     // private loginNewWindow: boolean;
     private timerHandle: any;
@@ -63,13 +64,8 @@ class App extends React.Component<AppProps, AppState> {
 
         Utilities.ObjectAssign(this.state.settings, Utilities.Storage.getItem("settings")); // replace defaults with anything we find in storage.
 
-        var here = document.location;
-        this.identity = new Kurve.Identity({
-            clientId: "b8dd3290-662a-4f91-92b9-3e70fbabe04e",
-            tokenProcessingUri: here.protocol + '//' + here.host + here.pathname.substring(0, here.pathname.lastIndexOf('/') + 1) + '../public/login.html',
-            version: null
-        });
-        this.graph = new Kurve.Graph({ identity: this.identity });
+        this.InitKurve();
+
         this.me = null;
 
         var params = document.location.search.replace(/.*?\?/, "").split("&").map(function(kv) { return kv.split('='); }).reduce(function(prev, kva) { prev[kva[0]] = (!kva[1]) ? true : kva[1]; return prev }, {});
@@ -89,10 +85,6 @@ class App extends React.Component<AppProps, AppState> {
         document.getElementById("ShowNotes").onclick = (e) => this.ShowNotes();
         document.getElementById("RefreshCurrentView").onclick = (e) => this.RefreshCurrentView();
 
-        console.log('Checking for identity redirect');
-        if (this.identity.checkForIdentityRedirect()) {
-            this.LoggedIn()
-        }
         this.UpdateLoginState();
     }
 
@@ -232,7 +224,7 @@ class App extends React.Component<AppProps, AppState> {
     }
 
     public UpdateLoginState() {
-        if (this.identity.isLoggedIn()) {
+        if (this.IsLoggedIn()) {
             document.getElementById("DoLogin").style.display = "none";
             document.getElementById("DoLogout").style.display = "inherit";
             document.getElementById("RefreshCurrentView").style.display = "inherit";
@@ -253,7 +245,7 @@ class App extends React.Component<AppProps, AppState> {
     }
 
     public IsLoggedIn(): boolean {
-        return this.identity.isLoggedIn();
+        return !!this.accessToken || this.identity.isLoggedIn();
     }
 
     public Login() {
@@ -271,9 +263,38 @@ class App extends React.Component<AppProps, AppState> {
     }
 
     public Logout() {
+        this.accessToken = null;
+        Utilities.Storage.removeItem("accessToken");
         this.identity.logOut();
         this.UpdateLoginState();
     };
+
+    private InitKurve() {
+        var here = document.location;
+        this.identity = new Kurve.Identity({
+            clientId: "b8dd3290-662a-4f91-92b9-3e70fbabe04e",
+            tokenProcessingUri: here.protocol + '//' + here.host + here.pathname.substring(0, here.pathname.lastIndexOf('/') + 1) + '../public/login.html',
+            version: null
+        });
+
+        this.accessToken = Utilities.Storage.getItem('accessToken');
+
+        if (this.accessToken) {
+            this.graph = new Kurve.Graph({ defaultAccessToken: this.accessToken });
+            this.LoggedIn();
+        } else {
+            this.identity.getAccessTokenAsync(this.defaultResourceID)
+                .then((token: string) => {
+                    Utilities.Storage.setItem("accessToken", token);
+                    this.accessToken = token;
+                    this.graph = new Kurve.Graph({ defaultAccessToken: token });
+                    this.LoggedIn();
+                })
+                .fail(() => {
+                    console.log("Error getting accessToken.");
+                });
+        }
+    }
 
     private handleMultiChange = (e) => {
         console.log(JSON.stringify(e));
