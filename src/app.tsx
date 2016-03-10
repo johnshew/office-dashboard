@@ -98,7 +98,7 @@ class App extends React.Component<AppProps, AppState> {
 
     public render() {
         var welcome = (this.state.show == ShowState.Welcome) ? <div className="jumbotron"> <h2> { "Welcome" }</h2> <p> { "Please login to access your information" } </p> </div> : null;
-        var mail = (this.state.show == ShowState.Mail) ? <Mail messages={ this.state.messages } scroll={ this.state.settings.scroll } mailboxes={["inbox", "sent items"]}/> : null;
+        var mail = (this.state.show == ShowState.Mail) ? <Mail me={this.me} graph={this.graph} messages={ this.state.messages } scroll={ this.state.settings.scroll } mailboxes={["inbox", "sent items"]}/> : null;
         var calendar = (this.state.show == ShowState.Calendar) ? <Calendar events={ this.state.events } scroll={ this.state.settings.scroll } /> : null;
         var loadingMessage = (this.state.fetchingMail || this.state.fetchingCalendar) ? <div style={ loadingMessageStyle }>Loading...</div> : null;
 
@@ -202,7 +202,7 @@ class App extends React.Component<AppProps, AppState> {
         console.log('Now getting messages.');
         this.setState({ fetchingMail: true });
 
-        this.me.messagesAsync()
+        this.me.messagesAsync('$expand=attachments($select=id,isInline)')
             .then((messages) => {
                 console.log('Got messages.  Now rendering.');
                 if (this.mounted && this.state.show === ShowState.Welcome) { this.setState({ show: ShowState.Mail }); }

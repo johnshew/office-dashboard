@@ -1,4 +1,7 @@
 declare module Kurve {
+    interface PromiseCallback<T> {
+        (T: any, Error: any): void;
+    }
     class Deferred<T, E> {
         private _dispatcher;
         constructor();
@@ -48,30 +51,24 @@ declare module Kurve {
         PreferredUsername: string;
         FullToken: any;
     }
-    class Identity {
-        authContext: any;
-        config: any;
-        isCallback: boolean;
+    interface IdentitySettings {
         clientId: string;
-        private req;
+        tokenProcessingUri: string;
+        version: OAuthVersion;
+    }
+    class Identity {
+        clientId: string;
         private state;
         private version;
         private nonce;
         private idToken;
         private loginCallback;
-        private accessTokenCallback;
         private getTokenCallback;
         private tokenProcessorUrl;
         private tokenCache;
-        private logonUser;
         private refreshTimer;
         private policy;
-        private tenant;
-        constructor(identitySettings: {
-            clientId: string;
-            tokenProcessingUri: string;
-            version: OAuthVersion;
-        });
+        constructor(identitySettings: IdentitySettings);
         checkForIdentityRedirect(): boolean;
         private decodeIdToken(idToken);
         private decodeAccessToken(accessToken, resource?, scopes?);
@@ -80,7 +77,7 @@ declare module Kurve {
         private renewIdToken();
         getCurrentOauthVersion(): OAuthVersion;
         getAccessTokenAsync(resource: string): Promise<string, Error>;
-        getAccessToken(resource: string, callback: (token: string, error: Error) => void): void;
+        getAccessToken(resource: string, callback: PromiseCallback<string>): void;
         getAccessTokenForScopesAsync(scopes: string[], promptForConsent?: boolean): Promise<string, Error>;
         getAccessTokenForScopes(scopes: string[], promptForConsent: boolean, callback: (token: string, error: Error) => void): void;
         loginAsync(loginSettings?: {
@@ -166,9 +163,6 @@ declare module Kurve {
     }
     class DataModelWrapperWithNextLink<T, S> extends DataModelWrapper<T> {
         nextLink: NextLink<S>;
-    }
-    interface PromiseCallback<T> {
-        (T: any, Error: any): void;
     }
     class ProfilePhotoDataModel {
         id: string;
@@ -340,6 +334,27 @@ declare module Kurve {
     }
     class Groups extends DataModelWrapperWithNextLink<Group[], Groups> {
     }
+    enum AttachmentType {
+        fileAttachment = 0,
+        itemAttachment = 1,
+        referenceAttachment = 2,
+    }
+    class AttachmentDataModel {
+        contentId: string;
+        id: string;
+        isInline: string;
+        lastModifiedDateTime: Date;
+        name: string;
+        size: number;
+        contentBytes: string;
+        contentLocation: string;
+        contentType: string;
+    }
+    class Attachment extends DataModelWrapper<AttachmentDataModel> {
+        getType(): AttachmentType;
+    }
+    class Attachments extends DataModelWrapperWithNextLink<Attachment[], Attachments> {
+    }
     class Graph {
         private req;
         private accessToken;
@@ -377,6 +392,10 @@ declare module Kurve {
         profilePhotoForUser(userPrincipalName: string, callback: PromiseCallback<ProfilePhoto>, odataQuery?: string): void;
         profilePhotoValueForUserAsync(userPrincipalName: string, odataQuery?: string): Promise<any, Error>;
         profilePhotoValueForUser(userPrincipalName: string, callback: PromiseCallback<any>, odataQuery?: string): void;
+        messageAttachmentsAsync(userPrincipalName: string, messageId: string, odataQuery?: string): Promise<Attachments, Error>;
+        messageAttachments(userPrincipalName: string, messageId: string, callback: PromiseCallback<Attachments>, odataQuery?: string): void;
+        messageAttachmentAsync(userPrincipalName: string, messageId: string, attachmentId: string, odataQuery?: string): Promise<Attachment, Error>;
+        messageAttachment(userPrincipalName: string, messageId: string, attachmentId: string, callback: PromiseCallback<Attachment>, odataQuery?: string): void;
         getAsync(url: string): Promise<string, Error>;
         get(url: string, callback: PromiseCallback<string>, responseType?: string, scopes?: string[]): void;
         private generateError(xhr);
@@ -389,6 +408,8 @@ declare module Kurve {
         private getGroup(urlString, callback, scopes?);
         private getPhoto(urlString, callback, scopes?);
         private getPhotoValue(urlString, callback, scopes?);
+        private getMessageAttachments(urlString, callback, scopes?);
+        private getMessageAttachment(urlString, callback, scopes?);
         private buildUrl(root, path, odataQuery?);
         private buildMeUrl(path?, odataQuery?);
         private buildUsersUrl(path?, odataQuery?);
