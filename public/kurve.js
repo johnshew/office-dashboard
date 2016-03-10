@@ -1148,22 +1148,22 @@ var Kurve;
             this.getPhotoValue(urlString, callback, this.scopesForV2(scopes));
         };
         // Message Attachments
-        Graph.prototype.messageAttachmentsAsync = function (userPrincipalName, messageId, odataQuery) {
+        Graph.prototype.messageAttachmentsForUserAsync = function (userPrincipalName, messageId, odataQuery) {
             var d = new Kurve.Deferred();
-            this.messageAttachments(userPrincipalName, messageId, function (result, error) { return error ? d.reject(error) : d.resolve(result); }, odataQuery);
+            this.messageAttachmentsForUser(userPrincipalName, messageId, function (result, error) { return error ? d.reject(error) : d.resolve(result); }, odataQuery);
             return d.promise;
         };
-        Graph.prototype.messageAttachments = function (userPrincipalName, messageId, callback, odataQuery) {
+        Graph.prototype.messageAttachmentsForUser = function (userPrincipalName, messageId, callback, odataQuery) {
             var scopes = [Scopes.Mail.Read];
             var urlString = this.buildUsersUrl(userPrincipalName + "/messages/" + messageId + "/attachments", odataQuery);
             this.getMessageAttachments(urlString, callback, this.scopesForV2(scopes));
         };
-        Graph.prototype.messageAttachmentAsync = function (userPrincipalName, messageId, attachmentId, odataQuery) {
+        Graph.prototype.messageAttachmentForUserAsync = function (userPrincipalName, messageId, attachmentId, odataQuery) {
             var d = new Kurve.Deferred();
-            this.messageAttachment(userPrincipalName, messageId, attachmentId, function (attachment, error) { return error ? d.reject(error) : d.resolve(attachment); }, odataQuery);
+            this.messageAttachmentForUser(userPrincipalName, messageId, attachmentId, function (attachment, error) { return error ? d.reject(error) : d.resolve(attachment); }, odataQuery);
             return d.promise;
         };
-        Graph.prototype.messageAttachment = function (userPrincipalName, messageId, attachmentId, callback, odataQuery) {
+        Graph.prototype.messageAttachmentForUser = function (userPrincipalName, messageId, attachmentId, callback, odataQuery) {
             var scopes = [Scopes.Mail.Read];
             var urlString = this.buildUsersUrl(userPrincipalName + "/messages/" + messageId + "/attachments/" + attachmentId, odataQuery);
             this.getMessageAttachment(urlString, callback, this.scopesForV2(scopes));

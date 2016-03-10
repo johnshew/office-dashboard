@@ -341,7 +341,7 @@ export class MessageView extends React.Component<MessageViewProps, any>
         message['attachments'].forEach((item) => {
             if (!item.isInline) { return; }
 
-            this.props.graph.messageAttachmentAsync(user.userPrincipalName, message.id, item.id)
+            this.props.graph.messageAttachmentForUserAsync(user.userPrincipalName, message.id, item.id)
                 .then((attachment) => {
                     if (attachment.getType() === Kurve.AttachmentType.fileAttachment) {
                         var currentInlineAttachments = this.state.inlineAttachments.slice();
