@@ -139,7 +139,7 @@ export class EventSummary extends React.Component<EventSummaryProps, any> {
                 <p style={ big }>{startTime + (duration ? " / " + duration : "") }</p>
                 { event.subject ? <p style={ smallBold }> { event.subject } </p> : null }
                 { location ? <p style={ small }>{ location }</p> : null}
-                </div>
+            </div>
         );
     }
 }
@@ -165,9 +165,9 @@ export class EventList extends React.Component<EventListProps, any> {
             lastDate = date;
             return (
                 <div key={ event.id }>
-                  { dateSeparator }
-                  <EventSummary onSelect={ this.handleSelect } selected={ this.props.selected === event.id } event={ event } />
-                    </div>
+                    { dateSeparator }
+                    <EventSummary onSelect={ this.handleSelect } selected={ this.props.selected === event.id } event={ event } />
+                </div>
             );
         });
         return <div>{ eventSummaries }</div>;
@@ -193,11 +193,11 @@ export class MailSummary extends React.Component<MailSummaryProps, any> {
         var message = this.props.message;
         return (
             <div onClick={ this.handleClick } style={ (this.props.selected) ? selectedSummaryStyle : summaryStyle } >
-              <p style={ big }>{(message.sender) ? message.sender.emailAddress.name : ""}</p>
-              <p style={ smallBold }>{message.subject}</p>
-              <p style={ Combine(small, summaryPreviewStyle) }>{message.bodyPreview}</p>
-              <p style={ Combine(small, summaryDateStyle) }>{ ShortTimeString(message.receivedDateTime) }</p>
-              <div style={ clearStyle }/>
+                <p style={ big }>{(message.sender) ? message.sender.emailAddress.name : ""}</p>
+                <p style={ smallBold }>{message.subject}</p>
+                <p style={ Combine(small, summaryPreviewStyle) }>{message.bodyPreview}</p>
+                <p style={ Combine(small, summaryDateStyle) }>{ ShortTimeString(message.receivedDateTime) }</p>
+                <div style={ clearStyle }/>
             </div>
         );
     }
@@ -224,7 +224,7 @@ export class MailList extends React.Component<MailListProps, any> {
     }
 }
 
-function CleanUp(html: string, inlineAttachments: Array<any>) {
+function CleanUp(html: string, inlineAttachments: Array<Kurve.Attachment>) {
     var doc = document.implementation.createHTMLDocument("example");
     doc.documentElement.innerHTML = html;
 
@@ -252,6 +252,39 @@ function CleanUp(html: string, inlineAttachments: Array<any>) {
         }
     }
 
+    // Inline attachments
+    var inlineImages = doc.body.querySelectorAll("img[src^='cid'");
+
+    [].forEach.call(inlineImages, function (image) {
+        var contentId = image.src.replace('cid:', '');
+        var originalWith = image.width;
+        var originalHeight = image.height;
+
+        image.src = '/public/loading.gif?' + image.src;
+        image.width = 25;
+        image.height = 25;
+
+        var foundInAttachments = inlineAttachments.filter((a) => { return a.data.contentId === contentId; });
+
+        if (foundInAttachments.length > 0) {
+            var attachment = foundInAttachments[0].data;
+
+            if (originalWith) {
+                image.width = originalWith;
+            } else {
+                image.removeAttribute('width');
+            }
+
+            if (originalHeight) {
+                image.height = originalHeight;
+            } else {
+                image.removeAttribute('height');
+            }
+
+            image.src = 'data:' + attachment.contentType + ';base64,' + attachment.contentBytes;
+        }
+    });
+
     // Make sure all styles are scoped
     var styles = doc.getElementsByTagName("style");
     var styleIndex = styles.length;
@@ -260,46 +293,13 @@ function CleanUp(html: string, inlineAttachments: Array<any>) {
     }
     ScopedStyles.ScopeStyles(doc.documentElement); // polyfill scoping if necessary
 
-    var inlineImages = doc.body.querySelectorAll("img[src^='cid'");
-
-    [].forEach.call(inlineImages, function (image) {
-        image.src = '/public/loading.gif?' + image.src;
-        image.setAttribute('originalWidth', image.width);
-        image.setAttribute('originalHeight', image.height);
-        image.width = 25;
-        image.height = 25;
-    });
-
-    inlineAttachments.forEach((attachment) => {
-        var selector = "img[src^='/public/loading.gif?cid:" + attachment.contentId + "']";
-        var images = doc.body.querySelectorAll(selector);
-
-        [].forEach.call(images, function (image) {
-            var width = image.getAttribute('originalWidth');
-            if (width !== "0") {
-                image.width = width;
-            } else {
-                image.removeAttribute('width')
-            }
-
-            var height = image.getAttribute('originalHeight');
-            if (height !== "0") {
-                image.height = height;
-            } else {
-                image.removeAttribute('height')
-            }
-
-            image.src = 'data:' + attachment.contentType + ';base64,' + attachment.contentBytes;
-        });
-    });
-
     return { __html: doc.body.innerHTML }
 }
 
 interface MessageViewProps extends React.Props<MessageView> {
-    me: Kurve.User;
-    graph: Kurve.Graph;
     message: Kurve.MessageDataModel;
+    attachments: Kurve.Attachment[];
+    onMessageAttachmentRequested: (messageId: string, attachmentId: string) => void;
     style?: React.CSSProperties;
 }
 
@@ -317,6 +317,28 @@ export class MessageView extends React.Component<MessageViewProps, any>
         this.state = { inlineAttachments: [] };
     }
 
+    componentWillUpdate(nextProps: MessageViewProps) {
+        if (nextProps.message) {
+            var message = nextProps.message;
+
+            message['attachments'].forEach((item) => {
+                if (!item.isInline) { return; }
+
+                var attachment = this.findAttachment(item.id);
+
+                // If attachment is not cached it will notify the App load load each.
+                if (!attachment) {
+                    nextProps.onMessageAttachmentRequested(message.id, item.id);
+                }
+            });
+        }
+    }
+
+    private findAttachment(attachmentId): Kurve.Attachment {
+        var found = this.props.attachments.filter((attachment) => (attachment.data.id === attachmentId));
+        return (found.length > 0) ? found[0] : null;
+    }
+
     private recipients(mailboxes: Kurve.Recipient[], style: React.CSSProperties, prefix: string) {
         var recipientList = mailboxes.reduce((p, c) => { return (p ? p + "; " : "") + c.emailAddress.name; }, null);
         if (recipientList) {
@@ -327,33 +349,6 @@ export class MessageView extends React.Component<MessageViewProps, any>
 
     public scrollToTop() {
         try { this.Header.scrollIntoView(); } catch (err) { }
-    }
-
-    componentWillReceiveProps(nextProps: MessageViewProps) {
-        if (!this.props.me) { return; }
-        if (this.props.message === nextProps.message) { return; }
-
-        var user = this.props.me.data;
-        var message = nextProps.message;
-
-        if (!message) { return; }
-
-        message['attachments'].forEach((item) => {
-            if (!item.isInline) { return; }
-
-            this.props.graph.messageAttachmentForUserAsync(user.userPrincipalName, message.id, item.id)
-                .then((attachment) => {
-                    if (attachment.getType() === Kurve.AttachmentType.fileAttachment) {
-                        var currentInlineAttachments = this.state.inlineAttachments.slice();
-                        currentInlineAttachments.push(attachment.data);
-                        this.setState({ inlineAttachments: currentInlineAttachments })
-                    }
-
-                    this.setState({ fetchingInlineAttachments: false });
-                }).fail((error) => {
-                    this.setState({ fetchingInlineAttachments: false });
-                });
-        });
     }
 
     render() {
@@ -381,7 +376,7 @@ export class MessageView extends React.Component<MessageViewProps, any>
                     { this.recipients(message.bccRecipients, small, "Bcc") }
                     <p style={ small }>{ ShortTimeString(message.receivedDateTime) }</p>
                 </div>
-                <div style={ messageBody } dangerouslySetInnerHTML={ CleanUp(body, this.state.inlineAttachments ) } />
+                <div style={ messageBody } dangerouslySetInnerHTML={ CleanUp(body, this.props.attachments ) } />
             </div>
         );
     }
@@ -435,9 +430,9 @@ export class EventView extends React.Component<EventViewProps, any>
 }
 
 interface MailProps extends React.Props<Mail> {
-    me: Kurve.User;
-    graph: Kurve.Graph;
     messages: Kurve.MessageDataModel[];
+    attachments: Kurve.Attachment[];
+    onMessageAttachmentRequested: (messageId: string, attachmentId: string) => void;
     mailboxes: string[];
     scroll: boolean;
 }
@@ -489,7 +484,11 @@ export class Mail extends React.Component<MailProps, MailState>
                     <MailList onSelection={ this.handleSelection } selected={ this.state.selected } messages={ this.props.messages } />
                 </div>
                 <div className="col-xs-12 col-sm-8 col-lg-9" style={ itemViewStyle }>
-                    <MessageView ref={ (c) => this.messageView = c } message={this.selectedMessage() } me={this.props.me} graph={this.props.graph} />
+                    <MessageView
+                        ref={ (c) => this.messageView = c }
+                        message={this.selectedMessage()}
+                        attachments={this.props.attachments}
+                        onMessageAttachmentRequested={this.props.onMessageAttachmentRequested.bind(this)} />
                 </div>
             </div>
         );
