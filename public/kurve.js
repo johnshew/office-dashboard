@@ -234,23 +234,20 @@ var Kurve;
     })();
     Kurve.IdToken = IdToken;
     var Identity = (function () {
+        //      private tenant: string = "";
         function Identity(identitySettings) {
             var _this = this;
-            this.authContext = null;
-            this.config = null;
-            this.isCallback = false;
             this.policy = "";
-            this.tenant = "";
             this.clientId = identitySettings.clientId;
             this.tokenProcessorUrl = identitySettings.tokenProcessingUri;
-            this.req = new XMLHttpRequest();
+            //          this.req = new XMLHttpRequest();
             this.tokenCache = {};
             if (identitySettings.version)
                 this.version = identitySettings.version;
             else
                 this.version = OAuthVersion.v1;
             //Callback handler from other windows
-            window.addEventListener("message", (function (event) {
+            window.addEventListener("message", function (event) {
                 if (event.data.type === "id_token") {
                     if (event.data.error) {
                         var e = new Error();
@@ -290,7 +287,7 @@ var Kurve;
                         }
                     }
                 }
-            }));
+            });
         }
         Identity.prototype.checkForIdentityRedirect = function () {
             function token(s) {
@@ -335,14 +332,6 @@ var Kurve;
             }
             else if (accessToken) {
                 throw "Should not get here.  This should be handled via the iframe approach.";
-                if (this.state === params["state"][0]) {
-                    this.getTokenCallback && this.getTokenCallback(accessToken, null);
-                }
-                else {
-                    var error = new Error();
-                    error.statusText = "Invalid state";
-                    this.getTokenCallback && this.getTokenCallback(null, error);
-                }
             }
             return false;
         };
@@ -370,11 +359,7 @@ var Kurve;
             var decodedToken = this.base64Decode(accessToken.substring(accessToken.indexOf('.') + 1, accessToken.lastIndexOf('.')));
             var decodedTokenJSON = JSON.parse(decodedToken);
             var expiryDate = new Date(new Date('01/01/1970 0:0 UTC').getTime() + parseInt(decodedTokenJSON.exp) * 1000);
-            var key;
-            if (resource)
-                key = resource;
-            else
-                key = scopes.join(" ");
+            var key = resource || scopes.join(" ");
             var token = new Token();
             token.expiry = expiryDate;
             token.resource = resource;
@@ -393,8 +378,7 @@ var Kurve;
         };
         Identity.prototype.renewIdToken = function () {
             clearTimeout(this.refreshTimer);
-            this.login((function () {
-            }));
+            this.login(function () { });
         };
         Identity.prototype.getCurrentOauthVersion = function () {
             return this.version;
@@ -420,29 +404,18 @@ var Kurve;
                 return;
             }
             //Check for cache and see if we have a valid token
-            var cachedToken = null;
-            var keys = Object.keys(this.tokenCache);
-            keys.forEach(function (key) {
-                var token = _this.tokenCache[key];
-                //remove expired tokens
-                if (token.expiry <= (new Date(new Date().getTime() + 60000))) {
-                    delete _this.tokenCache[key];
+            for (var key in this.tokenCache) {
+                var token = this.tokenCache[key];
+                //remove tokens that are expired, or will expire within 5 minutes)
+                if (token.expiry <= new Date(new Date().getTime() + 60000)) {
+                    delete this.tokenCache[key];
                 }
-                else {
-                    //Tries to capture a token that matches the resource
-                    var containScopes = true;
-                    if (token.resource == resource) {
-                        cachedToken = token;
-                    }
-                }
-            });
-            if (cachedToken) {
-                //We have it cached, has it expired? (5 minutes error margin)
-                if (cachedToken.expiry > (new Date(new Date().getTime() + 60000))) {
-                    callback(cachedToken.token, null);
+                else if (token.resource == resource) {
+                    callback(token.token, null);
                     return;
                 }
             }
+            ;
             //If we got this far, we need to go get this token
             //Need to create the iFrame to invoke the acquire token
             this.getTokenCallback = (function (token, error) {
@@ -471,14 +444,14 @@ var Kurve;
         Identity.prototype.getAccessTokenForScopesAsync = function (scopes, promptForConsent) {
             if (promptForConsent === void 0) { promptForConsent = false; }
             var d = new Kurve.Deferred();
-            this.getAccessTokenForScopes(scopes, promptForConsent, (function (token, error) {
+            this.getAccessTokenForScopes(scopes, promptForConsent, function (token, error) {
                 if (error) {
                     d.reject(error);
                 }
                 else {
                     d.resolve(token);
                 }
-            }));
+            });
             return d.promise;
         };
         Identity.prototype.getAccessTokenForScopes = function (scopes, promptForConsent, callback) {
@@ -492,31 +465,14 @@ var Kurve;
             }
             //Check for cache and see if we have a valid token
             var cachedToken = null;
-            var keys = Object.keys(this.tokenCache);
-            keys.forEach(function (key) {
-                var token = _this.tokenCache[key];
-                //remove expired tokens
-                if (token.expiry <= (new Date(new Date().getTime() + 60000))) {
-                    delete _this.tokenCache[key];
+            for (var key in this.tokenCache) {
+                var token = this.tokenCache[key];
+                //remove tokens that are expired, or will expire within 5 minutes)
+                if (token.expiry <= new Date(new Date().getTime() + 60000)) {
+                    delete this.tokenCache[key];
                 }
-                else {
-                    //Tries to capture a token that contains all scopes and is still valid
-                    var containScopes = true;
-                    if (token.scopes) {
-                        scopes.forEach(function (scope) {
-                            if (token.scopes.indexOf(scope) < 0)
-                                containScopes = false;
-                        });
-                    }
-                    if (containScopes) {
-                        cachedToken = token;
-                    }
-                }
-            });
-            if (cachedToken) {
-                //We have it cached, has it expired? (5 minutes error margin)
-                if (cachedToken.expiry > (new Date(new Date().getTime() + 60000))) {
-                    callback(cachedToken.token, null);
+                else if (token.scopes && scopes.every(function (scope) { return token.scopes.indexOf(scope) >= 0; })) {
+                    callback(token.token, null);
                     return;
                 }
             }
@@ -1001,6 +957,44 @@ var Kurve;
         return Groups;
     })(DataModelWrapperWithNextLink);
     Kurve.Groups = Groups;
+    (function (AttachmentType) {
+        AttachmentType[AttachmentType["fileAttachment"] = 0] = "fileAttachment";
+        AttachmentType[AttachmentType["itemAttachment"] = 1] = "itemAttachment";
+        AttachmentType[AttachmentType["referenceAttachment"] = 2] = "referenceAttachment";
+    })(Kurve.AttachmentType || (Kurve.AttachmentType = {}));
+    var AttachmentType = Kurve.AttachmentType;
+    var AttachmentDataModel = (function () {
+        function AttachmentDataModel() {
+        }
+        return AttachmentDataModel;
+    })();
+    Kurve.AttachmentDataModel = AttachmentDataModel;
+    var Attachment = (function (_super) {
+        __extends(Attachment, _super);
+        function Attachment() {
+            _super.apply(this, arguments);
+        }
+        Attachment.prototype.getType = function () {
+            switch (this._data['@odata.type']) {
+                case "#microsoft.graph.fileAttachment":
+                    return AttachmentType.fileAttachment;
+                case "#microsoft.graph.itemAttachment":
+                    return AttachmentType.itemAttachment;
+                case "#microsoft.graph.referenceAttachment":
+                    return AttachmentType.referenceAttachment;
+            }
+        };
+        return Attachment;
+    })(DataModelWrapper);
+    Kurve.Attachment = Attachment;
+    var Attachments = (function (_super) {
+        __extends(Attachments, _super);
+        function Attachments() {
+            _super.apply(this, arguments);
+        }
+        return Attachments;
+    })(DataModelWrapperWithNextLink);
+    Kurve.Attachments = Attachments;
     var Graph = (function () {
         function Graph(identityInfo) {
             this.req = null;
@@ -1043,11 +1037,7 @@ var Kurve;
         };
         Graph.prototype.user = function (userId, callback, odataQuery, basicProfileOnly) {
             if (basicProfileOnly === void 0) { basicProfileOnly = true; }
-            var scopes = [];
-            if (basicProfileOnly)
-                scopes = [Scopes.User.ReadBasicAll];
-            else
-                scopes = [Scopes.User.ReadAll];
+            var scopes = basicProfileOnly ? [Scopes.User.ReadBasicAll] : [Scopes.User.ReadAll];
             var urlString = this.buildUsersUrl(userId, odataQuery);
             this.getUser(urlString, callback, this.scopesForV2(scopes));
         };
@@ -1059,11 +1049,7 @@ var Kurve;
         };
         Graph.prototype.users = function (callback, odataQuery, basicProfileOnly) {
             if (basicProfileOnly === void 0) { basicProfileOnly = true; }
-            var scopes = [];
-            if (basicProfileOnly)
-                scopes = [Scopes.User.ReadBasicAll];
-            else
-                scopes = [Scopes.User.ReadAll];
+            var scopes = basicProfileOnly ? [Scopes.User.ReadBasicAll] : [Scopes.User.ReadAll];
             var urlString = this.buildUsersUrl("", odataQuery);
             this.getUsers(urlString, callback, this.scopesForV2(scopes), basicProfileOnly);
         };
@@ -1160,6 +1146,27 @@ var Kurve;
             var scopes = [Scopes.User.ReadBasicAll];
             var urlString = this.buildUsersUrl(userPrincipalName + "/photo/$value", odataQuery);
             this.getPhotoValue(urlString, callback, this.scopesForV2(scopes));
+        };
+        // Message Attachments
+        Graph.prototype.messageAttachmentsForUserAsync = function (userPrincipalName, messageId, odataQuery) {
+            var d = new Kurve.Deferred();
+            this.messageAttachmentsForUser(userPrincipalName, messageId, function (result, error) { return error ? d.reject(error) : d.resolve(result); }, odataQuery);
+            return d.promise;
+        };
+        Graph.prototype.messageAttachmentsForUser = function (userPrincipalName, messageId, callback, odataQuery) {
+            var scopes = [Scopes.Mail.Read];
+            var urlString = this.buildUsersUrl(userPrincipalName + "/messages/" + messageId + "/attachments", odataQuery);
+            this.getMessageAttachments(urlString, callback, this.scopesForV2(scopes));
+        };
+        Graph.prototype.messageAttachmentForUserAsync = function (userPrincipalName, messageId, attachmentId, odataQuery) {
+            var d = new Kurve.Deferred();
+            this.messageAttachmentForUser(userPrincipalName, messageId, attachmentId, function (attachment, error) { return error ? d.reject(error) : d.resolve(attachment); }, odataQuery);
+            return d.promise;
+        };
+        Graph.prototype.messageAttachmentForUser = function (userPrincipalName, messageId, attachmentId, callback, odataQuery) {
+            var scopes = [Scopes.Mail.Read];
+            var urlString = this.buildUsersUrl(userPrincipalName + "/messages/" + messageId + "/attachments/" + attachmentId, odataQuery);
+            this.getMessageAttachment(urlString, callback, this.scopesForV2(scopes));
         };
         //http verbs
         Graph.prototype.getAsync = function (url) {
@@ -1427,6 +1434,57 @@ var Kurve;
                 callback(result, null);
             }, "blob", scopes);
         };
+        Graph.prototype.getMessageAttachments = function (urlString, callback, scopes) {
+            var _this = this;
+            this.get(urlString, function (result, errorGet) {
+                if (errorGet) {
+                    callback(null, errorGet);
+                    return;
+                }
+                var attachmentsODATA = JSON.parse(result);
+                if (attachmentsODATA.error) {
+                    var errorODATA = new Kurve.Error();
+                    errorODATA.other = attachmentsODATA.error;
+                    callback(null, errorODATA);
+                    return;
+                }
+                var resultsArray = (attachmentsODATA.value ? attachmentsODATA.value : [attachmentsODATA]);
+                var attachments = new Attachments(_this, resultsArray.map(function (o) { return new Attachment(_this, o); }));
+                var nextLink = attachmentsODATA['@odata.nextLink'];
+                if (nextLink) {
+                    attachments.nextLink = function (callback) {
+                        var scopes = [Scopes.Mail.Read];
+                        var d = new Kurve.Deferred();
+                        _this.getMessageAttachments(nextLink, function (attachments, error) {
+                            if (callback)
+                                callback(attachments, error);
+                            else
+                                error ? d.reject(error) : d.resolve(attachments);
+                        }, _this.scopesForV2(scopes));
+                        return d.promise;
+                    };
+                }
+                callback(attachments, null);
+            }, null, scopes);
+        };
+        Graph.prototype.getMessageAttachment = function (urlString, callback, scopes) {
+            var _this = this;
+            this.get(urlString, function (result, errorGet) {
+                if (errorGet) {
+                    callback(null, errorGet);
+                    return;
+                }
+                var ODATA = JSON.parse(result);
+                if (ODATA.error) {
+                    var ODATAError = new Kurve.Error();
+                    ODATAError.other = ODATA.error;
+                    callback(null, ODATAError);
+                    return;
+                }
+                var attachment = new Attachment(_this, ODATA);
+                callback(attachment, null);
+            }, null, scopes);
+        };
         Graph.prototype.buildUrl = function (root, path, odataQuery) {
             return this.baseUrl + root + path + (odataQuery ? "?" + odataQuery : "");
         };
@@ -1446,32 +1504,32 @@ var Kurve;
     })();
     Kurve.Graph = Graph;
 })(Kurve || (Kurve = {}));
-//*********************************************************   
-//   
+//*********************************************************
+//
 //Kurve js, https://github.com/microsoftdx/kurvejs
-//  
-//Copyright (c) Microsoft Corporation  
-//All rights reserved.   
-//  
-// MIT License:  
-// Permission is hereby granted, free of charge, to any person obtaining  
-// a copy of this software and associated documentation files (the  
-// ""Software""), to deal in the Software without restriction, including  
-// without limitation the rights to use, copy, modify, merge, publish,  
-// distribute, sublicense, and/or sell copies of the Software, and to  
-// permit persons to whom the Software is furnished to do so, subject to  
-// the following conditions:  
-// The above copyright notice and this permission notice shall be  
-// included in all copies or substantial portions of the Software.  
-// THE SOFTWARE IS PROVIDED ""AS IS"", WITHOUT WARRANTY OF ANY KIND,  
-// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF  
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND  
-// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE  
-// LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION  
-// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION  
-// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  
-//   
-//*********************************************************   
+//
+//Copyright (c) Microsoft Corporation
+//All rights reserved.
+//
+// MIT License:
+// Permission is hereby granted, free of charge, to any person obtaining
+// a copy of this software and associated documentation files (the
+// ""Software""), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+// THE SOFTWARE IS PROVIDED ""AS IS"", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+// LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//
+//*********************************************************
 
 if (((typeof window != "undefined" && window.module) || (typeof module != "undefined")) && typeof module.exports != "undefined") {
     module.exports = Kurve;

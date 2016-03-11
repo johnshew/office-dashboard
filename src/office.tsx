@@ -87,12 +87,11 @@ const plainTextStyle: React.CSSProperties = {
 }
 
 const scrollingContentStyle: React.CSSProperties = {
-    position: "absolute", 
-    width: "100%", 
-    top: "51px", 
+    position: "absolute",
+    width: "100%",
+    top: "51px",
     bottom: "0px"
 }
-
 
 interface EventSummaryProps extends React.Props<EventSummary> {
     event: Kurve.EventDataModel;
@@ -100,7 +99,6 @@ interface EventSummaryProps extends React.Props<EventSummary> {
     selected?: boolean;
     onSelect?(messageId: string);
 }
-
 
 class DateSpan {
     public days: number;
@@ -141,7 +139,7 @@ export class EventSummary extends React.Component<EventSummaryProps, any> {
                 <p style={ big }>{startTime + (duration ? " / " + duration : "") }</p>
                 { event.subject ? <p style={ smallBold }> { event.subject } </p> : null }
                 { location ? <p style={ small }>{ location }</p> : null}
-                </div>
+            </div>
         );
     }
 }
@@ -154,7 +152,7 @@ interface EventListProps extends React.Props<EventList> {
 
 export class EventList extends React.Component<EventListProps, any> {
     constructor(props, state) {
-        super(props, state); 
+        super(props, state);
     }
     private handleSelect = (id: string) => {
         this.props.onSelection(id);
@@ -167,15 +165,14 @@ export class EventList extends React.Component<EventListProps, any> {
             lastDate = date;
             return (
                 <div key={ event.id }>
-                  { dateSeparator }
-                  <EventSummary onSelect={ this.handleSelect } selected={ this.props.selected === event.id } event={ event } />
-                    </div>
+                    { dateSeparator }
+                    <EventSummary onSelect={ this.handleSelect } selected={ this.props.selected === event.id } event={ event } />
+                </div>
             );
         });
         return <div>{ eventSummaries }</div>;
     }
 }
-
 
 interface MailSummaryProps extends React.Props<MailSummary> {
     key: string;
@@ -196,12 +193,12 @@ export class MailSummary extends React.Component<MailSummaryProps, any> {
         var message = this.props.message;
         return (
             <div onClick={ this.handleClick } style={ (this.props.selected) ? selectedSummaryStyle : summaryStyle } >
-              <p style={ big }>{(message.sender) ? message.sender.emailAddress.name : ""}</p>
-              <p style={ smallBold }>{message.subject}</p>
-              <p style={ Combine(small, summaryPreviewStyle) }>{message.bodyPreview}</p>
-              <p style={ Combine(small, summaryDateStyle) }>{ ShortTimeString(message.receivedDateTime) }</p>
-              <div style={ clearStyle }/>
-                </div>
+                <p style={ big }>{(message.sender) ? message.sender.emailAddress.name : ""}</p>
+                <p style={ smallBold }>{message.subject}</p>
+                <p style={ Combine(small, summaryPreviewStyle) }>{message.bodyPreview}</p>
+                <p style={ Combine(small, summaryDateStyle) }>{ ShortTimeString(message.receivedDateTime) }</p>
+                <div style={ clearStyle }/>
+            </div>
         );
     }
 }
@@ -227,12 +224,10 @@ export class MailList extends React.Component<MailListProps, any> {
     }
 }
 
-
-
-function CleanUp(html: string) {
+function CleanUp(html: string, inlineAttachments: Array<Kurve.Attachment>) {
     var doc = document.implementation.createHTMLDocument("example");
     doc.documentElement.innerHTML = html;
-    
+
     // Create a new <div/> in the body and move all existing body content to that the new div.
     var resultElement = doc.createElement("div");
     var node: Node;
@@ -241,8 +236,8 @@ function CleanUp(html: string) {
         resultElement.appendChild(node);
     }
     doc.body.appendChild(resultElement);
-    
-    // Move all styles in <head/> into the new <div/> 
+
+    // Move all styles in <head/> into the new <div/>
     var headList = doc.getElementsByTagName("head");
     if (headList.length == 1) {
         var head = headList.item(0);
@@ -257,6 +252,23 @@ function CleanUp(html: string) {
         }
     }
 
+    // Inline attachments
+    var inlineImages = doc.body.querySelectorAll("img[src^='cid'");
+
+    [].forEach.call(inlineImages, function (image) {
+        var contentId = image.src.replace('cid:', '');
+        var foundInAttachments = inlineAttachments.filter((a) => { return a.data.contentId === contentId; });
+
+        if (foundInAttachments.length > 0) {
+            var attachment = foundInAttachments[0].data;
+            image.src = 'data:' + attachment.contentType + ';base64,' + attachment.contentBytes;
+        } else {
+            image.src = '/public/loading.gif';
+            image.width = 25;
+            image.height = 25;
+        }
+    });
+
     // Make sure all styles are scoped
     var styles = doc.getElementsByTagName("style");
     var styleIndex = styles.length;
@@ -264,23 +276,53 @@ function CleanUp(html: string) {
         styles.item(styleIndex).setAttribute("scoped", "");
     }
     ScopedStyles.ScopeStyles(doc.documentElement); // polyfill scoping if necessary
-    
+
     return { __html: doc.body.innerHTML }
 }
 
 interface MessageViewProps extends React.Props<MessageView> {
     message: Kurve.MessageDataModel;
+    attachments: Kurve.Attachment[];
+    onMessageAttachmentDownloadRequest: (messageId: string, attachmentId: string) => void;
     style?: React.CSSProperties;
 }
 
 export class MessageView extends React.Component<MessageViewProps, any>
 {
     private Header: HTMLDivElement;
-    
+
     /*    private check(text: string) {
             return (text != null) ? text : "";
         }
     */
+
+    constructor(props, state) {
+        super(props, state);
+        this.state = { inlineAttachments: [] };
+    }
+
+    componentWillUpdate(nextProps: MessageViewProps) {
+        if (nextProps.message) {
+            var message = nextProps.message;
+
+            message['attachments'].forEach((item) => {
+                if (!item.isInline) { return; }
+
+                var attachment = this.findAttachment(item.id);
+
+                // If attachment is not cached it will notify the App load load each.
+                if (!attachment) {
+                    nextProps.onMessageAttachmentDownloadRequest(message.id, item.id);
+                }
+            });
+        }
+    }
+
+    private findAttachment(attachmentId): Kurve.Attachment {
+        var found = this.props.attachments.filter((attachment) => (attachment.data.id === attachmentId));
+        return (found.length > 0) ? found[0] : null;
+    }
+
     private recipients(mailboxes: Kurve.Recipient[], style: React.CSSProperties, prefix: string) {
         var recipientList = mailboxes.reduce((p, c) => { return (p ? p + "; " : "") + c.emailAddress.name; }, null);
         if (recipientList) {
@@ -307,23 +349,22 @@ export class MessageView extends React.Component<MessageViewProps, any>
         if (message.body && message.body.contentType === "text") {
             messageBody = Combine(messageBody, plainTextStyle);
         }
+
         return (
             <div>
-              <div ref={(c) => { this.Header = c; } }  className="well" style={  { padding: 10 } }>
-                <p style={ big }>{from}</p>
-                <p style={ smallEmphasis }>{subject}</p>
-                { this.recipients(message.toRecipients, small, "To") }
-                { this.recipients(message.ccRecipients, small, "Cc") }
-                { this.recipients(message.bccRecipients, small, "Bcc") }
-                <p style={ small }>{ ShortTimeString(message.receivedDateTime) }</p>
-                  </div>
-              <div style={ messageBody } dangerouslySetInnerHTML={ CleanUp(body) } />
+                <div ref={(c) => { this.Header = c; } }  className="well" style={  { padding: 10 } }>
+                    <p style={ big }>{from}</p>
+                    <p style={ smallEmphasis }>{subject}</p>
+                    { this.recipients(message.toRecipients, small, "To") }
+                    { this.recipients(message.ccRecipients, small, "Cc") }
+                    { this.recipients(message.bccRecipients, small, "Bcc") }
+                    <p style={ small }>{ ShortTimeString(message.receivedDateTime) }</p>
                 </div>
+                <div style={ messageBody } dangerouslySetInnerHTML={ CleanUp(body, this.props.attachments ) } />
+            </div>
         );
     }
 }
-
-
 
 interface EventViewProps extends React.Props<EventView> {
     event: Kurve.EventDataModel;
@@ -342,7 +383,6 @@ export class EventView extends React.Component<EventViewProps, any>
             var result = ((p != null) ? p + '; ' : '') + a.emailAddress.name;
             return result;
         }, null);
-        return "";
     }
 
     render() {
@@ -362,20 +402,21 @@ export class EventView extends React.Component<EventViewProps, any>
         }
         return (
             <div>
-              <div className="well" style={  { padding: 10 } }>
-                <p style={ big }>{organizer}</p>
-                <p style={ smallEmphasis }>{subject}</p>
-                <p style={ small }>{attendees}</p>
-                  </div>
-              <div style={ messageBody } dangerouslySetInnerHTML={ CleanUp(body) } />
+                <div className="well" style={  { padding: 10 } }>
+                    <p style={ big }>{organizer}</p>
+                    <p style={ smallEmphasis }>{subject}</p>
+                    <p style={ small }>{attendees}</p>
                 </div>
+                <div style={ messageBody } dangerouslySetInnerHTML={ CleanUp(body, []) } />
+            </div>
         );
     }
 }
 
-
 interface MailProps extends React.Props<Mail> {
     messages: Kurve.MessageDataModel[];
+    attachments: Kurve.Attachment[];
+    onMessageAttachmentDownloadRequest: (messageId: string, attachmentId: string) => void;
     mailboxes: string[];
     scroll: boolean;
 }
@@ -384,7 +425,6 @@ interface MailState {
     mailboxFilter?: string[];
     selected?: string;
 }
-
 
 export class Mail extends React.Component<MailProps, MailState>
 {
@@ -420,16 +460,21 @@ export class Mail extends React.Component<MailProps, MailState>
                     <option value={mailboxName}>{mailboxName}</option>
                 );
         */
-        var contentLayoutStyle = (this.props.scroll) ? scrollingContentStyle : {}; 
+
+        var contentLayoutStyle = (this.props.scroll) ? scrollingContentStyle : {};
         return (
             <div style={ contentLayoutStyle }>
-              <div className="col-xs-12 col-sm-4 col-lg-3" style={ listStyle }>
-                <MailList onSelection={ this.handleSelection } selected={ this.state.selected } messages={ this.props.messages } />
-                  </div>
-              <div className="col-xs-12 col-sm-8 col-lg-9" style={ itemViewStyle }>
-                <MessageView ref={ (c) => this.messageView = c } message={this.selectedMessage() }/>
-                  </div>
+                <div className="col-xs-12 col-sm-4 col-lg-3" style={ listStyle }>
+                    <MailList onSelection={ this.handleSelection } selected={ this.state.selected } messages={ this.props.messages } />
                 </div>
+                <div className="col-xs-12 col-sm-8 col-lg-9" style={ itemViewStyle }>
+                    <MessageView
+                        ref={ (c) => this.messageView = c }
+                        message={this.selectedMessage()}
+                        attachments={this.props.attachments}
+                        onMessageAttachmentDownloadRequest={this.props.onMessageAttachmentDownloadRequest.bind(this)} />
+                </div>
+            </div>
         );
     }
 }
@@ -437,9 +482,8 @@ export class Mail extends React.Component<MailProps, MailState>
 /*
                     <SelectBox label="All Mailboxes" onChange={this.handleMultiChange} value={this.state.mailboxFilter} multiple={true}>
                         {options}
-                    </SelectBox>                        
+                    </SelectBox>
 */
-
 
 interface CalendarProps extends React.Props<Calendar> {
     events: Kurve.EventDataModel[];
@@ -449,8 +493,6 @@ interface CalendarProps extends React.Props<Calendar> {
 interface CalendarState {
     selected?: string;
 }
-
-
 
 export class Calendar extends React.Component<CalendarProps, CalendarState>
 {
@@ -470,18 +512,17 @@ export class Calendar extends React.Component<CalendarProps, CalendarState>
     }
 
     render() {
-        var contentLayoutStyle = (this.props.scroll) ? scrollingContentStyle : {}; 
+        var contentLayoutStyle = (this.props.scroll) ? scrollingContentStyle : {};
         return (
             <div style={ contentLayoutStyle }>
                 <div className="col-xs-12 col-sm-4 col-lg-3" style={ listStyle }>
                     <EventList onSelection={ this.handleSelection } selected={ this.state.selected } events={ this.props.events } />
-                    </div>
+                </div>
                 <div className="col-xs-12 col-sm-8 col-lg-9" style={ itemViewStyle }>
                     <EventView event={this.selectedCalendarEvent() } />
-                    </div>
                 </div>
+            </div>
         );
-
     }
 }
 

@@ -22,6 +22,7 @@ interface AppState {
     fetchingMail? : Boolean;
     fetchingCalendar? : Boolean;
     messages?: Kurve.MessageDataModel[];
+    attachments?: Kurve.Attachment[];
     messageIdToIndex?: Object;
     events?: Kurve.EventDataModel[];
     eventIdToIndex?: Object;
@@ -48,6 +49,7 @@ class App extends React.Component<AppProps, AppState> {
             fetchingMail: false,
             fetchingCalendar: false,
             messages: [],
+            attachments: [],
             messageIdToIndex: {},
             events: [],
             eventIdToIndex: {},
@@ -96,9 +98,19 @@ class App extends React.Component<AppProps, AppState> {
         this.UpdateLoginState();
     }
 
+    private renderMail() {
+        return <Mail
+            messages={this.state.messages}
+            attachments={this.state.attachments}
+            onMessageAttachmentDownloadRequest={this.GetMessageAttachment.bind(this)}
+            scroll={this.state.settings.scroll}
+            mailboxes={["inbox", "sent items"]}
+        />
+    }
+
     public render() {
         var welcome = (this.state.show == ShowState.Welcome) ? <div className="jumbotron"> <h2> { "Welcome" }</h2> <p> { "Please login to access your information" } </p> </div> : null;
-        var mail = (this.state.show == ShowState.Mail) ? <Mail messages={ this.state.messages } scroll={ this.state.settings.scroll } mailboxes={["inbox", "sent items"]}/> : null;
+        var mail = (this.state.show == ShowState.Mail) ? this.renderMail() : null;
         var calendar = (this.state.show == ShowState.Calendar) ? <Calendar events={ this.state.events } scroll={ this.state.settings.scroll } /> : null;
         var loadingMessage = (this.state.fetchingMail || this.state.fetchingCalendar) ? <div style={ loadingMessageStyle }>Loading...</div> : null;
 
@@ -202,7 +214,7 @@ class App extends React.Component<AppProps, AppState> {
         console.log('Now getting messages.');
         this.setState({ fetchingMail: true });
 
-        this.me.messagesAsync()
+        this.me.messagesAsync('$expand=attachments($select=id,isInline)')
             .then((messages) => {
                 console.log('Got messages.  Now rendering.');
                 if (this.mounted && this.state.show === ShowState.Welcome) { this.setState({ show: ShowState.Mail }); }
@@ -210,6 +222,27 @@ class App extends React.Component<AppProps, AppState> {
                 this.setState({ fetchingMail: false });
             }).fail((error) => {
                 this.setState({ fetchingMail: false });
+            });
+    }
+
+    public GetMessageAttachment(messageId, attachmentId) {
+        if (!this.me) {
+            this.GetMe();
+            return;
+        }
+
+        var attachment = this.state.attachments.filter(a => { return a.data.id === attachmentId; });
+        if (attachment.length > 0) { return; }
+
+        this.graph.messageAttachmentForUserAsync(this.me.data.userPrincipalName, messageId, attachmentId)
+            .then((attachment) => {
+                if (attachment.getType() === Kurve.AttachmentType.fileAttachment) {
+                    var currentAttachments = this.state.attachments.slice();
+                    currentAttachments.push(attachment);
+                    this.setState({ attachments: currentAttachments })
+                }
+            }).fail((error) => {
+                console.log('Could not the attachment.', error);
             });
     }
 
