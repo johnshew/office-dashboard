@@ -253,7 +253,7 @@ function CleanUp(html: string, inlineAttachments: Array<Kurve.Attachment>) {
     }
 
     // Inline attachments
-    var inlineImages = doc.body.querySelectorAll("img[src^='cid'");
+    var inlineImages = doc.body.querySelectorAll("img[src^='cid']");
 
     [].forEach.call(inlineImages, function (image) {
         var contentId = image.src.replace('cid:', '');
