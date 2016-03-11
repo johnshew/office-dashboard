@@ -299,7 +299,7 @@ function CleanUp(html: string, inlineAttachments: Array<Kurve.Attachment>) {
 interface MessageViewProps extends React.Props<MessageView> {
     message: Kurve.MessageDataModel;
     attachments: Kurve.Attachment[];
-    onMessageAttachmentRequested: (messageId: string, attachmentId: string) => void;
+    onMessageAttachmentDownloadRequest: (messageId: string, attachmentId: string) => void;
     style?: React.CSSProperties;
 }
 
@@ -328,7 +328,7 @@ export class MessageView extends React.Component<MessageViewProps, any>
 
                 // If attachment is not cached it will notify the App load load each.
                 if (!attachment) {
-                    nextProps.onMessageAttachmentRequested(message.id, item.id);
+                    nextProps.onMessageAttachmentDownloadRequest(message.id, item.id);
                 }
             });
         }
@@ -432,7 +432,7 @@ export class EventView extends React.Component<EventViewProps, any>
 interface MailProps extends React.Props<Mail> {
     messages: Kurve.MessageDataModel[];
     attachments: Kurve.Attachment[];
-    onMessageAttachmentRequested: (messageId: string, attachmentId: string) => void;
+    onMessageAttachmentDownloadRequest: (messageId: string, attachmentId: string) => void;
     mailboxes: string[];
     scroll: boolean;
 }
@@ -488,7 +488,7 @@ export class Mail extends React.Component<MailProps, MailState>
                         ref={ (c) => this.messageView = c }
                         message={this.selectedMessage()}
                         attachments={this.props.attachments}
-                        onMessageAttachmentRequested={this.props.onMessageAttachmentRequested.bind(this)} />
+                        onMessageAttachmentDownloadRequest={this.props.onMessageAttachmentDownloadRequest.bind(this)} />
                 </div>
             </div>
         );

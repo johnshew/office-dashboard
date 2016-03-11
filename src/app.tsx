@@ -102,7 +102,7 @@ class App extends React.Component<AppProps, AppState> {
         return <Mail
             messages={this.state.messages}
             attachments={this.state.attachments}
-            onMessageAttachmentRequested={this.GetMessageAttachment.bind(this)}
+            onMessageAttachmentDownloadRequest={this.GetMessageAttachment.bind(this)}
             scroll={this.state.settings.scroll}
             mailboxes={["inbox", "sent items"]}
         />
