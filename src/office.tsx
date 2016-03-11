@@ -257,31 +257,15 @@ function CleanUp(html: string, inlineAttachments: Array<Kurve.Attachment>) {
 
     [].forEach.call(inlineImages, function (image) {
         var contentId = image.src.replace('cid:', '');
-        var originalWith = image.width;
-        var originalHeight = image.height;
-
-        image.src = '/public/loading.gif?' + image.src;
-        image.width = 25;
-        image.height = 25;
-
         var foundInAttachments = inlineAttachments.filter((a) => { return a.data.contentId === contentId; });
 
         if (foundInAttachments.length > 0) {
             var attachment = foundInAttachments[0].data;
-
-            if (originalWith) {
-                image.width = originalWith;
-            } else {
-                image.removeAttribute('width');
-            }
-
-            if (originalHeight) {
-                image.height = originalHeight;
-            } else {
-                image.removeAttribute('height');
-            }
-
             image.src = 'data:' + attachment.contentType + ';base64,' + attachment.contentBytes;
+        } else {
+            image.src = '/public/loading.gif';
+            image.width = 25;
+            image.height = 25;
         }
     });
 
