@@ -237,9 +237,9 @@ class App extends React.Component<AppProps, AppState> {
         this.graph.messageAttachmentForUserAsync(this.me.data.userPrincipalName, messageId, attachmentId)
             .then((attachment) => {
                 if (attachment.getType() === Kurve.AttachmentType.fileAttachment) {
-                    var currentAttachmnets = this.state.attachments.slice();
-                    currentAttachmnets.push(attachment);
-                    this.setState({ attachments: currentAttachmnets })
+                    var currentAttachments = this.state.attachments.slice();
+                    currentAttachments.push(attachment);
+                    this.setState({ attachments: currentAttachments })
                 }
             }).fail((error) => {
                 console.log('Could not the attachment.', error);
