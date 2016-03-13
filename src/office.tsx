@@ -2,6 +2,7 @@ import * as React from 'react';
 import * as Utilities from './utilities';
 import { SelectBox } from './selectbox';
 import * as ScopedStyles from './scopedStylePolyfill';
+import * as App from './app';
 
 import Combine = Utilities.Combine;
 import ShortTimeString = Utilities.ShortTimeString;
@@ -224,7 +225,7 @@ export class MailList extends React.Component<MailListProps, any> {
     }
 }
 
-function CleanUp(html: string, inlineAttachments: Array<Kurve.Attachment>) {
+function CleanUp(html: string, inlineAttachments?: App.AttachmentDictionary) {
     var doc = document.implementation.createHTMLDocument("example");
     doc.documentElement.innerHTML = html;
 
@@ -255,12 +256,11 @@ function CleanUp(html: string, inlineAttachments: Array<Kurve.Attachment>) {
     // Inline attachments
     var inlineImages = doc.body.querySelectorAll("img[src^='cid']");
 
-    [].forEach.call(inlineImages, function (image) {
+    [].forEach.call(inlineImages, image => {
         var contentId = image.src.replace('cid:', '');
-        var foundInAttachments = inlineAttachments.filter((a) => { return a.data.contentId === contentId; });
+        var attachment = inlineAttachments && inlineAttachments[contentId];
 
-        if (foundInAttachments.length > 0) {
-            var attachment = foundInAttachments[0].data;
+        if (attachment) {
             image.src = 'data:' + attachment.contentType + ';base64,' + attachment.contentBytes;
         } else {
             image.src = '/public/loading.gif';
@@ -282,8 +282,8 @@ function CleanUp(html: string, inlineAttachments: Array<Kurve.Attachment>) {
 
 interface MessageViewProps extends React.Props<MessageView> {
     message: Kurve.MessageDataModel;
-    attachments: Kurve.Attachment[];
-    onMessageAttachmentDownloadRequest: (messageId: string, attachmentId: string) => void;
+    attachments?: App.AttachmentDictionary;
+    onMessageAttachmentDownloadRequest: (messageId: string) => void;
     style?: React.CSSProperties;
 }
 
@@ -302,25 +302,12 @@ export class MessageView extends React.Component<MessageViewProps, any>
     }
 
     componentWillUpdate(nextProps: MessageViewProps) {
-        if (nextProps.message) {
-            var message = nextProps.message;
-
-            message['attachments'].forEach((item) => {
-                if (!item.isInline) { return; }
-
-                var attachment = this.findAttachment(item.id);
-
-                // If attachment is not cached it will notify the App load load each.
-                if (!attachment) {
-                    nextProps.onMessageAttachmentDownloadRequest(message.id, item.id);
-                }
-            });
+        console.log("checking for inline images for subject", nextProps.message && nextProps.message.subject);
+        if (!nextProps.attachments && nextProps.message && nextProps.message.attachments &&
+            nextProps.message.attachments.some(attachment => attachment.isInline)) {
+            console.log("requesting download of message attachments");
+            nextProps.onMessageAttachmentDownloadRequest(nextProps.message.id);
         }
-    }
-
-    private findAttachment(attachmentId): Kurve.Attachment {
-        var found = this.props.attachments.filter((attachment) => (attachment.data.id === attachmentId));
-        return (found.length > 0) ? found[0] : null;
     }
 
     private recipients(mailboxes: Kurve.Recipient[], style: React.CSSProperties, prefix: string) {
@@ -344,6 +331,7 @@ export class MessageView extends React.Component<MessageViewProps, any>
         var message = this.props.message;
         if (!message) { return null; }
         var subject = message.subject || "";
+        console.log("rendering message", subject);
         var from = message.sender && message.sender.emailAddress && message.sender.emailAddress.name || "";
         var body = message.body && message.body.content || "";
         if (message.body && message.body.contentType === "text") {
@@ -407,7 +395,7 @@ export class EventView extends React.Component<EventViewProps, any>
                     <p style={ smallEmphasis }>{subject}</p>
                     <p style={ small }>{attendees}</p>
                 </div>
-                <div style={ messageBody } dangerouslySetInnerHTML={ CleanUp(body, []) } />
+                <div style={ messageBody } dangerouslySetInnerHTML={ CleanUp(body) } />
             </div>
         );
     }
@@ -415,8 +403,8 @@ export class EventView extends React.Component<EventViewProps, any>
 
 interface MailProps extends React.Props<Mail> {
     messages: Kurve.MessageDataModel[];
-    attachments: Kurve.Attachment[];
-    onMessageAttachmentDownloadRequest: (messageId: string, attachmentId: string) => void;
+    messageAttachments?: App.MessageAttachments;
+    onMessageAttachmentDownloadRequest: (messageId: string) => void;
     mailboxes: string[];
     scroll: boolean;
 }
@@ -462,6 +450,7 @@ export class Mail extends React.Component<MailProps, MailState>
         */
 
         var contentLayoutStyle = (this.props.scroll) ? scrollingContentStyle : {};
+        var attachments = this.props.messageAttachments && this.state.selected && this.props.messageAttachments.messageId === this.state.selected ? this.props.messageAttachments.attachments : null;
         return (
             <div style={ contentLayoutStyle }>
                 <div className="col-xs-12 col-sm-4 col-lg-3" style={ listStyle }>
@@ -470,9 +459,9 @@ export class Mail extends React.Component<MailProps, MailState>
                 <div className="col-xs-12 col-sm-8 col-lg-9" style={ itemViewStyle }>
                     <MessageView
                         ref={ (c) => this.messageView = c }
-                        message={this.selectedMessage()}
-                        attachments={this.props.attachments}
-                        onMessageAttachmentDownloadRequest={this.props.onMessageAttachmentDownloadRequest.bind(this)} />
+                        message={ this.selectedMessage() }
+                        attachments={ attachments }
+                        onMessageAttachmentDownloadRequest={ this.props.onMessageAttachmentDownloadRequest } />
                 </div>
             </div>
         );

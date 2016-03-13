@@ -15,6 +15,19 @@ const loadingMessageStyle: React.CSSProperties = {
 
 enum ShowState { Welcome, Mail, Calendar, Contacts, Notes };
 
+export interface AttachmentDictionary {
+    [index:string]: Kurve.AttachmentDataModel;
+}
+
+export class MessageAttachments {
+    constructor(public messageId: string, public attachments?: AttachmentDictionary) {
+        this.attachments = {} 
+        if (attachments)
+            for(var key in attachments)
+                this.attachments[key] = attachments[key];
+    }
+}
+
 interface AppProps extends React.Props<App> {
 }
 
@@ -22,7 +35,7 @@ interface AppState {
     fetchingMail? : Boolean;
     fetchingCalendar? : Boolean;
     messages?: Kurve.MessageDataModel[];
-    attachments?: Kurve.Attachment[];
+    messageAttachments?: MessageAttachments;
     messageIdToIndex?: Object;
     events?: Kurve.EventDataModel[];
     eventIdToIndex?: Object;
@@ -49,7 +62,6 @@ class App extends React.Component<AppProps, AppState> {
             fetchingMail: false,
             fetchingCalendar: false,
             messages: [],
-            attachments: [],
             messageIdToIndex: {},
             events: [],
             eventIdToIndex: {},
@@ -101,8 +113,8 @@ class App extends React.Component<AppProps, AppState> {
     private renderMail() {
         return <Mail
             messages={this.state.messages}
-            attachments={this.state.attachments}
-            onMessageAttachmentDownloadRequest={this.GetMessageAttachment.bind(this)}
+            messageAttachments={this.state.messageAttachments}
+            onMessageAttachmentDownloadRequest={this.DownloadMessageAttachments.bind(this)}
             scroll={this.state.settings.scroll}
             mailboxes={["inbox", "sent items"]}
         />
@@ -225,24 +237,26 @@ class App extends React.Component<AppProps, AppState> {
             });
     }
 
-    public GetMessageAttachment(messageId, attachmentId) {
-        if (!this.me) {
-            this.GetMe();
+    public DownloadMessageAttachments(messageId: string) {
+        if (!this.state.messages)
             return;
-        }
-
-        var attachment = this.state.attachments.filter(a => { return a.data.id === attachmentId; });
-        if (attachment.length > 0) { return; }
-
-        this.graph.messageAttachmentForUserAsync(this.me.data.userPrincipalName, messageId, attachmentId)
-            .then((attachment) => {
-                if (attachment.getType() === Kurve.AttachmentType.fileAttachment) {
-                    var currentAttachments = this.state.attachments.slice();
-                    currentAttachments.push(attachment);
-                    this.setState({ attachments: currentAttachments })
-                }
-            }).fail((error) => {
-                console.log('Could not the attachment.', error);
+        var messages = this.state.messages.filter(m => m.id === messageId);
+        if (messages.length == 0)
+            return;
+        this.setState({messageAttachments: new MessageAttachments(messageId)});
+        messages[0].attachments
+            .filter(a => a.isInline)
+            .forEach(attachment => {
+                this.graph.messageAttachmentForUserAsync(this.me.data.userPrincipalName, messageId, attachment.id)
+                .then(attachment => {
+                    if (attachment.getType() === Kurve.AttachmentType.fileAttachment) {
+                        var messageAttachments = new MessageAttachments(messageId, this.state.messageAttachments.attachments)
+                        messageAttachments.attachments[attachment.data.contentId] = attachment.data;
+                        this.setState({ messageAttachments: messageAttachments });
+                    }
+                }).fail(error => {
+                    console.log('Could not load the attachment.', error);
+                });
             });
     }
 

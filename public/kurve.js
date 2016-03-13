@@ -790,14 +790,14 @@ var Kurve;
         return DataModelWrapper;
     })();
     Kurve.DataModelWrapper = DataModelWrapper;
-    var DataModelWrapperWithNextLink = (function (_super) {
-        __extends(DataModelWrapperWithNextLink, _super);
-        function DataModelWrapperWithNextLink() {
+    var DataModelListWrapper = (function (_super) {
+        __extends(DataModelListWrapper, _super);
+        function DataModelListWrapper() {
             _super.apply(this, arguments);
         }
-        return DataModelWrapperWithNextLink;
+        return DataModelListWrapper;
     })(DataModelWrapper);
-    Kurve.DataModelWrapperWithNextLink = DataModelWrapperWithNextLink;
+    Kurve.DataModelListWrapper = DataModelListWrapper;
     var ProfilePhotoDataModel = (function () {
         function ProfilePhotoDataModel() {
         }
@@ -871,6 +871,12 @@ var Kurve;
         User.prototype.calendarViewAsync = function (odataQuery) {
             return this.graph.eventsForUserAsync(this._data.userPrincipalName, EventsEndpoint.calendarView, odataQuery);
         };
+        User.prototype.mailFolders = function (callback, odataQuery) {
+            this.graph.mailFoldersForUser(this._data.userPrincipalName, callback, odataQuery);
+        };
+        User.prototype.mailFoldersAsync = function (odataQuery) {
+            return this.graph.mailFoldersForUserAsync(this._data.userPrincipalName, odataQuery);
+        };
         return User;
     })(DataModelWrapper);
     Kurve.User = User;
@@ -880,7 +886,7 @@ var Kurve;
             _super.apply(this, arguments);
         }
         return Users;
-    })(DataModelWrapperWithNextLink);
+    })(DataModelListWrapper);
     Kurve.Users = Users;
     var MessageDataModel = (function () {
         function MessageDataModel() {
@@ -902,7 +908,7 @@ var Kurve;
             _super.apply(this, arguments);
         }
         return Messages;
-    })(DataModelWrapperWithNextLink);
+    })(DataModelListWrapper);
     Kurve.Messages = Messages;
     var EventDataModel = (function () {
         function EventDataModel() {
@@ -927,7 +933,7 @@ var Kurve;
             this._data = _data;
         }
         return Events;
-    })(DataModelWrapperWithNextLink);
+    })(DataModelListWrapper);
     Kurve.Events = Events;
     var Contact = (function () {
         function Contact() {
@@ -955,8 +961,30 @@ var Kurve;
             _super.apply(this, arguments);
         }
         return Groups;
-    })(DataModelWrapperWithNextLink);
+    })(DataModelListWrapper);
     Kurve.Groups = Groups;
+    var MailFolderDataModel = (function () {
+        function MailFolderDataModel() {
+        }
+        return MailFolderDataModel;
+    })();
+    Kurve.MailFolderDataModel = MailFolderDataModel;
+    var MailFolder = (function (_super) {
+        __extends(MailFolder, _super);
+        function MailFolder() {
+            _super.apply(this, arguments);
+        }
+        return MailFolder;
+    })(DataModelWrapper);
+    Kurve.MailFolder = MailFolder;
+    var MailFolders = (function (_super) {
+        __extends(MailFolders, _super);
+        function MailFolders() {
+            _super.apply(this, arguments);
+        }
+        return MailFolders;
+    })(DataModelListWrapper);
+    Kurve.MailFolders = MailFolders;
     (function (AttachmentType) {
         AttachmentType[AttachmentType["fileAttachment"] = 0] = "fileAttachment";
         AttachmentType[AttachmentType["itemAttachment"] = 1] = "itemAttachment";
@@ -993,7 +1021,7 @@ var Kurve;
             _super.apply(this, arguments);
         }
         return Attachments;
-    })(DataModelWrapperWithNextLink);
+    })(DataModelListWrapper);
     Kurve.Attachments = Attachments;
     var Graph = (function () {
         function Graph(identityInfo) {
@@ -1084,6 +1112,17 @@ var Kurve;
             var scopes = [Scopes.Mail.Read];
             var urlString = this.buildUsersUrl(userPrincipalName + "/messages", odataQuery);
             this.getMessages(urlString, function (result, error) { return callback(result, error); }, this.scopesForV2(scopes));
+        };
+        // MailFolders For User
+        Graph.prototype.mailFoldersForUserAsync = function (userPrincipalName, odataQuery) {
+            var d = new Kurve.Deferred();
+            this.mailFoldersForUser(userPrincipalName, function (messages, error) { return error ? d.reject(error) : d.resolve(messages); }, odataQuery);
+            return d.promise;
+        };
+        Graph.prototype.mailFoldersForUser = function (userPrincipalName, callback, odataQuery) {
+            var scopes = [Scopes.Mail.Read];
+            var urlString = this.buildUsersUrl(userPrincipalName + "/mailFolders", odataQuery);
+            this.getMailFolders(urlString, function (result, error) { return callback(result, error); }, this.scopesForV2(scopes));
         };
         // Events For User
         Graph.prototype.eventsForUserAsync = function (userPrincipalName, endpoint, odataQuery) {
@@ -1433,6 +1472,38 @@ var Kurve;
                 }
                 callback(result, null);
             }, "blob", scopes);
+        };
+        Graph.prototype.getMailFolders = function (urlString, callback, scopes) {
+            var _this = this;
+            this.get(urlString, function (result, errorGet) {
+                if (errorGet) {
+                    callback(null, errorGet);
+                    return;
+                }
+                var odata = JSON.parse(result);
+                if (odata.error) {
+                    var errorODATA = new Kurve.Error();
+                    errorODATA.other = odata.error;
+                    callback(null, errorODATA);
+                }
+                var resultsArray = (odata.value ? odata.value : [odata]);
+                var mailFolders = new MailFolders(_this, resultsArray.map(function (o) { return new MailFolder(_this, o); }));
+                var nextLink = odata['@odata.nextLink'];
+                if (nextLink) {
+                    mailFolders.nextLink = function (callback) {
+                        var scopes = [Scopes.User.ReadAll];
+                        var d = new Kurve.Deferred();
+                        _this.getMailFolders(nextLink, function (result, error) {
+                            if (callback)
+                                callback(result, error);
+                            else
+                                error ? d.reject(error) : d.resolve(result);
+                        }, _this.scopesForV2(scopes));
+                        return d.promise;
+                    };
+                }
+                callback(mailFolders, null);
+            }, null, scopes);
         };
         Graph.prototype.getMessageAttachments = function (urlString, callback, scopes) {
             var _this = this;
