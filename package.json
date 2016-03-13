@@ -2,11 +2,16 @@
   "name": "GraphDashboard",
   "version": "0.0.0",
   "description": "",
-  "main": "start.js",
+  "main": "server.js",
   "dependencies": {
     "bootstrap": "^3.3.6",
     "react": "^0.14.5",
-    "react-dom": "^0.14.3"
+    "react-dom": "^0.14.3",
+    "restify": "^4.0.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/johnshew/office-dashboard.git"
   },
   "devDependencies": {
     "browserify": "^12.0.1",
@@ -17,7 +22,8 @@
     "watchify": "^3.6.1"
   },
   "scripts": {
-    "start": "http-server . -o --cors -p 8000 -a localhost",
+    "start": "node server.js",
+    "start-http-server": "http-server . -o --cors -p 8000 -a localhost",
     "build": "browserify src/app.tsx typings/tsd.d.ts    -d -p tsify -o public/bundle.js ",
     "watch": "watchify   src/app.tsx typings/tsd.d.ts -v -d -p tsify -o public/bundle.js",
     "test": "echo \"Error: no test specified\" && exit 1",
