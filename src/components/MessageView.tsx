@@ -44,16 +44,6 @@ interface MessageViewProps extends React.Props<MessageView> {
 export default class MessageView extends React.Component<MessageViewProps, any> {
     private Header: HTMLDivElement;
 
-    /*    private check(text: string) {
-            return (text != null) ? text : "";
-        }
-    */
-
-    constructor(props, state) {
-        super(props, state);
-        this.state = { inlineAttachments: [] };
-    }
-
     componentWillUpdate(nextProps: MessageViewProps) {
         console.log("checking for inline images for subject", nextProps.message && nextProps.message.subject);
         if (!nextProps.attachments && nextProps.message && nextProps.message.attachments &&
