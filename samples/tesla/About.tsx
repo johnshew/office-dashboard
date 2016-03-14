@@ -1,5 +1,4 @@
 import * as React from 'react';
-import * as Utilities from '../lib/utilities';
 
 interface AboutProps extends React.Props<About> {
 }

@@ -1,6 +1,5 @@
 import * as React from 'react';
-import * as Utilities from '../lib/utilities';
-import { SelectBox } from './selectbox';
+import * as Utilities from './Utilities';
 
 export interface SettingsValues {
     scroll: boolean;

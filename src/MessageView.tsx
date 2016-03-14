@@ -1,7 +1,7 @@
 import * as React from 'react';
-import * as App from '../app';
+import { AttachmentDictionary } from './Utilities';
 
-import * as Utilities from '../lib/utilities';
+import * as Utilities from './Utilities';
 import ItemViewHtmlBody from './ItemViewHtmlBody';
 
 import Combine = Utilities.Combine;
@@ -36,7 +36,7 @@ const plainTextStyle: React.CSSProperties = {
 
 interface MessageViewProps extends React.Props<MessageView> {
     message: Kurve.MessageDataModel;
-    attachments?: App.AttachmentDictionary;
+    attachments?: AttachmentDictionary;
     onMessageAttachmentDownloadRequest: (messageId: string) => void;
     style?: React.CSSProperties;
 }

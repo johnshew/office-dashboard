@@ -1,5 +1,5 @@
 import * as React from 'react';
-import * as App from '../app';
+import { MessageAttachments } from './Utilities';
 
 import MailList from './MailList';
 import MessageView from './MessageView';
@@ -28,7 +28,7 @@ const listStyle: React.CSSProperties = {
 
 interface MailProps extends React.Props<Mail> {
     messages: Kurve.MessageDataModel[];
-    messageAttachments?: App.MessageAttachments;
+    messageAttachments?: MessageAttachments;
     onMessageAttachmentDownloadRequest: (messageId: string) => void;
     mailboxes: string[];
     scroll: boolean;

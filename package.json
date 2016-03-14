@@ -24,8 +24,8 @@
   "scripts": {
     "start": "node server.js",
     "start-http-server": "http-server . -o --cors -p 8000 -a localhost",
-    "build": "browserify src/app.tsx typings/tsd.d.ts    -d -p tsify -o public/bundle.js ",
-    "watch": "watchify   src/app.tsx typings/tsd.d.ts -v -d -p tsify -o public/bundle.js",
+    "build": "browserify samples/tesla/App.tsx typings/tsd.d.ts    -d -p tsify -o public/bundle.js ",
+    "watch": "watchify   samples/tesla/App.tsx typings/tsd.d.ts -v -d -p tsify -o public/bundle.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "typings": "tsd install"
   },
