@@ -1,9 +1,11 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import * as Utilities from './utilities';
-import { Mail, Calendar} from './office';
-import { Settings, SettingsValues } from './settings';
-import { About } from './about';
+import * as Utilities from './lib/utilities';
+
+import About from './components/About';
+import { Settings, SettingsValues } from './components/Settings';
+import Mail from './components/Mail';
+import Calendar from './components/Calendar';
 
 const loadingMessageStyle: React.CSSProperties = {
     position: 'fixed',
@@ -21,7 +23,7 @@ export interface AttachmentDictionary {
 
 export class MessageAttachments {
     constructor(public messageId: string, public attachments?: AttachmentDictionary) {
-        this.attachments = {} 
+        this.attachments = {}
         if (attachments)
             for(var key in attachments)
                 this.attachments[key] = attachments[key];
