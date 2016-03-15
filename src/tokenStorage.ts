@@ -8,13 +8,13 @@ export default class TokenLocalStorage implements Kurve.TokenStorage {
         this.tokens = this.getStoredTokens();
     }
 
-    public add(token) {
-        this.tokens[token.id] = token;
+    public add(key, token) {
+        this.tokens[key] = token;
         this.save();
     }
 
-    public remove(token) {
-        delete this.tokens[token.id];
+    public remove(key) {
+        delete this.tokens[key];
         this.save();
     }
 

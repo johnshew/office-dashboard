@@ -223,13 +223,13 @@ var Kurve;
     })();
     Kurve.Error = Error;
     var Token = (function () {
-        function Token(tokenData) {
-            tokenData = tokenData || {};
-            this.id = tokenData.id,
-                this.scopes = tokenData.scopes;
-            this.resource = tokenData.resource;
-            this.token = tokenData.token;
-            this.expiry = new Date(tokenData.expiry);
+        function Token(token) {
+            token = token || {};
+            this.id = token.id,
+                this.scopes = token.scopes;
+            this.resource = token.resource;
+            this.token = token.token;
+            this.expiry = new Date(token.expiry);
         }
         Object.defineProperty(Token.prototype, "isExpired", {
             get: function () {
@@ -248,19 +248,25 @@ var Kurve;
             this.tokens = {};
             if (tokenStorage) {
                 tokenStorage.getAll().forEach(function (token) {
-                    _this.tokens[token.id] = new Token(token);
+                    token = new Token(token);
+                    if (token.isExpired) {
+                        _this.tokenStorage.remove(token);
+                    }
+                    else {
+                        _this.tokens[token.id] = token;
+                    }
                 });
             }
         }
         TokenCache.prototype.add = function (token) {
             this.tokens[token.id] = token;
-            this.tokenStorage && this.tokenStorage.add(token);
+            this.tokenStorage && this.tokenStorage.add(token.id, token);
         };
         TokenCache.prototype.getForResource = function (resource) {
             var cachedToken = this.tokens[resource];
             if (cachedToken && cachedToken.isExpired) {
-                this.tokenStorage && this.tokenStorage.remove(cachedToken);
-                this.tokens[resource] = null;
+                this.tokenStorage && this.tokenStorage.remove(cachedToken.id);
+                delete this.tokens[resource];
                 return null;
             }
             return cachedToken;
@@ -268,12 +274,14 @@ var Kurve;
         TokenCache.prototype.getForScopes = function (scopes) {
             for (var key in this.tokens) {
                 var token = this.tokens[key];
-                if (token.isExpired) {
-                    this.tokenStorage && this.tokenStorage.remove(token);
-                    this.tokens[key] = null;
-                }
-                else if (token.scopes && scopes.every(function (scope) { return token.scopes.indexOf(scope) >= 0; })) {
-                    return token;
+                if (token.scopes && scopes.every(function (scope) { return token.scopes.indexOf(scope) >= 0; })) {
+                    if (token.isExpired) {
+                        this.tokenStorage && this.tokenStorage.remove(token.id);
+                        delete this.tokens[key];
+                    }
+                    else {
+                        return token;
+                    }
                 }
             }
         };
@@ -674,32 +682,32 @@ var Kurve;
     })();
     Kurve.Identity = Identity;
 })(Kurve || (Kurve = {}));
-//*********************************************************   
-//   
+//*********************************************************
+//
 //Kurve js, https://github.com/microsoftdx/kurvejs
-//  
-//Copyright (c) Microsoft Corporation  
-//All rights reserved.   
-//  
-// MIT License:  
-// Permission is hereby granted, free of charge, to any person obtaining  
-// a copy of this software and associated documentation files (the  
-// ""Software""), to deal in the Software without restriction, including  
-// without limitation the rights to use, copy, modify, merge, publish,  
-// distribute, sublicense, and/or sell copies of the Software, and to  
-// permit persons to whom the Software is furnished to do so, subject to  
-// the following conditions:  
-// The above copyright notice and this permission notice shall be  
-// included in all copies or substantial portions of the Software.  
-// THE SOFTWARE IS PROVIDED ""AS IS"", WITHOUT WARRANTY OF ANY KIND,  
-// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF  
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND  
-// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE  
-// LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION  
-// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION  
-// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  
-//   
-//*********************************************************   
+//
+//Copyright (c) Microsoft Corporation
+//All rights reserved.
+//
+// MIT License:
+// Permission is hereby granted, free of charge, to any person obtaining
+// a copy of this software and associated documentation files (the
+// ""Software""), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+// THE SOFTWARE IS PROVIDED ""AS IS"", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+// LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//
+//*********************************************************
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }

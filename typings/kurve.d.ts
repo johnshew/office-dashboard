@@ -43,16 +43,23 @@ declare module Kurve {
         resource: string;
         token: string;
         expiry: Date;
-        constructor(tokenData?: any);
+        constructor(token: Token);
+        constructor(token?: {
+            id?: string;
+            scopes?: string[];
+            resource?: string;
+            token?: string;
+            expiry?: string;
+        });
         isExpired: boolean;
     }
     interface TokenDictionary {
         [index: string]: Token;
     }
     interface TokenStorage {
-        add(token: Token): any;
-        remove(token: Token): any;
-        getAll(): Token[];
+        add(key: string, token: any): any;
+        remove(key: string): any;
+        getAll(): any[];
         clear(): any;
     }
     class IdToken {
@@ -242,6 +249,7 @@ declare module Kurve {
         emailAddress: EmailAddress;
     }
     class MessageDataModel {
+        attachments: AttachmentDataModel[];
         bccRecipients: Recipient[];
         body: ItemBody;
         bodyPreview: string;
@@ -374,7 +382,7 @@ declare module Kurve {
     class AttachmentDataModel {
         contentId: string;
         id: string;
-        isInline: string;
+        isInline: boolean;
         lastModifiedDateTime: Date;
         name: string;
         size: number;
