@@ -1,5 +1,4 @@
 import * as React from 'react';
-//var React = require('react');
 
 var div = React.createElement.bind(null, 'div')
 var button = React.createElement.bind(null, 'button')
@@ -30,7 +29,7 @@ function interceptEvent(event) {
 export const SelectBox = React.createClass(
 {
   displayName: 'SelectBox',
-  
+
   getInitialState: function () {
     return {
       id: 'react-select-box-' + (++idInc),

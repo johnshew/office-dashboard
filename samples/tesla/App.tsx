@@ -1,9 +1,12 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import * as Utilities from './utilities';
-import { Mail, Calendar} from './office';
-import { Settings, SettingsValues } from './settings';
-import { About } from './about';
+import * as Utilities from './Utilities';
+
+import About from './About';
+import { Settings, SettingsValues } from './Settings';
+import Mail from '../../src/Mail';
+import Calendar from '../../src/Calendar';
+import { MessageAttachments, AttachmentDictionary } from '../../src/Utilities';
 
 const loadingMessageStyle: React.CSSProperties = {
     position: 'fixed',
@@ -15,18 +18,6 @@ const loadingMessageStyle: React.CSSProperties = {
 
 enum ShowState { Welcome, Mail, Calendar, Contacts, Notes };
 
-export interface AttachmentDictionary {
-    [index:string]: Kurve.AttachmentDataModel;
-}
-
-export class MessageAttachments {
-    constructor(public messageId: string, public attachments?: AttachmentDictionary) {
-        this.attachments = {} 
-        if (attachments)
-            for(var key in attachments)
-                this.attachments[key] = attachments[key];
-    }
-}
 
 interface AppProps extends React.Props<App> {
 }
