@@ -182,32 +182,32 @@ var Kurve;
     })();
     Kurve.Promise = Promise;
 })(Kurve || (Kurve = {}));
-//*********************************************************
-//
+//*********************************************************   
+//   
 //Kurve js, https://github.com/microsoftdx/kurvejs
-//
-//Copyright (c) Microsoft Corporation
-//All rights reserved.
-//
-// MIT License:
-// Permission is hereby granted, free of charge, to any person obtaining
-// a copy of this software and associated documentation files (the
-// ""Software""), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to
-// permit persons to whom the Software is furnished to do so, subject to
-// the following conditions:
-// The above copyright notice and this permission notice shall be
-// included in all copies or substantial portions of the Software.
-// THE SOFTWARE IS PROVIDED ""AS IS"", WITHOUT WARRANTY OF ANY KIND,
-// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
-// LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-//
-//*********************************************************
+//  
+//Copyright (c) Microsoft Corporation  
+//All rights reserved.   
+//  
+// MIT License:  
+// Permission is hereby granted, free of charge, to any person obtaining  
+// a copy of this software and associated documentation files (the  
+// ""Software""), to deal in the Software without restriction, including  
+// without limitation the rights to use, copy, modify, merge, publish,  
+// distribute, sublicense, and/or sell copies of the Software, and to  
+// permit persons to whom the Software is furnished to do so, subject to  
+// the following conditions:  
+// The above copyright notice and this permission notice shall be  
+// included in all copies or substantial portions of the Software.  
+// THE SOFTWARE IS PROVIDED ""AS IS"", WITHOUT WARRANTY OF ANY KIND,  
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF  
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND  
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE  
+// LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION  
+// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION  
+// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  
+//   
+//*********************************************************   
 // Copyright (c) Microsoft. All rights reserved. Licensed under the MIT license. See full license at the bottom of this file.
 var Kurve;
 (function (Kurve) {
@@ -222,72 +222,84 @@ var Kurve;
         return Error;
     })();
     Kurve.Error = Error;
-    var Token = (function () {
-        function Token(token) {
-            token = token || {};
-            this.id = token.id,
-                this.scopes = token.scopes;
-            this.resource = token.resource;
-            this.token = token.token;
-            this.expiry = new Date(token.expiry);
+    var CachedToken = (function () {
+        function CachedToken(id, scopes, resource, token, expiry) {
+            this.id = id;
+            this.scopes = scopes;
+            this.resource = resource;
+            this.token = token;
+            this.expiry = expiry;
         }
-        Object.defineProperty(Token.prototype, "isExpired", {
+        ;
+        Object.defineProperty(CachedToken.prototype, "isExpired", {
             get: function () {
                 return this.expiry <= new Date(new Date().getTime() + 60000);
             },
             enumerable: true,
             configurable: true
         });
-        return Token;
+        CachedToken.prototype.hasScopes = function (requiredScopes) {
+            var _this = this;
+            if (!this.scopes) {
+                return false;
+            }
+            return requiredScopes.every(function (requiredScope) {
+                return _this.scopes.some(function (actualScope) { return requiredScope === actualScope; });
+            });
+        };
+        return CachedToken;
     })();
-    Kurve.Token = Token;
     var TokenCache = (function () {
         function TokenCache(tokenStorage) {
             var _this = this;
             this.tokenStorage = tokenStorage;
-            this.tokens = {};
+            this.cachedTokens = {};
             if (tokenStorage) {
-                tokenStorage.getAll().forEach(function (token) {
-                    token = new Token(token);
-                    if (token.isExpired) {
-                        _this.tokenStorage.remove(token);
+                tokenStorage.getAll().forEach(function (_a) {
+                    var id = _a.id, scopes = _a.scopes, resource = _a.resource, token = _a.token, expiry = _a.expiry;
+                    var cachedToken = new CachedToken(id, scopes, resource, token, new Date(expiry));
+                    if (cachedToken.isExpired) {
+                        _this.tokenStorage.remove(cachedToken.id);
                     }
                     else {
-                        _this.tokens[token.id] = token;
+                        _this.cachedTokens[cachedToken.id] = cachedToken;
                     }
                 });
             }
         }
         TokenCache.prototype.add = function (token) {
-            this.tokens[token.id] = token;
+            this.cachedTokens[token.id] = token;
             this.tokenStorage && this.tokenStorage.add(token.id, token);
         };
         TokenCache.prototype.getForResource = function (resource) {
-            var cachedToken = this.tokens[resource];
+            var cachedToken = this.cachedTokens[resource];
             if (cachedToken && cachedToken.isExpired) {
-                this.tokenStorage && this.tokenStorage.remove(cachedToken.id);
-                delete this.tokens[resource];
+                this.remove(resource);
                 return null;
             }
             return cachedToken;
         };
         TokenCache.prototype.getForScopes = function (scopes) {
-            for (var key in this.tokens) {
-                var token = this.tokens[key];
-                if (token.scopes && scopes.every(function (scope) { return token.scopes.indexOf(scope) >= 0; })) {
-                    if (token.isExpired) {
-                        this.tokenStorage && this.tokenStorage.remove(token.id);
-                        delete this.tokens[key];
+            for (var key in this.cachedTokens) {
+                var cachedToken = this.cachedTokens[key];
+                if (cachedToken.hasScopes(scopes)) {
+                    if (cachedToken.isExpired) {
+                        this.remove(key);
                     }
                     else {
-                        return token;
+                        return cachedToken;
                     }
                 }
             }
+            return null;
         };
         TokenCache.prototype.clear = function () {
-            this.tokens = {};
+            this.cachedTokens = {};
             this.tokenStorage && this.tokenStorage.clear();
+        };
+        TokenCache.prototype.remove = function (key) {
+            this.tokenStorage && this.tokenStorage.remove(key);
+            delete this.cachedTokens[key];
         };
         return TokenCache;
     })();
@@ -424,12 +436,7 @@ var Kurve;
             var decodedTokenJSON = JSON.parse(decodedToken);
             var expiryDate = new Date(new Date('01/01/1970 0:0 UTC').getTime() + parseInt(decodedTokenJSON.exp) * 1000);
             var key = resource || scopes.join(" ");
-            var token = new Token();
-            token.expiry = expiryDate;
-            token.resource = resource;
-            token.scopes = scopes;
-            token.token = accessToken;
-            token.id = key;
+            var token = new CachedToken(key, scopes, resource, accessToken, expiryDate);
             this.tokenCache.add(token);
         };
         Identity.prototype.getIdToken = function () {
@@ -467,7 +474,6 @@ var Kurve;
                 callback(null, e);
                 return;
             }
-
             var token = this.tokenCache.getForResource(resource);
             if (token) {
                 return callback(token.token, null);
@@ -519,7 +525,6 @@ var Kurve;
                 callback(null, e);
                 return;
             }
-
             var token = this.tokenCache.getForScopes(scopes);
             if (token) {
                 return callback(token.token, null);

@@ -2,7 +2,9 @@ import * as Utlities from './utilities';
 
 export default class TokenLocalStorage implements Kurve.TokenStorage {
     private storageKey = 'kurve-identity-token-store';
-    private tokens: Kurve.TokenDictionary;
+    private tokens: {
+        [index: string]: any;
+    };
 
     constructor() {
         this.tokens = this.getStoredTokens();

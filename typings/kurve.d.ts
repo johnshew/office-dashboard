@@ -37,25 +37,6 @@ declare module Kurve {
         text: string;
         other: any;
     }
-    class Token {
-        id: string;
-        scopes: string[];
-        resource: string;
-        token: string;
-        expiry: Date;
-        constructor(token: Token);
-        constructor(token?: {
-            id?: string;
-            scopes?: string[];
-            resource?: string;
-            token?: string;
-            expiry?: string;
-        });
-        isExpired: boolean;
-    }
-    interface TokenDictionary {
-        [index: string]: Token;
-    }
     interface TokenStorage {
         add(key: string, token: any): any;
         remove(key: string): any;
