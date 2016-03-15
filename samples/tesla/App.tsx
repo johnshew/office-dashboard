@@ -1,10 +1,12 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import * as Utilities from './utilities';
-import TokenLocalStorage from './tokenStorage';
-import { Mail, Calendar} from './office';
-import { Settings, SettingsValues } from './settings';
-import { About } from './about';
+import * as Utilities from './Utilities';
+import TokenLocalStorage from './TokenStorage';
+import About from './About';
+import { Settings, SettingsValues } from './Settings';
+import Mail from '../../src/Mail';
+import Calendar from '../../src/Calendar';
+import { MessageAttachments, AttachmentDictionary } from '../../src/Utilities';
 
 const loadingMessageStyle: React.CSSProperties = {
     position: 'fixed',
@@ -16,6 +18,7 @@ const loadingMessageStyle: React.CSSProperties = {
 
 enum ShowState { Welcome, Mail, Calendar, Contacts, Notes };
 
+
 interface AppProps extends React.Props<App> {
 }
 
@@ -23,6 +26,7 @@ interface AppState {
     fetchingMail? : Boolean;
     fetchingCalendar? : Boolean;
     messages?: Kurve.MessageDataModel[];
+    messageAttachments?: MessageAttachments;
     messageIdToIndex?: Object;
     events?: Kurve.EventDataModel[];
     eventIdToIndex?: Object;
@@ -102,9 +106,19 @@ class App extends React.Component<AppProps, AppState> {
         }
     }
 
+    private renderMail() {
+        return <Mail
+            messages={this.state.messages}
+            messageAttachments={this.state.messageAttachments}
+            onMessageAttachmentDownloadRequest={this.DownloadMessageAttachments.bind(this)}
+            scroll={this.state.settings.scroll}
+            mailboxes={["inbox", "sent items"]}
+        />
+    }
+
     public render() {
         var welcome = (this.state.show == ShowState.Welcome) ? <div className="jumbotron"> <h2> { "Welcome" }</h2> <p> { "Please login to access your information" } </p> </div> : null;
-        var mail = (this.state.show == ShowState.Mail) ? <Mail messages={ this.state.messages } scroll={ this.state.settings.scroll } mailboxes={["inbox", "sent items"]}/> : null;
+        var mail = (this.state.show == ShowState.Mail) ? this.renderMail() : null;
         var calendar = (this.state.show == ShowState.Calendar) ? <Calendar events={ this.state.events } scroll={ this.state.settings.scroll } /> : null;
         var loadingMessage = (this.state.fetchingMail || this.state.fetchingCalendar) ? <div style={ loadingMessageStyle }>Loading...</div> : null;
 
@@ -208,7 +222,7 @@ class App extends React.Component<AppProps, AppState> {
         console.log('Now getting messages.');
         this.setState({ fetchingMail: true });
 
-        this.me.messagesAsync()
+        this.me.messagesAsync('$expand=attachments($select=id,isInline)')
             .then((messages) => {
                 console.log('Got messages.  Now rendering.');
                 if (this.mounted && this.state.show === ShowState.Welcome) { this.setState({ show: ShowState.Mail }); }
@@ -216,6 +230,29 @@ class App extends React.Component<AppProps, AppState> {
                 this.setState({ fetchingMail: false });
             }).fail((error) => {
                 this.setState({ fetchingMail: false });
+            });
+    }
+
+    public DownloadMessageAttachments(messageId: string) {
+        if (!this.state.messages)
+            return;
+        var messages = this.state.messages.filter(m => m.id === messageId);
+        if (messages.length == 0)
+            return;
+        this.setState({messageAttachments: new MessageAttachments(messageId)});
+        messages[0].attachments
+            .filter(a => a.isInline)
+            .forEach(attachment => {
+                this.graph.messageAttachmentForUserAsync(this.me.data.userPrincipalName, messageId, attachment.id)
+                .then(attachment => {
+                    if (attachment.getType() === Kurve.AttachmentType.fileAttachment) {
+                        var messageAttachments = new MessageAttachments(messageId, this.state.messageAttachments.attachments)
+                        messageAttachments.attachments[attachment.data.contentId] = attachment.data;
+                        this.setState({ messageAttachments: messageAttachments });
+                    }
+                }).fail(error => {
+                    console.log('Could not load the attachment.', error);
+                });
             });
     }
 

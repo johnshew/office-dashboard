@@ -39,8 +39,6 @@ export class Storage {
     }
 }
 
-
-
 export function Hook(rootObject: any, functionToHook: string, hookingFunction: (...optionalParams: any[]) => void): void {
     var previousFunction = rootObject[functionToHook];
 
@@ -48,40 +46,9 @@ export function Hook(rootObject: any, functionToHook: string, hookingFunction: (
         hookingFunction.apply(null,optionalParams);
         previousFunction.apply(rootObject, optionalParams);
     }
+
     return previousFunction;
 }
-
-
-export function CreateCookie(name: string, value: string, days: number): void {
-    var expires: string;
-    if (days) {
-        var date = new Date();
-        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-        expires = "; expires=" + date.toUTCString();
-    } else {
-        expires = "";
-    }
-
-    document.cookie = name + "=" + value + expires + "; path=/";
-}
-
-export function ReadCookie(name: string): string {
-    var nameEQ = name + "=";
-    var ca = document.cookie.split(';');
-    for (var i = 0; i < ca.length; i++) {
-        var c = ca[i];
-        while (c.charAt(0) === ' ') {
-            c = c.substring(1, c.length);
-        }
-
-        if (c.indexOf(nameEQ) === 0) {
-            return c.substring(nameEQ.length, c.length);
-        }
-    }
-    return "";
-}
-
-// Polyfills
 
 export function ObjectAssign(target, ...args) {
     if (target === undefined || target === null) {
@@ -102,10 +69,6 @@ export function ObjectAssign(target, ...args) {
     return output;
 }
 
-// if (typeof Object["assign"] != 'function') {
-//    Object["assign"] = ObjectAssign
-//}
-
 export function Combine(...styles: React.CSSProperties[]): React.CSSProperties {  // Essentially Object.Assign(x,y,...)
     return styles.reduce((previous, style) => {
         return (style != null) ? Object.keys(style).reduce((previous, key) => {
@@ -124,11 +87,9 @@ export function sortBy(key?: (any) => any, reverse?: boolean) {
 }
 
 export class DebugConsole {
-
     console : HTMLDivElement;
     logger : HTMLDivElement;
     command : HTMLInputElement;
-
 
     public constructor() {
         this.console = document.getElementById("DebugConsole") as HTMLDivElement;
@@ -164,33 +125,6 @@ export class DebugConsole {
 
 export var LocalConsole = null;
 
-export function LocalConsoleInitialize()
-{
+export function LocalConsoleInitialize() {
     LocalConsole = new DebugConsole();
-}
-
-export enum Days { Mon = 1, Tue, Wed, Thu, Fri, Sat, Sun }
-
-export function ShortTimeString(dateString: string)
-{
-    var today = new Date();
-    var date = new Date(dateString);
-
-    if (date.toDateString() === today.toDateString()) {
-        var hours = date.getHours();
-        var suffix = " AM";
-        if (hours == 0) {
-            hours = 12;
-        } else if (hours >= 12) {
-            suffix = " PM";
-            hours -= 12;
-        }
-        var minutes = date.getMinutes().toString();
-        if (minutes.length == 1) {
-            minutes = "0" + minutes;
-        }
-        return hours + ":" + minutes + suffix;
-    } else {
-        return Days[date.getDay()] + " " + date.getMonth() + "/" + date.getDate();
-    }
 }
