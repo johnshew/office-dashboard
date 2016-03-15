@@ -222,10 +222,86 @@ var Kurve;
         return Error;
     })();
     Kurve.Error = Error;
-    var Token = (function () {
-        function Token() {
+    var CachedToken = (function () {
+        function CachedToken(id, scopes, resource, token, expiry) {
+            this.id = id;
+            this.scopes = scopes;
+            this.resource = resource;
+            this.token = token;
+            this.expiry = expiry;
         }
-        return Token;
+        ;
+        Object.defineProperty(CachedToken.prototype, "isExpired", {
+            get: function () {
+                return this.expiry <= new Date(new Date().getTime() + 60000);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        CachedToken.prototype.hasScopes = function (requiredScopes) {
+            var _this = this;
+            if (!this.scopes) {
+                return false;
+            }
+            return requiredScopes.every(function (requiredScope) {
+                return _this.scopes.some(function (actualScope) { return requiredScope === actualScope; });
+            });
+        };
+        return CachedToken;
+    })();
+    var TokenCache = (function () {
+        function TokenCache(tokenStorage) {
+            var _this = this;
+            this.tokenStorage = tokenStorage;
+            this.cachedTokens = {};
+            if (tokenStorage) {
+                tokenStorage.getAll().forEach(function (_a) {
+                    var id = _a.id, scopes = _a.scopes, resource = _a.resource, token = _a.token, expiry = _a.expiry;
+                    var cachedToken = new CachedToken(id, scopes, resource, token, new Date(expiry));
+                    if (cachedToken.isExpired) {
+                        _this.tokenStorage.remove(cachedToken.id);
+                    }
+                    else {
+                        _this.cachedTokens[cachedToken.id] = cachedToken;
+                    }
+                });
+            }
+        }
+        TokenCache.prototype.add = function (token) {
+            this.cachedTokens[token.id] = token;
+            this.tokenStorage && this.tokenStorage.add(token.id, token);
+        };
+        TokenCache.prototype.getForResource = function (resource) {
+            var cachedToken = this.cachedTokens[resource];
+            if (cachedToken && cachedToken.isExpired) {
+                this.remove(resource);
+                return null;
+            }
+            return cachedToken;
+        };
+        TokenCache.prototype.getForScopes = function (scopes) {
+            for (var key in this.cachedTokens) {
+                var cachedToken = this.cachedTokens[key];
+                if (cachedToken.hasScopes(scopes)) {
+                    if (cachedToken.isExpired) {
+                        this.remove(key);
+                    }
+                    else {
+                        return cachedToken;
+                    }
+                }
+            }
+            return null;
+        };
+        TokenCache.prototype.clear = function () {
+            this.cachedTokens = {};
+            this.tokenStorage && this.tokenStorage.clear();
+        };
+        TokenCache.prototype.remove = function (key) {
+            this.tokenStorage && this.tokenStorage.remove(key);
+            delete this.cachedTokens[key];
+        };
+        return TokenCache;
     })();
     var IdToken = (function () {
         function IdToken() {
@@ -241,11 +317,11 @@ var Kurve;
             this.clientId = identitySettings.clientId;
             this.tokenProcessorUrl = identitySettings.tokenProcessingUri;
             //          this.req = new XMLHttpRequest();
-            this.tokenCache = {};
             if (identitySettings.version)
                 this.version = identitySettings.version;
             else
                 this.version = OAuthVersion.v1;
+            this.tokenCache = new TokenCache(identitySettings.tokenStorage);
             //Callback handler from other windows
             window.addEventListener("message", function (event) {
                 if (event.data.type === "id_token") {
@@ -360,13 +436,8 @@ var Kurve;
             var decodedTokenJSON = JSON.parse(decodedToken);
             var expiryDate = new Date(new Date('01/01/1970 0:0 UTC').getTime() + parseInt(decodedTokenJSON.exp) * 1000);
             var key = resource || scopes.join(" ");
-            var token = new Token();
-            token.expiry = expiryDate;
-            token.resource = resource;
-            token.scopes = scopes;
-            token.token = accessToken;
-            token.id = key;
-            this.tokenCache[key] = token;
+            var token = new CachedToken(key, scopes, resource, accessToken, expiryDate);
+            this.tokenCache.add(token);
         };
         Identity.prototype.getIdToken = function () {
             return this.idToken;
@@ -403,19 +474,10 @@ var Kurve;
                 callback(null, e);
                 return;
             }
-            //Check for cache and see if we have a valid token
-            for (var key in this.tokenCache) {
-                var token = this.tokenCache[key];
-                //remove tokens that are expired, or will expire within 5 minutes)
-                if (token.expiry <= new Date(new Date().getTime() + 60000)) {
-                    delete this.tokenCache[key];
-                }
-                else if (token.resource == resource) {
-                    callback(token.token, null);
-                    return;
-                }
+            var token = this.tokenCache.getForResource(resource);
+            if (token) {
+                return callback(token.token, null);
             }
-            ;
             //If we got this far, we need to go get this token
             //Need to create the iFrame to invoke the acquire token
             this.getTokenCallback = (function (token, error) {
@@ -463,18 +525,9 @@ var Kurve;
                 callback(null, e);
                 return;
             }
-            //Check for cache and see if we have a valid token
-            var cachedToken = null;
-            for (var key in this.tokenCache) {
-                var token = this.tokenCache[key];
-                //remove tokens that are expired, or will expire within 5 minutes)
-                if (token.expiry <= new Date(new Date().getTime() + 60000)) {
-                    delete this.tokenCache[key];
-                }
-                else if (token.scopes && scopes.every(function (scope) { return token.scopes.indexOf(scope) >= 0; })) {
-                    callback(token.token, null);
-                    return;
-                }
+            var token = this.tokenCache.getForScopes(scopes);
+            if (token) {
+                return callback(token.token, null);
             }
             //If we got this far, we don't have a valid cached token, so will need to get one.
             //Need to create the iFrame to invoke the acquire token
@@ -604,6 +657,7 @@ var Kurve;
             }
         };
         Identity.prototype.logOut = function () {
+            this.tokenCache.clear();
             var url = "https://login.microsoftonline.com/common/oauth2/logout?post_logout_redirect_uri=" + encodeURI(window.location.href);
             window.location.href = url;
         };
@@ -635,32 +689,32 @@ var Kurve;
     })();
     Kurve.Identity = Identity;
 })(Kurve || (Kurve = {}));
-//*********************************************************   
-//   
+//*********************************************************
+//
 //Kurve js, https://github.com/microsoftdx/kurvejs
-//  
-//Copyright (c) Microsoft Corporation  
-//All rights reserved.   
-//  
-// MIT License:  
-// Permission is hereby granted, free of charge, to any person obtaining  
-// a copy of this software and associated documentation files (the  
-// ""Software""), to deal in the Software without restriction, including  
-// without limitation the rights to use, copy, modify, merge, publish,  
-// distribute, sublicense, and/or sell copies of the Software, and to  
-// permit persons to whom the Software is furnished to do so, subject to  
-// the following conditions:  
-// The above copyright notice and this permission notice shall be  
-// included in all copies or substantial portions of the Software.  
-// THE SOFTWARE IS PROVIDED ""AS IS"", WITHOUT WARRANTY OF ANY KIND,  
-// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF  
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND  
-// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE  
-// LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION  
-// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION  
-// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  
-//   
-//*********************************************************   
+//
+//Copyright (c) Microsoft Corporation
+//All rights reserved.
+//
+// MIT License:
+// Permission is hereby granted, free of charge, to any person obtaining
+// a copy of this software and associated documentation files (the
+// ""Software""), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+// THE SOFTWARE IS PROVIDED ""AS IS"", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+// LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//
+//*********************************************************
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }

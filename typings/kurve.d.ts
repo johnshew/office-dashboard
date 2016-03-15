@@ -37,6 +37,12 @@ declare module Kurve {
         text: string;
         other: any;
     }
+    interface TokenStorage {
+        add(key: string, token: any): any;
+        remove(key: string): any;
+        getAll(): any[];
+        clear(): any;
+    }
     class IdToken {
         Token: string;
         IssuerIdentifier: string;
@@ -55,6 +61,7 @@ declare module Kurve {
         clientId: string;
         tokenProcessingUri: string;
         version: OAuthVersion;
+        tokenStorage?: TokenStorage;
     }
     class Identity {
         clientId: string;

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import * as Utilities from './Utilities';
-
+import TokenLocalStorage from './TokenStorage';
 import About from './About';
 import { Settings, SettingsValues } from './Settings';
 import Mail from '../../src/Mail';
@@ -41,6 +41,7 @@ class App extends React.Component<AppProps, AppState> {
     // private eventIdToIndex: {};  now in state
     private mounted = false;
     private storage: Utilities.Storage;
+    private tokenStorage: TokenLocalStorage;
 
     // private loginNewWindow: boolean;
     private timerHandle: any;
@@ -68,11 +69,14 @@ class App extends React.Component<AppProps, AppState> {
 
         Utilities.ObjectAssign(this.state.settings, Utilities.Storage.getItem("settings")); // replace defaults with anything we find in storage.
 
+        this.tokenStorage = new TokenLocalStorage();
+
         var here = document.location;
         this.identity = new Kurve.Identity({
             clientId: "b8dd3290-662a-4f91-92b9-3e70fbabe04e",
             tokenProcessingUri: here.protocol + '//' + here.host + here.pathname.substring(0, here.pathname.lastIndexOf('/') + 1) + '../public/login.html',
-            version: null
+            version: null,
+            tokenStorage: this.tokenStorage
         });
         this.graph = new Kurve.Graph({ identity: this.identity });
         this.me = null;
@@ -97,8 +101,9 @@ class App extends React.Component<AppProps, AppState> {
         console.log('Checking for identity redirect');
         if (this.identity.checkForIdentityRedirect()) {
             this.LoggedIn()
+        } else if (this.tokenStorage.hasTokens()) {
+            this.Login();
         }
-        this.UpdateLoginState();
     }
 
     private renderMail() {

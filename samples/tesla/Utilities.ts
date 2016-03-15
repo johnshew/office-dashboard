@@ -26,6 +26,17 @@ export class Storage {
         }
         return null;
     }
+
+    public static removeItem(key: string): any {
+        if (localStorage) {
+            try {
+                localStorage.removeItem(key);
+            }
+            catch (e) {
+                console.log('localStorage remove error ' + e);
+            }
+        }
+    }
 }
 
 export function Hook(rootObject: any, functionToHook: string, hookingFunction: (...optionalParams: any[]) => void): void {
