@@ -1,5 +1,5 @@
 
-// This file enables continuous deployment - it is not needed  by the Kurve app 
+// This file enables continuous deployment - it is not needed  by the Kurve app
 
 var http = require('http');
 var restify = require('restify');
@@ -10,8 +10,13 @@ var server = restify.createServer();
 server.use(restify.gzipResponse());
 server.use(restify.queryParser());
 
+server.get('/', function (req,res,next) {
+    res.redirect('./public/index.html', next);
+});
+
 server.get(/\/public\/?.*/, restify.serveStatic({
-    directory: __dirname
+    directory: __dirname,
+    default: 'index.html'
 }));
 
 server.listen(port, function() {
