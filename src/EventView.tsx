@@ -57,6 +57,7 @@ export default class EventView extends React.Component<EventViewProps, any> {
         var subject = event.subject || "";
         var organizer = event.organizer && event.organizer.emailAddress && event.organizer.emailAddress.name || "";
         var attendees = this.attendees() || "";
+        var location = event.location.displayName;
         var body = event.body && event.body.content || "";
         if (event.body && event.body.contentType === "text") {
             messageBody = Combine(messageBody, plainTextStyle);
@@ -67,6 +68,7 @@ export default class EventView extends React.Component<EventViewProps, any> {
                     <p style={ big }>{organizer}</p>
                     <p style={ smallEmphasis }>{subject}</p>
                     <p style={ small }>{attendees}</p>
+                    <p style={ small }>{ location }</p>
                 </div>
 
                 <ItemViewHtmlBody style={messageBody} body={body} />
