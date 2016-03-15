@@ -1,7 +1,7 @@
 import * as React from 'react';
-import * as App from '../app';
+import { AttachmentDictionary } from './Utilities';
 
-import * as Utilities from '../lib/utilities';
+import * as Utilities from './Utilities';
 import ItemViewHtmlBody from './ItemViewHtmlBody';
 
 import Combine = Utilities.Combine;
@@ -36,23 +36,13 @@ const plainTextStyle: React.CSSProperties = {
 
 interface MessageViewProps extends React.Props<MessageView> {
     message: Kurve.MessageDataModel;
-    attachments?: App.AttachmentDictionary;
+    attachments?: AttachmentDictionary;
     onMessageAttachmentDownloadRequest: (messageId: string) => void;
     style?: React.CSSProperties;
 }
 
 export default class MessageView extends React.Component<MessageViewProps, any> {
     private Header: HTMLDivElement;
-
-    /*    private check(text: string) {
-            return (text != null) ? text : "";
-        }
-    */
-
-    constructor(props, state) {
-        super(props, state);
-        this.state = { inlineAttachments: [] };
-    }
 
     componentWillUpdate(nextProps: MessageViewProps) {
         console.log("checking for inline images for subject", nextProps.message && nextProps.message.subject);

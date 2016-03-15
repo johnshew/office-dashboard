@@ -1,5 +1,5 @@
 import * as React from 'react';
-import * as Utilities from '../lib/utilities';
+import * as Utilities from './Utilities';
 
 import ItemViewHtmlBody from './ItemViewHtmlBody';
 
@@ -38,10 +38,6 @@ interface EventViewProps extends React.Props<EventView> {
 }
 
 export default class EventView extends React.Component<EventViewProps, any> {
-    private check(text: string) {
-        return (text != null) ? text : "";
-    }
-
     private attendees() {
         var x = this.props.event.attendees;
         return x.reduce((p, a) => {

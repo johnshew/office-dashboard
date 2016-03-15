@@ -1,12 +1,12 @@
 import * as React from 'react';
-import * as App from '../app';
+import { AttachmentDictionary } from './Utilities';
 
-import * as ScopedStyles from '../lib/scopedStylePolyfill';
+import * as ScopedStyles from './ScopedStylePolyfill';
 
 interface ItemViewHtmlBodyProps extends React.Props<ItemViewHtmlBody> {
     style: React.CSSProperties
     body: string;
-    attachments?: App.AttachmentDictionary;
+    attachments?: AttachmentDictionary;
 }
 
 export default class ItemViewHtmlBody extends React.Component<ItemViewHtmlBodyProps, any> {
@@ -14,7 +14,7 @@ export default class ItemViewHtmlBody extends React.Component<ItemViewHtmlBodyPr
         return <div style={this.props.style} dangerouslySetInnerHTML={this.parseMessageBody(this.props.body, this.props.attachments)} />
     }
 
-    private parseMessageBody(html: string, inlineAttachments?: App.AttachmentDictionary) {
+    private parseMessageBody(html: string, inlineAttachments?: AttachmentDictionary) {
         var doc = document.implementation.createHTMLDocument("example");
         doc.documentElement.innerHTML = html;
 
