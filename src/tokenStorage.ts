@@ -1,4 +1,4 @@
-import * as Utitlities from './utilities';
+import * as Utlities from './utilities';
 
 export default class TokenLocalStorage implements Kurve.TokenStorage {
     private storageKey = 'kurve-identity-token-store';
@@ -27,7 +27,7 @@ export default class TokenLocalStorage implements Kurve.TokenStorage {
     }
 
     public clear() {
-        Utitlities.Storage.removeItem(this.storageKey);
+        Utlities.Storage.removeItem(this.storageKey);
     }
 
     public hasTokens() {
@@ -35,10 +35,10 @@ export default class TokenLocalStorage implements Kurve.TokenStorage {
     }
 
     private getStoredTokens() {
-        return Utitlities.Storage.getItem(this.storageKey) || {};
+        return Utlities.Storage.getItem(this.storageKey) || {};
     }
 
     private save() {
-        Utitlities.Storage.setItem(this.storageKey, this.tokens);
+        Utlities.Storage.setItem(this.storageKey, this.tokens);
     }
 }
