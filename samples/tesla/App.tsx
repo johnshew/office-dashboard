@@ -234,6 +234,7 @@ class App extends React.Component<AppProps, AppState> {
     }
 
     public DownloadMessageAttachments(messageId: string) {
+        console.log("received request to download attachments for message", messageId);
         if (!this.state.messages)
             return;
         var messages = this.state.messages.filter(m => m.id === messageId);
@@ -243,6 +244,7 @@ class App extends React.Component<AppProps, AppState> {
         messages[0].attachments
             .filter(a => a.isInline)
             .forEach(attachment => {
+                console.log("spawning async attachments download for message", messageId);
                 this.graph.messageAttachmentForUserAsync(this.me.data.userPrincipalName, messageId, attachment.id)
                 .then(attachment => {
                     if (attachment.getType() === Kurve.AttachmentType.fileAttachment) {
