@@ -6,21 +6,27 @@ The application is optimized for the Tesla dashboard screen but it works well on
 
 You can try the app here http://aka.ms/offdash.
 
+IMPORTANT: In Settings make sure “Login without a new window” is checked. If not, expect a warning about popups.
+
 ## Release Notes
 
-### Release 0.1 – Public Alpha
+### Release 0.2 – Public Alpha 2
  
 This app provides a Tesla-friendly way to access your Office information.
  
 This is a pure client app that talks directly to Microsoft’s servers over HTTPS with READ-ONLY access so there is very little risk that your information will be compromised.
  
-There are several significant limitations and issues in this release:
+New in this release:
 
-* Embedded pictures (in either email or calendar) are not supported
+* Embedded pictures (in either email or calendar) are now supported
+* Calendar events display location
+* Once you click "login" you shouldn't have to do so again until you log out
+
+There are still a number of significant limitations and issues in this release:
+
 * The email view shows all messages from every folder in your mailbox – including sent mail
 * Attachments sometimes show up as separate messages
 * Calendar meeting times are shown in military time
-* You have to login every time you go back to the app - we should persist the tokens
 * Loading the messages takes a little while on Tesla and there is no message indicating it is loading
 * The settings options are too small to be easily used is the Tesla
 
@@ -59,7 +65,7 @@ After you fork the repo do the following:
     npm install
     npm run typings
     npm run build (or npm run watch)
-    npm run start (to run locally - remember to use http://localhost not http://127.0.0.1)
+    npm run start-http-server (to run locally - remember to use http://localhost not http://127.0.0.1)
  
 ### Working with the Tesla browser
 
