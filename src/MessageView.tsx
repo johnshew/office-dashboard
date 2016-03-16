@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { AttachmentDictionary } from './Utilities';
 
 import * as Utilities from './Utilities';
 import ItemViewHtmlBody from './ItemViewHtmlBody';
@@ -35,23 +34,12 @@ const plainTextStyle: React.CSSProperties = {
 }
 
 interface MessageViewProps extends React.Props<MessageView> {
-    message: Kurve.MessageDataModel;
-    attachments?: AttachmentDictionary;
-    onMessageAttachmentDownloadRequest: (messageId: string) => void;
+    message?: Kurve.MessageDataModel;
     style?: React.CSSProperties;
 }
 
 export default class MessageView extends React.Component<MessageViewProps, any> {
     private Header: HTMLDivElement;
-
-    componentWillUpdate(nextProps: MessageViewProps) {
-        console.log("checking for inline images for subject", nextProps.message && nextProps.message.subject);
-        if (!nextProps.attachments && nextProps.message && nextProps.message.attachments &&
-            nextProps.message.attachments.some(attachment => attachment.isInline)) {
-            console.log("requesting download of message attachments");
-            nextProps.onMessageAttachmentDownloadRequest(nextProps.message.id);
-        }
-    }
 
     private recipients(mailboxes: Kurve.Recipient[], style: React.CSSProperties, prefix: string) {
         var recipientList = mailboxes.reduce((p, c) => { return (p ? p + "; " : "") + c.emailAddress.name; }, null);
@@ -66,17 +54,17 @@ export default class MessageView extends React.Component<MessageViewProps, any> 
     }
 
     render() {
+        var message = this.props.message;
+        if (!message) { return null; }
         var big = Combine(bigStyle, noOverflowStyle, this.props.style);
         var small = Combine(smallStyle, noOverflowStyle, this.props.style);
         var smallEmphasis = Combine(smallStyle, emphasisStyle, noOverflowStyle, this.props.style);
         var smallScrolling = Combine(smallStyle, this.props.style);
         var messageBody = Combine(bodyStyle, this.props.style);
-        var message = this.props.message;
-        if (!message) { return null; }
         var subject = message.subject || "";
         console.log("rendering message", subject);
         var from = message.sender && message.sender.emailAddress && message.sender.emailAddress.name || "";
-        var body = message.body && message.body.content || "";
+        var body = message.body && message.body.content;
         if (message.body && message.body.contentType === "text") {
             messageBody = Combine(messageBody, plainTextStyle);
         }
@@ -92,7 +80,7 @@ export default class MessageView extends React.Component<MessageViewProps, any> 
                     <p style={ small }>{ ShortTimeString(message.receivedDateTime) }</p>
                 </div>
 
-                <ItemViewHtmlBody style={messageBody} body={body} attachments={this.props.attachments} />
+                <ItemViewHtmlBody style={messageBody} body={body} attachments={this.props.message.attachments} />
             </div>
         );
     }

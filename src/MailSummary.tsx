@@ -60,7 +60,7 @@ interface MailSummaryProps extends React.Props<MailSummary> {
     message: Kurve.MessageDataModel;
     style?: Object;
     selected?: boolean;
-    onSelect?(messageId: string);
+    onSelect(messageId: string);
 }
 
 export default class MailSummary extends React.Component<MailSummaryProps, any> {

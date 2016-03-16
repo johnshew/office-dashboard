@@ -6,7 +6,7 @@ import About from './About';
 import { Settings, SettingsValues } from './Settings';
 import Mail from '../../src/Mail';
 import Calendar from '../../src/Calendar';
-import { MessageAttachments, AttachmentDictionary } from '../../src/Utilities';
+
 
 const loadingMessageStyle: React.CSSProperties = {
     position: 'fixed',
@@ -18,7 +18,6 @@ const loadingMessageStyle: React.CSSProperties = {
 
 enum ShowState { Welcome, Mail, Calendar, Contacts, Notes };
 
-
 interface AppProps extends React.Props<App> {
 }
 
@@ -26,7 +25,7 @@ interface AppState {
     fetchingMail? : Boolean;
     fetchingCalendar? : Boolean;
     messages?: Kurve.MessageDataModel[];
-    messageAttachments?: MessageAttachments;
+    selectedMessage?: Kurve.MessageDataModel;
     messageIdToIndex?: Object;
     events?: Kurve.EventDataModel[];
     eventIdToIndex?: Object;
@@ -109,10 +108,9 @@ class App extends React.Component<AppProps, AppState> {
     private renderMail() {
         return <Mail
             messages={this.state.messages}
-            messageAttachments={this.state.messageAttachments}
-            onMessageAttachmentDownloadRequest={this.DownloadMessageAttachments.bind(this)}
+            selectedMessage={this.state.selectedMessage}
+            onSelect={this.SelectMessage}
             scroll={this.state.settings.scroll}
-            mailboxes={["inbox", "sent items"]}
         />
     }
 
@@ -233,22 +231,26 @@ class App extends React.Component<AppProps, AppState> {
             });
     }
 
-    public DownloadMessageAttachments(messageId: string) {
-        if (!this.state.messages)
-            return;
+    public SelectMessage = (messageId: string) => {
+        console.log("Selecting Message", messageId);
         var messages = this.state.messages.filter(m => m.id === messageId);
         if (messages.length == 0)
             return;
-        this.setState({messageAttachments: new MessageAttachments(messageId)});
+
+        // Set up an initial message with no attachments
+        this.setState({ selectedMessage: Utilities.ObjectAssign({}, messages[0], {attachments: []}) });
+
+        // Loop on the original message attachments metadata
         messages[0].attachments
             .filter(a => a.isInline)
             .forEach(attachment => {
                 this.graph.messageAttachmentForUserAsync(this.me.data.userPrincipalName, messageId, attachment.id)
                 .then(attachment => {
                     if (attachment.getType() === Kurve.AttachmentType.fileAttachment) {
-                        var messageAttachments = new MessageAttachments(messageId, this.state.messageAttachments.attachments)
-                        messageAttachments.attachments[attachment.data.contentId] = attachment.data;
-                        this.setState({ messageAttachments: messageAttachments });
+                        // keep state immutable by creating a new message with new attachments
+                        var newAttachments = this.state.selectedMessage.attachments.slice();
+                        newAttachments.push(attachment.data);
+                        this.setState({ selectedMessage: Utilities.ObjectAssign({}, this.state.selectedMessage, {attachments: newAttachments}) });
                     }
                 }).fail(error => {
                     console.log('Could not load the attachment.', error);
