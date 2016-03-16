@@ -100,6 +100,7 @@ class App extends React.Component<AppProps, AppState> {
 
         console.log('Checking for identity redirect');
         if (this.identity.checkForIdentityRedirect()) {
+            window.location.hash = '#';
             this.LoggedIn()
         } else if (this.tokenStorage.hasTokens()) {
             this.Login();
