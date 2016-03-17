@@ -17,6 +17,8 @@ export interface SettingsValues {
 interface SettingsProps extends React.Props<Settings> {
     values: SettingsValues;
     onChange: (SettingsValue) => void;
+    modalIsOpen: boolean;
+    onModalCloseRequest: (event: any) => void;
 }
 
 const modalstyles = {
@@ -41,15 +43,7 @@ const modalstyles = {
 export class Settings extends React.Component<SettingsProps, any> {
     constructor(props, state) {
         super(props, state);
-        this.state = {
-            modalIsOpen: false
-        }
-    }
-
-    componentDidMount() {
-        document.getElementById("ShowSettings").onclick = () => {
-            this.setState({ modalIsOpen: true });
-        }
+        this.state = {};
     }
 
     private handleScrollChange = (event) => {
@@ -84,7 +78,7 @@ export class Settings extends React.Component<SettingsProps, any> {
     }
 
     private handleModalCloseRequest = (event) => {
-        this.setState({ modalIsOpen: false });
+        this.props.onModalCloseRequest(event);
     }
 
     public render() {
@@ -93,7 +87,7 @@ export class Settings extends React.Component<SettingsProps, any> {
             <Modal
                 className="modal-dialog"
                 closeTimeoutMS={150}
-                isOpen={this.state.modalIsOpen}
+                isOpen={this.props.modalIsOpen}
                 onRequestClose={this.handleModalCloseRequest}
                 style={modalstyles}
             >

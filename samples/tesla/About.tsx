@@ -22,28 +22,18 @@ const modalstyles = {
 }
 
 interface AboutProps extends React.Props<About> {
+    modalIsOpen: boolean;
+    onModalCloseRequest: (event: any) => void;
 }
 
-interface AboutState {
-    modalIsOpen: boolean
-}
-
-export default class About extends React.Component<AboutProps, AboutState> {
+export default class About extends React.Component<AboutProps, {}> {
     constructor(props, state) {
         super(props, state);
-        this.state = {
-            modalIsOpen: false
-        }
-    }
-
-    componentDidMount() {
-        document.getElementById("ShowAbout").onclick = () => {
-            this.setState({ modalIsOpen: true });
-        }
+        this.state = {};
     }
 
     private handleModalCloseRequest = (event) => {
-        this.setState({ modalIsOpen: false });
+        this.props.onModalCloseRequest(event);
     }
 
     public render() {
@@ -51,7 +41,7 @@ export default class About extends React.Component<AboutProps, AboutState> {
             <Modal
                 className="modal-dialog"
                 closeTimeoutMS={150}
-                isOpen={this.state.modalIsOpen}
+                isOpen={this.props.modalIsOpen}
                 onRequestClose={this.handleModalCloseRequest}
                 style={modalstyles}
             >
