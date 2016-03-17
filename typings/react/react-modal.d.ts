@@ -1,19 +1,29 @@
-// Type definitions for React v0.14 (react-dom)
-// Project: http://facebook.github.io/react/
-// Definitions by: Asana <https://asana.com>, AssureSign <http://www.assuresign.com>, Microsoft <https://microsoft.com>
-// Definitions: https://github.com/borisyankov/DefinitelyTyped
+// Type definitions for react-router v2.0.0
+// Project: https://github.com/rackt/react-router
+// Definitions by: Sergey Buturlakin <https://github.com/sergey-buturlakin>, Yuichi Murata <https://github.com/mrk21>, Václav Ostrožlík <https://github.com/vasek17>, Nathan Brown <https://github.com/ngbrown>
+// Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped
 
-/// <reference path="react.d.ts" />
+/// <reference path="../react/react.d.ts" />
 
-// interface ModalProps {
-//     className?: string;
-//     closeTimeoutMS?: number;
-//     isOpen?: boolean;
-//     onRequestClose?(event: any);
-// }
+declare namespace ReactModal {
+    import React = __React
+
+    interface ModalStyle {
+        overlay?: React.CSSProperties,
+        content?: React.CSSProperties
+    }
+
+    interface ModalProps extends React.Props<Modal> {
+        className?: string,
+        closeTimeoutMS?: number,
+        isOpen: boolean,
+        onRequestClose: (event: any) => void,
+        style?: ModalStyle
+    }
+    interface Modal extends React.ComponentClass<ModalProps> {}
+    const Modal: Modal
+}
 
 declare module "react-modal" {
-    function Modal();
-
-    export = Modal;
+    export = ReactModal.Modal;
 }
