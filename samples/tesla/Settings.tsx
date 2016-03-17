@@ -43,46 +43,61 @@ const modalstyles = {
 export class Settings extends React.Component<SettingsProps, any> {
     constructor(props, state) {
         super(props, state);
-        this.state = {};
+        this.state = {
+            settings: Utilities.ObjectAssign({}, this.props.values)
+        }
     }
 
     private handleScrollChange = (event) => {
-        var values = Utilities.ObjectAssign({}, this.props.values);
-        values.scroll = event.target.checked;
-        this.props.onChange(values);
+        this.state.settings.scroll = event.target.checked;
+        this.forceUpdate();
     }
 
     private handleConsoleChange = (event) => {
-        var values = Utilities.ObjectAssign({}, this.props.values);
-        values.console = event.target.checked;
-        this.props.onChange(values);
+        this.state.settings.console = event.target.checked;
+        this.forceUpdate();
     }
 
     private handleInPlaceChange = (event) => {
-        var values = Utilities.ObjectAssign({}, this.props.values);
-        values.inplace = event.target.checked;
-        this.props.onChange(values);
+        this.state.settings.inplace = event.target.checked;
+        this.forceUpdate();
     }
 
     private handleTestDataChange = (event) => {
-        var values = Utilities.ObjectAssign({}, this.props.values);
-        values.testData = event.target.checked;
-        this.props.onChange(values);
+        this.state.settings.testData = event.target.checked;
+        this.forceUpdate();
     }
 
     private handleRefreshChange = (event) => {
-        var values = Utilities.ObjectAssign({}, this.props.values);
         var refresh = (event.target.value) ? parseInt(event.target.value) : null;
-        values.refreshIntervalSeconds = (refresh === NaN) ? null : refresh;
-        this.props.onChange(values);
+        this.state.settings.refreshIntervalSeconds = refresh === NaN ? null : refresh;
+        this.forceUpdate();
     }
 
     private handleModalCloseRequest = (event) => {
+        this.applySettings();
         this.props.onModalCloseRequest(event);
     }
 
+    private applySettings = () => {
+        this.props.onChange(Utilities.ObjectAssign({}, this.state.settings) );
+    }
+
+    private handleDimissButtonClick = () => {
+        this.setState({ settings: Utilities.ObjectAssign({}, this.props.values) });
+    }
+
+    private settingsChanged = () => {
+        for (var key in this.state.settings) {
+            if (this.props.values[key] != this.state.settings[key]) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public render() {
-        var values = this.props.values;
+        var values = this.state.settings;
         return (
             <Modal
                 className="modal-dialog"
@@ -105,10 +120,11 @@ export class Settings extends React.Component<SettingsProps, any> {
                         <input type="checkbox" checked={ values.console } onChange={ this.handleConsoleChange }/> Show local debug console <br/>
                         {/*<input type="checkbox" checked={ values.testData } onChange={ this.handleTestDataChange }/> Use Test Data <br/>*/}
                         <br/>
-                        <input type="textbox" style={ { width: "80px" } } value={ (values.refreshIntervalSeconds === null) ? "" : values.refreshIntervalSeconds.toString() } onChange={ this.handleRefreshChange }/> Refresh interval in seconds.  0 to disable <br/>
+                        <input type="textbox" style={ { width: "80px" } } value={ (values.refreshIntervalSeconds == null) ? "" : values.refreshIntervalSeconds.toString() } onChange={ this.handleRefreshChange }/> Refresh interval in seconds.  0 to disable <br/>
                     </div>
                     <div className="modal-footer">
-                        <button type="button" className="btn btn-default" onClick={this.handleModalCloseRequest}>Close</button>
+                        <button type="button" className="btn btn-primary" onClick={this.handleModalCloseRequest} disabled={!this.settingsChanged()}>Save</button>
+                        <button type="button" className="btn btn-default" onClick={this.handleDimissButtonClick}>Cancel</button>
                     </div>
                 </div>
             </Modal>
