@@ -1,49 +1,21 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import Modal = require('react-modal');
-
-const modalstyles = {
-    overlay: {
-        zIndex: 9999
-    },
-    content: {
-        position: null,
-        top: 70,
-        left: null,
-        right: null,
-        bottom: null,
-        border: null,
-        background: null,
-        overflow: null,
-        WebkitOverflowScrolling: null,
-        borderRadius: null,
-        padding: null
-    }
-}
+import Styles from './Styles';
 
 interface AboutProps extends React.Props<About> {
+    modalIsOpen: boolean;
+    onModalCloseRequest: (event: any) => void;
 }
 
-interface AboutState {
-    modalIsOpen: boolean
-}
-
-export default class About extends React.Component<AboutProps, AboutState> {
+export default class About extends React.Component<AboutProps, {}> {
     constructor(props, state) {
         super(props, state);
-        this.state = {
-            modalIsOpen: false
-        }
-    }
-
-    componentDidMount() {
-        document.getElementById("ShowAbout").onclick = () => {
-            this.setState({ modalIsOpen: true });
-        }
+        this.state = {};
     }
 
     private handleModalCloseRequest = (event) => {
-        this.setState({ modalIsOpen: false });
+        this.props.onModalCloseRequest(event);
     }
 
     public render() {
@@ -51,9 +23,9 @@ export default class About extends React.Component<AboutProps, AboutState> {
             <Modal
                 className="modal-dialog"
                 closeTimeoutMS={150}
-                isOpen={this.state.modalIsOpen}
+                isOpen={this.props.modalIsOpen}
                 onRequestClose={this.handleModalCloseRequest}
-                style={modalstyles}
+                style={Styles.modal}
             >
                 <div className="modal-dialog">
                     <div className="modal-content">

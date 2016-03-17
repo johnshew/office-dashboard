@@ -32,6 +32,8 @@ interface AppState {
     eventIdToIndex?: Object;
     show?: ShowState;
     settings?: SettingsValues;
+    settingsModalIsOpen?: boolean;
+    aboutModalIsOpen?: boolean;
 }
 
 class App extends React.Component<AppProps, AppState> {
@@ -64,7 +66,9 @@ class App extends React.Component<AppProps, AppState> {
                 testData: false,
                 console: false,
                 refreshIntervalSeconds: 5*60
-            }
+            },
+            settingsModalIsOpen: false,
+            aboutModalIsOpen: false
         };
 
         Utilities.ObjectAssign(this.state.settings, Utilities.Storage.getItem("settings")); // replace defaults with anything we find in storage.
@@ -96,6 +100,8 @@ class App extends React.Component<AppProps, AppState> {
         document.getElementById("ShowCalendar").onclick = (e) => this.ShowCalendar();
         document.getElementById("ShowContacts").onclick = (e) => this.ShowContacts();
         document.getElementById("ShowNotes").onclick = (e) => this.ShowNotes();
+        document.getElementById("ShowSettings").onclick = () => this.ShowSettings();
+        document.getElementById("ShowAbout").onclick = () => this.ShowAbout();
         document.getElementById("RefreshCurrentView").onclick = (e) => this.RefreshCurrentView();
 
         console.log('Checking for identity redirect');
@@ -129,8 +135,14 @@ class App extends React.Component<AppProps, AppState> {
                 { welcome }
                 { mail }
                 { calendar }
-                <Settings onChange={ this.handleSettingsChange } values={ this.state.settings }/>
-                <About/>
+                <Settings
+                    modalIsOpen={ this.state.settingsModalIsOpen }
+                    onModalCloseRequest= { this.handleSettingsModalCloseRequest }
+                    onChange={ this.handleSettingsChange }
+                    values={ this.state.settings }/>
+                <About
+                    modalIsOpen={ this.state.aboutModalIsOpen }
+                    onModalCloseRequest= { this.handleAboutModalCloseRequest }/>
             </div>
         );
     }
@@ -152,6 +164,14 @@ class App extends React.Component<AppProps, AppState> {
         Utilities.Storage.setItem("settings", settings);
         this.CheckConsole();
         this.RefreshFromCloud(updated.refreshIntervalSeconds);
+    }
+
+    private handleSettingsModalCloseRequest = (event) => {
+        this.setState({ settingsModalIsOpen: false });
+    }
+
+    private handleAboutModalCloseRequest = (event) => {
+        this.setState({ aboutModalIsOpen: false });
     }
 
     public CheckConsole()
@@ -339,6 +359,14 @@ class App extends React.Component<AppProps, AppState> {
 
     private ShowNotes() {
 
+    }
+
+    private ShowSettings() {
+        this.setState({ settingsModalIsOpen: true });
+    }
+
+    private ShowAbout() {
+        this.setState({ aboutModalIsOpen: true });
     }
 
     private RefreshFromCloud(delay: number) {

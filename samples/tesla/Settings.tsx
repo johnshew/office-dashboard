@@ -5,6 +5,7 @@ import * as Utilities from './Utilities';
 //More info: http://stackoverflow.com/questions/16386640/typescript-0-9-module-functions
 //           https://typescript.codeplex.com/workitem/1058
 import Modal = require('react-modal');
+import Styles from './Styles';
 
 export interface SettingsValues {
     scroll: boolean;
@@ -17,85 +18,75 @@ export interface SettingsValues {
 interface SettingsProps extends React.Props<Settings> {
     values: SettingsValues;
     onChange: (SettingsValue) => void;
-}
-
-const modalstyles = {
-    overlay: {
-        zIndex: 9999
-    },
-    content: {
-        position: null,
-        top: 70,
-        left: null,
-        right: null,
-        bottom: null,
-        border: null,
-        background: null,
-        overflow: null,
-        WebkitOverflowScrolling: null,
-        borderRadius: null,
-        padding: null
-    }
+    modalIsOpen: boolean;
+    onModalCloseRequest: (event: any) => void;
 }
 
 export class Settings extends React.Component<SettingsProps, any> {
     constructor(props, state) {
         super(props, state);
         this.state = {
-            modalIsOpen: false
-        }
-    }
-
-    componentDidMount() {
-        document.getElementById("ShowSettings").onclick = () => {
-            this.setState({ modalIsOpen: true });
+            settings: Utilities.ObjectAssign({}, this.props.values)
         }
     }
 
     private handleScrollChange = (event) => {
-        var values = Utilities.ObjectAssign({}, this.props.values);
-        values.scroll = event.target.checked;
-        this.props.onChange(values);
+        this.state.settings.scroll = event.target.checked;
+        this.forceUpdate();
     }
 
     private handleConsoleChange = (event) => {
-        var values = Utilities.ObjectAssign({}, this.props.values);
-        values.console = event.target.checked;
-        this.props.onChange(values);
+        this.state.settings.console = event.target.checked;
+        this.forceUpdate();
     }
 
     private handleInPlaceChange = (event) => {
-        var values = Utilities.ObjectAssign({}, this.props.values);
-        values.inplace = event.target.checked;
-        this.props.onChange(values);
+        this.state.settings.inplace = event.target.checked;
+        this.forceUpdate();
     }
 
     private handleTestDataChange = (event) => {
-        var values = Utilities.ObjectAssign({}, this.props.values);
-        values.testData = event.target.checked;
-        this.props.onChange(values);
+        this.state.settings.testData = event.target.checked;
+        this.forceUpdate();
     }
 
     private handleRefreshChange = (event) => {
-        var values = Utilities.ObjectAssign({}, this.props.values);
         var refresh = (event.target.value) ? parseInt(event.target.value) : null;
-        values.refreshIntervalSeconds = (refresh === NaN) ? null : refresh;
-        this.props.onChange(values);
+        this.state.settings.refreshIntervalSeconds = refresh === NaN ? null : refresh;
+        this.forceUpdate();
     }
 
     private handleModalCloseRequest = (event) => {
-        this.setState({ modalIsOpen: false });
+        this.applySettings();
+        this.props.onModalCloseRequest(event);
+    }
+
+    private applySettings = () => {
+        this.props.onChange(Utilities.ObjectAssign({}, this.state.settings) );
+    }
+
+    private handleDimissButtonClick = () => {
+        this.setState({ settings: Utilities.ObjectAssign({}, this.props.values) });
+    }
+
+    private settingsChanged = () => {
+        for (var key in this.state.settings) {
+            if (this.props.values[key] != this.state.settings[key]) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public render() {
-        var values = this.props.values;
+        var values = this.state.settings;
         return (
             <Modal
                 className="modal-dialog"
                 closeTimeoutMS={150}
-                isOpen={this.state.modalIsOpen}
+                isOpen={this.props.modalIsOpen}
                 onRequestClose={this.handleModalCloseRequest}
-                style={modalstyles}
+                style={Styles.modal}
             >
                 <div className="modal-content">
                     <div className="modal-header">
@@ -111,10 +102,11 @@ export class Settings extends React.Component<SettingsProps, any> {
                         <input type="checkbox" checked={ values.console } onChange={ this.handleConsoleChange }/> Show local debug console <br/>
                         {/*<input type="checkbox" checked={ values.testData } onChange={ this.handleTestDataChange }/> Use Test Data <br/>*/}
                         <br/>
-                        <input type="textbox" style={ { width: "80px" } } value={ (values.refreshIntervalSeconds === null) ? "" : values.refreshIntervalSeconds.toString() } onChange={ this.handleRefreshChange }/> Refresh interval in seconds.  0 to disable <br/>
+                        <input type="textbox" style={ { width: "80px" } } value={ (values.refreshIntervalSeconds == null) ? "" : values.refreshIntervalSeconds.toString() } onChange={ this.handleRefreshChange }/> Refresh interval in seconds.  0 to disable <br/>
                     </div>
                     <div className="modal-footer">
-                        <button type="button" className="btn btn-default" onClick={this.handleModalCloseRequest}>Close</button>
+                        <button type="button" className="btn btn-primary" onClick={this.handleModalCloseRequest} disabled={!this.settingsChanged()}>Save</button>
+                        <button type="button" className="btn btn-default" onClick={this.handleDimissButtonClick}>Cancel</button>
                     </div>
                 </div>
             </Modal>
