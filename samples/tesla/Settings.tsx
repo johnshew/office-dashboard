@@ -5,6 +5,7 @@ import * as Utilities from './Utilities';
 //More info: http://stackoverflow.com/questions/16386640/typescript-0-9-module-functions
 //           https://typescript.codeplex.com/workitem/1058
 import Modal = require('react-modal');
+import Styles from './Styles';
 
 export interface SettingsValues {
     scroll: boolean;
@@ -19,25 +20,6 @@ interface SettingsProps extends React.Props<Settings> {
     onChange: (SettingsValue) => void;
     modalIsOpen: boolean;
     onModalCloseRequest: (event: any) => void;
-}
-
-const modalstyles = {
-    overlay: {
-        zIndex: 9999
-    },
-    content: {
-        position: null,
-        top: 70,
-        left: null,
-        right: null,
-        bottom: null,
-        border: null,
-        background: null,
-        overflow: null,
-        WebkitOverflowScrolling: null,
-        borderRadius: null,
-        padding: null
-    }
 }
 
 export class Settings extends React.Component<SettingsProps, any> {
@@ -104,7 +86,7 @@ export class Settings extends React.Component<SettingsProps, any> {
                 closeTimeoutMS={150}
                 isOpen={this.props.modalIsOpen}
                 onRequestClose={this.handleModalCloseRequest}
-                style={modalstyles}
+                style={Styles.modal}
             >
                 <div className="modal-content">
                     <div className="modal-header">

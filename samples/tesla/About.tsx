@@ -1,25 +1,7 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import Modal = require('react-modal');
-
-const modalstyles = {
-    overlay: {
-        zIndex: 9999
-    },
-    content: {
-        position: null,
-        top: 70,
-        left: null,
-        right: null,
-        bottom: null,
-        border: null,
-        background: null,
-        overflow: null,
-        WebkitOverflowScrolling: null,
-        borderRadius: null,
-        padding: null
-    }
-}
+import Styles from './Styles';
 
 interface AboutProps extends React.Props<About> {
     modalIsOpen: boolean;
@@ -43,7 +25,7 @@ export default class About extends React.Component<AboutProps, {}> {
                 closeTimeoutMS={150}
                 isOpen={this.props.modalIsOpen}
                 onRequestClose={this.handleModalCloseRequest}
-                style={modalstyles}
+                style={Styles.modal}
             >
                 <div className="modal-dialog">
                     <div className="modal-content">
