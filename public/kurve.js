@@ -931,6 +931,18 @@ var Kurve;
         User.prototype.mailFoldersAsync = function (odataQuery) {
             return this.graph.mailFoldersForUserAsync(this._data.userPrincipalName, odataQuery);
         };
+        User.prototype.message = function (messageId, callback, odataQuery) {
+            this.graph.messageForUser(this._data.userPrincipalName, messageId, callback, odataQuery);
+        };
+        User.prototype.messageAsync = function (messageId, odataQuery) {
+            return this.graph.messageForUserAsync(this._data.userPrincipalName, messageId, odataQuery);
+        };
+        User.prototype.messageAttachment = function (messageId, attachmentId, callback, odataQuery) {
+            this.graph.messageAttachmentForUser(this._data.userPrincipalName, messageId, attachmentId, callback, odataQuery);
+        };
+        User.prototype.messageAttachmentAsync = function (messageId, attachmentId, odataQuery) {
+            return this.graph.messageAttachmentForUserAsync(this._data.userPrincipalName, messageId, attachmentId, odataQuery);
+        };
         return User;
     })(DataModelWrapper);
     Kurve.User = User;
@@ -1157,6 +1169,16 @@ var Kurve;
             this.getGroups(urlString, callback, this.scopesForV2(scopes));
         };
         // Messages For User
+        Graph.prototype.messageForUserAsync = function (userPrincipalName, messageId, odataQuery) {
+            var d = new Kurve.Deferred();
+            this.messageForUser(userPrincipalName, messageId, function (message, error) { return error ? d.reject(error) : d.resolve(message); }, odataQuery);
+            return d.promise;
+        };
+        Graph.prototype.messageForUser = function (userPrincipalName, messageId, callback, odataQuery) {
+            var scopes = [Scopes.Mail.Read];
+            var urlString = this.buildUsersUrl(userPrincipalName + "/messages/" + messageId, odataQuery);
+            this.getMessage(urlString, messageId, function (result, error) { return callback(result, error); }, this.scopesForV2(scopes));
+        };
         Graph.prototype.messagesForUserAsync = function (userPrincipalName, odataQuery) {
             var d = new Kurve.Deferred();
             this.messagesForUser(userPrincipalName, function (messages, error) { return error ? d.reject(error) : d.resolve(messages); }, odataQuery);
@@ -1382,6 +1404,24 @@ var Kurve;
                     }));
                 }
             }
+        };
+        Graph.prototype.getMessage = function (urlString, messageId, callback, scopes) {
+            var _this = this;
+            this.get(urlString, function (result, errorGet) {
+                if (errorGet) {
+                    callback(null, errorGet);
+                    return;
+                }
+                var ODATA = JSON.parse(result);
+                if (ODATA.error) {
+                    var ODATAError = new Kurve.Error();
+                    ODATAError.other = ODATA.error;
+                    callback(null, ODATAError);
+                    return;
+                }
+                var message = new Message(_this, ODATA);
+                callback(message, null);
+            }, null, scopes);
         };
         Graph.prototype.getMessages = function (urlString, callback, scopes) {
             var _this = this;

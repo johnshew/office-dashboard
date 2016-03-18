@@ -1,20 +1,20 @@
 import * as React from 'react';
-import { AttachmentDictionary } from './Utilities';
 
 import * as ScopedStyles from './ScopedStylePolyfill';
 
 interface ItemViewHtmlBodyProps extends React.Props<ItemViewHtmlBody> {
     style: React.CSSProperties
-    body: string;
-    attachments?: AttachmentDictionary;
+    body?: string;
+    attachments?: Kurve.AttachmentDataModel[];
 }
 
 export default class ItemViewHtmlBody extends React.Component<ItemViewHtmlBodyProps, any> {
     render() {
-        return <div style={this.props.style} dangerouslySetInnerHTML={this.parseMessageBody(this.props.body, this.props.attachments)} />
+        var body = this.props.body || "<img src = '/public/loading.gif' width = '25'' height = '25'/>";
+        return <div style={this.props.style} dangerouslySetInnerHTML={  this.parseMessageBody(body, this.props.attachments) } />
     }
 
-    private parseMessageBody(html: string, inlineAttachments?: AttachmentDictionary) {
+    private parseMessageBody(html: string, attachments?: Kurve.AttachmentDataModel[]) {
         var doc = document.implementation.createHTMLDocument("example");
         doc.documentElement.innerHTML = html;
 
@@ -44,10 +44,12 @@ export default class ItemViewHtmlBody extends React.Component<ItemViewHtmlBodyPr
 
         // Inline attachments
         var inlineImages = doc.body.querySelectorAll("img[src^='cid']");
+        attachments = attachments || [];
 
         [].forEach.call(inlineImages, image => {
             var contentId = image.src.replace('cid:', '');
-            var attachment = inlineAttachments && inlineAttachments[contentId];
+            var attachmentsFound = attachments.filter(attachment => attachment.contentId == contentId);
+            var attachment = attachmentsFound && attachmentsFound[0];
             if (attachment) {
                 image.src = 'data:' + attachment.contentType + ';base64,' + attachment.contentBytes;
             } else {
