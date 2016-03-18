@@ -1248,7 +1248,7 @@ var Kurve;
             return d.promise;
         };
         Graph.prototype.profilePhotoForUser = function (userPrincipalName, callback, odataQuery) {
-            var scopes = [Scopes.User.ReadBasicAll];
+            var scopes = [Scopes.User.ReadAll];
             var urlString = this.buildUsersUrl(userPrincipalName + "/photo", odataQuery);
             this.getPhoto(urlString, callback, this.scopesForV2(scopes));
         };

@@ -6,7 +6,7 @@ import About from './About';
 import { Settings, SettingsValues } from './Settings';
 import Mail from '../../src/Mail';
 import Calendar from '../../src/Calendar';
-
+import SenderPhoto from '../../src/MessageView';
 
 const loadingMessageStyle: React.CSSProperties = {
     position: 'fixed',
@@ -26,6 +26,8 @@ interface AppState {
     fetchingCalendar? : Boolean;
     messages?: Kurve.MessageDataModel[];
     selectedMessage?: Kurve.MessageDataModel;
+    photoMetadata?: Kurve.ProfilePhotoDataModel;
+    photoImage?: any;
     messageIdToIndex?: Object;
     events?: Kurve.EventDataModel[];
     eventIdToIndex?: Object;
@@ -239,29 +241,45 @@ class App extends React.Component<AppProps, AppState> {
             return;
 
         // First render the basic metadata (including body preview)
-        this.setState({ selectedMessage: messages[0] });
+        this.setState({ selectedMessage: messages[0], photoMetadata: null, photoImage: null });
         
         // Next, get the rest of the message metadata and full body text 
         this.me.messageAsync(messageId)
-            .then(message => this.setState({ selectedMessage: message.data }))
-            .then(() =>
-                // Finally, load up the inline images
-                messages[0].attachments
-                    .filter(a => a.isInline)
-                    .forEach(attachment =>
-                        this.me.messageAttachmentAsync(messageId, attachment.id)
-                            .then(attachment => {
-                                if (attachment.getType() === Kurve.AttachmentType.fileAttachment) {
-                                    // keep state immutable by creating a new message with new attachments for every re-render
-                                    var message = Utilities.ObjectAssign({}, this.state.selectedMessage, { attachments: (this.state.selectedMessage.attachments || []).slice() })
-                                    message.attachments.push(attachment.data);
-                                    this.setState({ selectedMessage: message });
-                                }
-                            })
-                            .fail(error => console.log('Could not load the attachment.', error))
+        .then(message => this.setState({ selectedMessage: message.data }))
+        .then(_ => {
+            // Then the sender's profile picture
+            // This logic would be simpler if we our Promises implementation supported "all"
+            var userName = this.state.selectedMessage.sender && this.state.selectedMessage.sender.emailAddress && this.state.selectedMessage.sender.emailAddress.address;
+            if (userName)
+                console.log("fetching photo for ", userName);
+                this.graph.profilePhotoForUserAsync(userName)
+                .then(profilePhoto =>
+                    this.graph.profilePhotoValueForUserAsync(userName)
+                    .then(photoValue =>
+                        this.setState({ photoMetadata: profilePhoto.data, photoImage: photoValue })
                     )
+                    .fail(error => console.log('Could not load the photo image.', error))
+                )
+                .fail(error => console.log('Could not load the photo metadata.', error))
+            })
+        .then(_ =>
+            // Finally, load up the inline images
+            messages[0].attachments
+            .filter(a => a.isInline)
+            .forEach(attachment =>
+                this.me.messageAttachmentAsync(messageId, attachment.id)
+                .then(attachment => {
+                    if (attachment.getType() === Kurve.AttachmentType.fileAttachment) {
+                        // keep state immutable by creating a new message with new attachments for every re-render
+                        var message = Utilities.ObjectAssign({}, this.state.selectedMessage, { attachments: (this.state.selectedMessage.attachments || []).slice() })
+                        message.attachments.push(attachment.data);
+                        this.setState({ selectedMessage: message });
+                    }
+                })
+                .fail(error => console.log('Could not load the attachment.', error))
             )
-            .fail(error => console.log('Could not load the message.', error))
+        )
+        .fail(error => console.log('Could not load the message.', error))
     }
 
     private ProcessMessages(newList: Kurve.MessageDataModel[], idMap: Object, result: Kurve.Messages) {

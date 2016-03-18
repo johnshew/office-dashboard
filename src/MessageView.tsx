@@ -35,6 +35,8 @@ const plainTextStyle: React.CSSProperties = {
 
 interface MessageViewProps extends React.Props<MessageView> {
     message?: Kurve.MessageDataModel;
+    photoMetadata?: Kurve.ProfilePhotoDataModel;
+    photoImage?: any;
     style?: React.CSSProperties;
 }
 
@@ -73,6 +75,10 @@ export default class MessageView extends React.Component<MessageViewProps, any> 
         var body = message.body && message.body.content || message.bodyPreview;
         var received = message.receivedDateTime ? <p style={ small }>{ ShortTimeString(message.receivedDateTime) }</p> : null;
         var subject = message.subject ? <p style={ smallEmphasis }>{message.subject}</p> : null;
+        if (this.props.photoMetadata)
+            console.log("photo metadata", this.props.photoMetadata);
+        if (this.props.photoImage)
+            console.log("photo image");
 
         return (
             <div>

@@ -27,6 +27,8 @@ const listStyle: React.CSSProperties = {
 interface MailProps extends React.Props<Mail> {
     messages?: Kurve.MessageDataModel[];
     selectedMessage?: Kurve.MessageDataModel;
+    photoMetadata?: Kurve.ProfilePhotoDataModel;
+    photoImage?: any;
     onSelect(id:string);
     scroll: boolean;
 }
@@ -46,7 +48,7 @@ export default class Mail extends React.Component<MailProps, any> {
                     <MailList onSelect={ this.props.onSelect } messages={ this.props.messages } selectedMessage={ this.props.selectedMessage } />
                 </div>
                 <div className="col-xs-12 col-sm-8 col-lg-9" style={ itemViewStyle }>
-                    <MessageView ref={ (c) => this.messageView = c } message={ this.props.selectedMessage }/>
+                    <MessageView ref={ (c) => this.messageView = c } message={ this.props.selectedMessage } photoMetadata={ this.props.photoMetadata } photoImage = { this.props.photoImage } />
                 </div>
             </div>
         );
