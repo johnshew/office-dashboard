@@ -221,7 +221,7 @@ class App extends React.Component<AppProps, AppState> {
         console.log('Now getting messages.');
         this.setState({ fetchingMail: true });
 
-        this.me.messagesAsync('$select=bodyPreview,id,importance,receivedDateTime,sender,subject&$expand=attachments($select=id,isInline)')
+        this.me.messagesAsync('$select=bccRecipients,bodyPreview,ccRecipients,id,importance,receivedDateTime,sender,subject,toRecipients&$expand=attachments($select=id,isInline)')
             .then((messages) => {
                 console.log('Got messages.  Now rendering.');
                 if (this.mounted && this.state.show === ShowState.Welcome) { this.setState({ show: ShowState.Mail }); }
