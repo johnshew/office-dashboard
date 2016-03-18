@@ -99,6 +99,7 @@ class App extends React.Component<AppProps, AppState> {
 
         console.log('Checking for identity redirect');
         if (this.identity.checkForIdentityRedirect()) {
+            window.location.hash = '#';
             this.LoggedIn()
         } else if (this.tokenStorage.hasTokens()) {
             this.Login();
@@ -295,7 +296,13 @@ class App extends React.Component<AppProps, AppState> {
     }
 
     public LoggedIn() {
-        console.log('Successful login.');
+        console.log("Successful login");
+        var idtoken:Kurve.IdToken = this.identity.getIdToken();
+        if (idtoken && idtoken.UPN) {
+            var username = idtoken.UPN.replace(/[,;=| ]+/g, "_");
+            console.log("Username", username);
+            window["appInsights"].setAuthenticatedUserContext(username);
+        }
         this.UpdateLoginState();
         if (this.mounted) {
             this.setState({ show: ShowState.Mail });

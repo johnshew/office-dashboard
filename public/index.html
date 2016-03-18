@@ -9,17 +9,6 @@
     <meta name="author" content="">
 
     <title>Tesla Console</title>
-
-    <script type="text/javascript">
-        var appInsights=window.appInsights||function(config){
-        function r(config){t[config]=function(){var i=arguments;t.queue.push(function(){t[config].apply(t,i)})}}var t={config:config},u=document,e=window,o="script",s=u.createElement(o),i,f;for(s.src=config.url||"//az416426.vo.msecnd.net/scripts/a/ai.0.js",u.getElementsByTagName(o)[0].parentNode.appendChild(s),t.cookie=u.cookie,t.queue=[],i=["Event","Exception","Metric","PageView","Trace"];i.length;)r("track"+i.pop());return r("setAuthenticatedUserContext"),r("clearAuthenticatedUserContext"),config.disableExceptionTracking||(i="onerror",r("_"+i),f=e[i],e[i]=function(config,r,u,e,o){var s=f&&f(config,r,u,e,o);return s!==!0&&t["_"+i](config,r,u,e,o),s}),t
-        }({
-            instrumentationKey:"36f957d4-2f77-4424-9e61-070811d3a89b"
-        });
-
-        window.appInsights=appInsights;
-        appInsights.trackPageView();
-    </script>
     <script>
         window.onerror = function (errorMsg, url, lineNumber) {
             alert((lineNumber ? lineNumber : '') + '\r\n' + errorMsg + '\r\n' + (url ? url + ' ' : ''));
@@ -27,11 +16,11 @@
         // Show page load alerts on Tesla browser
     </script>
 
-    <!-- Polyfile ES5 on Telsa - not sure if both are needed -->
+    <!-- Polyfile ES5 on Tesla - not sure if both are needed -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/es5-shim/4.5.5/es5-shim.js"></script>
 
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.6/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.6/css/bootstrap-theme.min.css">
 
     <style>
         .tight {
@@ -42,8 +31,17 @@
             padding: 0px;
         }
     </style>
+    
+    <script type="text/javascript">
+        var appInsights=window.appInsights||function(config){
+        function r(config){t[config]=function(){var i=arguments;t.queue.push(function(){t[config].apply(t,i)})}}var t={config:config},u=document,e=window,o="script",s=u.createElement(o),i,f;for(s.src=config.url||"//az416426.vo.msecnd.net/scripts/a/ai.0.js",u.getElementsByTagName(o)[0].parentNode.appendChild(s),t.cookie=u.cookie,t.queue=[],i=["Event","Exception","Metric","PageView","Trace"];i.length;)r("track"+i.pop());return r("setAuthenticatedUserContext"),r("clearAuthenticatedUserContext"),config.disableExceptionTracking||(i="onerror",r("_"+i),f=e[i],e[i]=function(config,r,u,e,o){var s=f&&f(config,r,u,e,o);return s!==!0&&t["_"+i](config,r,u,e,o),s}),t
+        }({
+            instrumentationKey:"36f957d4-2f77-4424-9e61-070811d3a89b"
+        });
 
-
+        window.appInsights=appInsights;
+        appInsights.trackPageView();
+    </script>
 </head>
 
 <body>
