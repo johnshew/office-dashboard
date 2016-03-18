@@ -240,12 +240,11 @@ class App extends React.Component<AppProps, AppState> {
 
         // First render the basic metadata (including body preview)
         this.setState({ selectedMessage: messages[0] });
-
+        
         // Next, get the rest of the message metadata and full body text 
         this.me.messageAsync(messageId)
-            .then(message => {
-                this.setState({ selectedMessage: message.data });
-                
+            .then(message => this.setState({ selectedMessage: message.data }))
+            .then(() =>
                 // Finally, load up the inline images
                 messages[0].attachments
                     .filter(a => a.isInline)
@@ -253,15 +252,15 @@ class App extends React.Component<AppProps, AppState> {
                         this.me.messageAttachmentAsync(messageId, attachment.id)
                             .then(attachment => {
                                 if (attachment.getType() === Kurve.AttachmentType.fileAttachment) {
-                                    // keep state immutable by creating a new message with new attachments
-                                    var newAttachments = (this.state.selectedMessage.attachments || []).slice();
-                                    newAttachments.push(attachment.data);
-                                    this.setState({ selectedMessage: Utilities.ObjectAssign({}, this.state.selectedMessage, {attachments: newAttachments}) });
+                                    // keep state immutable by creating a new message with new attachments for every re-render
+                                    var message = Utilities.ObjectAssign({}, this.state.selectedMessage, { attachments: (this.state.selectedMessage.attachments || []).slice() })
+                                    message.attachments.push(attachment.data);
+                                    this.setState({ selectedMessage: message });
                                 }
                             })
                             .fail(error => console.log('Could not load the attachment.', error))
                     )
-            })
+            )
             .fail(error => console.log('Could not load the message.', error))
     }
 
