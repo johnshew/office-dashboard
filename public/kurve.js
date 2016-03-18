@@ -222,10 +222,86 @@ var Kurve;
         return Error;
     })();
     Kurve.Error = Error;
-    var Token = (function () {
-        function Token() {
+    var CachedToken = (function () {
+        function CachedToken(id, scopes, resource, token, expiry) {
+            this.id = id;
+            this.scopes = scopes;
+            this.resource = resource;
+            this.token = token;
+            this.expiry = expiry;
         }
-        return Token;
+        ;
+        Object.defineProperty(CachedToken.prototype, "isExpired", {
+            get: function () {
+                return this.expiry <= new Date(new Date().getTime() + 60000);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        CachedToken.prototype.hasScopes = function (requiredScopes) {
+            var _this = this;
+            if (!this.scopes) {
+                return false;
+            }
+            return requiredScopes.every(function (requiredScope) {
+                return _this.scopes.some(function (actualScope) { return requiredScope === actualScope; });
+            });
+        };
+        return CachedToken;
+    })();
+    var TokenCache = (function () {
+        function TokenCache(tokenStorage) {
+            var _this = this;
+            this.tokenStorage = tokenStorage;
+            this.cachedTokens = {};
+            if (tokenStorage) {
+                tokenStorage.getAll().forEach(function (_a) {
+                    var id = _a.id, scopes = _a.scopes, resource = _a.resource, token = _a.token, expiry = _a.expiry;
+                    var cachedToken = new CachedToken(id, scopes, resource, token, new Date(expiry));
+                    if (cachedToken.isExpired) {
+                        _this.tokenStorage.remove(cachedToken.id);
+                    }
+                    else {
+                        _this.cachedTokens[cachedToken.id] = cachedToken;
+                    }
+                });
+            }
+        }
+        TokenCache.prototype.add = function (token) {
+            this.cachedTokens[token.id] = token;
+            this.tokenStorage && this.tokenStorage.add(token.id, token);
+        };
+        TokenCache.prototype.getForResource = function (resource) {
+            var cachedToken = this.cachedTokens[resource];
+            if (cachedToken && cachedToken.isExpired) {
+                this.remove(resource);
+                return null;
+            }
+            return cachedToken;
+        };
+        TokenCache.prototype.getForScopes = function (scopes) {
+            for (var key in this.cachedTokens) {
+                var cachedToken = this.cachedTokens[key];
+                if (cachedToken.hasScopes(scopes)) {
+                    if (cachedToken.isExpired) {
+                        this.remove(key);
+                    }
+                    else {
+                        return cachedToken;
+                    }
+                }
+            }
+            return null;
+        };
+        TokenCache.prototype.clear = function () {
+            this.cachedTokens = {};
+            this.tokenStorage && this.tokenStorage.clear();
+        };
+        TokenCache.prototype.remove = function (key) {
+            this.tokenStorage && this.tokenStorage.remove(key);
+            delete this.cachedTokens[key];
+        };
+        return TokenCache;
     })();
     var IdToken = (function () {
         function IdToken() {
@@ -234,23 +310,20 @@ var Kurve;
     })();
     Kurve.IdToken = IdToken;
     var Identity = (function () {
+        //      private tenant: string = "";
         function Identity(identitySettings) {
             var _this = this;
-            this.authContext = null;
-            this.config = null;
-            this.isCallback = false;
             this.policy = "";
-            this.tenant = "";
             this.clientId = identitySettings.clientId;
             this.tokenProcessorUrl = identitySettings.tokenProcessingUri;
-            this.req = new XMLHttpRequest();
-            this.tokenCache = {};
+            //          this.req = new XMLHttpRequest();
             if (identitySettings.version)
                 this.version = identitySettings.version;
             else
                 this.version = OAuthVersion.v1;
+            this.tokenCache = new TokenCache(identitySettings.tokenStorage);
             //Callback handler from other windows
-            window.addEventListener("message", (function (event) {
+            window.addEventListener("message", function (event) {
                 if (event.data.type === "id_token") {
                     if (event.data.error) {
                         var e = new Error();
@@ -290,7 +363,7 @@ var Kurve;
                         }
                     }
                 }
-            }));
+            });
         }
         Identity.prototype.checkForIdentityRedirect = function () {
             function token(s) {
@@ -335,14 +408,6 @@ var Kurve;
             }
             else if (accessToken) {
                 throw "Should not get here.  This should be handled via the iframe approach.";
-                if (this.state === params["state"][0]) {
-                    this.getTokenCallback && this.getTokenCallback(accessToken, null);
-                }
-                else {
-                    var error = new Error();
-                    error.statusText = "Invalid state";
-                    this.getTokenCallback && this.getTokenCallback(null, error);
-                }
             }
             return false;
         };
@@ -370,18 +435,9 @@ var Kurve;
             var decodedToken = this.base64Decode(accessToken.substring(accessToken.indexOf('.') + 1, accessToken.lastIndexOf('.')));
             var decodedTokenJSON = JSON.parse(decodedToken);
             var expiryDate = new Date(new Date('01/01/1970 0:0 UTC').getTime() + parseInt(decodedTokenJSON.exp) * 1000);
-            var key;
-            if (resource)
-                key = resource;
-            else
-                key = scopes.join(" ");
-            var token = new Token();
-            token.expiry = expiryDate;
-            token.resource = resource;
-            token.scopes = scopes;
-            token.token = accessToken;
-            token.id = key;
-            this.tokenCache[key] = token;
+            var key = resource || scopes.join(" ");
+            var token = new CachedToken(key, scopes, resource, accessToken, expiryDate);
+            this.tokenCache.add(token);
         };
         Identity.prototype.getIdToken = function () {
             return this.idToken;
@@ -393,8 +449,7 @@ var Kurve;
         };
         Identity.prototype.renewIdToken = function () {
             clearTimeout(this.refreshTimer);
-            this.login((function () {
-            }));
+            this.login(function () { });
         };
         Identity.prototype.getCurrentOauthVersion = function () {
             return this.version;
@@ -419,29 +474,9 @@ var Kurve;
                 callback(null, e);
                 return;
             }
-            //Check for cache and see if we have a valid token
-            var cachedToken = null;
-            var keys = Object.keys(this.tokenCache);
-            keys.forEach(function (key) {
-                var token = _this.tokenCache[key];
-                //remove expired tokens
-                if (token.expiry <= (new Date(new Date().getTime() + 60000))) {
-                    delete _this.tokenCache[key];
-                }
-                else {
-                    //Tries to capture a token that matches the resource
-                    var containScopes = true;
-                    if (token.resource == resource) {
-                        cachedToken = token;
-                    }
-                }
-            });
-            if (cachedToken) {
-                //We have it cached, has it expired? (5 minutes error margin)
-                if (cachedToken.expiry > (new Date(new Date().getTime() + 60000))) {
-                    callback(cachedToken.token, null);
-                    return;
-                }
+            var token = this.tokenCache.getForResource(resource);
+            if (token) {
+                return callback(token.token, null);
             }
             //If we got this far, we need to go get this token
             //Need to create the iFrame to invoke the acquire token
@@ -471,14 +506,14 @@ var Kurve;
         Identity.prototype.getAccessTokenForScopesAsync = function (scopes, promptForConsent) {
             if (promptForConsent === void 0) { promptForConsent = false; }
             var d = new Kurve.Deferred();
-            this.getAccessTokenForScopes(scopes, promptForConsent, (function (token, error) {
+            this.getAccessTokenForScopes(scopes, promptForConsent, function (token, error) {
                 if (error) {
                     d.reject(error);
                 }
                 else {
                     d.resolve(token);
                 }
-            }));
+            });
             return d.promise;
         };
         Identity.prototype.getAccessTokenForScopes = function (scopes, promptForConsent, callback) {
@@ -490,35 +525,9 @@ var Kurve;
                 callback(null, e);
                 return;
             }
-            //Check for cache and see if we have a valid token
-            var cachedToken = null;
-            var keys = Object.keys(this.tokenCache);
-            keys.forEach(function (key) {
-                var token = _this.tokenCache[key];
-                //remove expired tokens
-                if (token.expiry <= (new Date(new Date().getTime() + 60000))) {
-                    delete _this.tokenCache[key];
-                }
-                else {
-                    //Tries to capture a token that contains all scopes and is still valid
-                    var containScopes = true;
-                    if (token.scopes) {
-                        scopes.forEach(function (scope) {
-                            if (token.scopes.indexOf(scope) < 0)
-                                containScopes = false;
-                        });
-                    }
-                    if (containScopes) {
-                        cachedToken = token;
-                    }
-                }
-            });
-            if (cachedToken) {
-                //We have it cached, has it expired? (5 minutes error margin)
-                if (cachedToken.expiry > (new Date(new Date().getTime() + 60000))) {
-                    callback(cachedToken.token, null);
-                    return;
-                }
+            var token = this.tokenCache.getForScopes(scopes);
+            if (token) {
+                return callback(token.token, null);
             }
             //If we got this far, we don't have a valid cached token, so will need to get one.
             //Need to create the iFrame to invoke the acquire token
@@ -648,6 +657,7 @@ var Kurve;
             }
         };
         Identity.prototype.logOut = function () {
+            this.tokenCache.clear();
             var url = "https://login.microsoftonline.com/common/oauth2/logout?post_logout_redirect_uri=" + encodeURI(window.location.href);
             window.location.href = url;
         };
@@ -679,32 +689,37 @@ var Kurve;
     })();
     Kurve.Identity = Identity;
 })(Kurve || (Kurve = {}));
-//*********************************************************   
-//   
+//*********************************************************
+//
 //Kurve js, https://github.com/microsoftdx/kurvejs
-//  
-//Copyright (c) Microsoft Corporation  
-//All rights reserved.   
-//  
-// MIT License:  
-// Permission is hereby granted, free of charge, to any person obtaining  
-// a copy of this software and associated documentation files (the  
-// ""Software""), to deal in the Software without restriction, including  
-// without limitation the rights to use, copy, modify, merge, publish,  
-// distribute, sublicense, and/or sell copies of the Software, and to  
-// permit persons to whom the Software is furnished to do so, subject to  
-// the following conditions:  
-// The above copyright notice and this permission notice shall be  
-// included in all copies or substantial portions of the Software.  
-// THE SOFTWARE IS PROVIDED ""AS IS"", WITHOUT WARRANTY OF ANY KIND,  
-// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF  
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND  
-// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE  
-// LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION  
-// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION  
-// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  
-//   
-//*********************************************************   
+//
+//Copyright (c) Microsoft Corporation
+//All rights reserved.
+//
+// MIT License:
+// Permission is hereby granted, free of charge, to any person obtaining
+// a copy of this software and associated documentation files (the
+// ""Software""), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+// THE SOFTWARE IS PROVIDED ""AS IS"", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+// LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//
+//*********************************************************
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
 // Copyright (c) Microsoft. All rights reserved. Licensed under the MIT license. See full license at the bottom of this file.
 var Kurve;
 (function (Kurve) {
@@ -816,24 +831,40 @@ var Kurve;
         })();
         Scopes.Notes = Notes;
     })(Scopes = Kurve.Scopes || (Kurve.Scopes = {}));
+    var DataModelWrapper = (function () {
+        function DataModelWrapper(graph, _data) {
+            this.graph = graph;
+            this._data = _data;
+        }
+        Object.defineProperty(DataModelWrapper.prototype, "data", {
+            get: function () { return this._data; },
+            enumerable: true,
+            configurable: true
+        });
+        return DataModelWrapper;
+    })();
+    Kurve.DataModelWrapper = DataModelWrapper;
+    var DataModelListWrapper = (function (_super) {
+        __extends(DataModelListWrapper, _super);
+        function DataModelListWrapper() {
+            _super.apply(this, arguments);
+        }
+        return DataModelListWrapper;
+    })(DataModelWrapper);
+    Kurve.DataModelListWrapper = DataModelListWrapper;
     var ProfilePhotoDataModel = (function () {
         function ProfilePhotoDataModel() {
         }
         return ProfilePhotoDataModel;
     })();
     Kurve.ProfilePhotoDataModel = ProfilePhotoDataModel;
-    var ProfilePhoto = (function () {
-        function ProfilePhoto(graph, _data) {
-            this.graph = graph;
-            this._data = _data;
+    var ProfilePhoto = (function (_super) {
+        __extends(ProfilePhoto, _super);
+        function ProfilePhoto() {
+            _super.apply(this, arguments);
         }
-        Object.defineProperty(ProfilePhoto.prototype, "data", {
-            get: function () { return this._data; },
-            enumerable: true,
-            configurable: true
-        });
         return ProfilePhoto;
-    })();
+    })(DataModelWrapper);
     Kurve.ProfilePhoto = ProfilePhoto;
     var UserDataModel = (function () {
         function UserDataModel() {
@@ -841,27 +872,22 @@ var Kurve;
         return UserDataModel;
     })();
     Kurve.UserDataModel = UserDataModel;
-    (function (EventEndpoint) {
-        EventEndpoint[EventEndpoint["events"] = 0] = "events";
-        EventEndpoint[EventEndpoint["calendarView"] = 1] = "calendarView";
-    })(Kurve.EventEndpoint || (Kurve.EventEndpoint = {}));
-    var EventEndpoint = Kurve.EventEndpoint;
-    var User = (function () {
-        function User(graph, _data) {
-            this.graph = graph;
-            this._data = _data;
+    (function (EventsEndpoint) {
+        EventsEndpoint[EventsEndpoint["events"] = 0] = "events";
+        EventsEndpoint[EventsEndpoint["calendarView"] = 1] = "calendarView";
+    })(Kurve.EventsEndpoint || (Kurve.EventsEndpoint = {}));
+    var EventsEndpoint = Kurve.EventsEndpoint;
+    var User = (function (_super) {
+        __extends(User, _super);
+        function User() {
+            _super.apply(this, arguments);
         }
-        Object.defineProperty(User.prototype, "data", {
-            get: function () { return this._data; },
-            enumerable: true,
-            configurable: true
-        });
         // These are all passthroughs to the graph
         User.prototype.events = function (callback, odataQuery) {
-            this.graph.eventsForUser(this._data.userPrincipalName, EventEndpoint.events, callback, odataQuery);
+            this.graph.eventsForUser(this._data.userPrincipalName, EventsEndpoint.events, callback, odataQuery);
         };
         User.prototype.eventsAsync = function (odataQuery) {
-            return this.graph.eventsForUserAsync(this._data.userPrincipalName, EventEndpoint.events, odataQuery);
+            return this.graph.eventsForUserAsync(this._data.userPrincipalName, EventsEndpoint.events, odataQuery);
         };
         User.prototype.memberOf = function (callback, Error, odataQuery) {
             this.graph.memberOfForUser(this._data.userPrincipalName, callback, odataQuery);
@@ -881,41 +907,40 @@ var Kurve;
         User.prototype.managerAsync = function (odataQuery) {
             return this.graph.managerForUserAsync(this._data.userPrincipalName, odataQuery);
         };
-        User.prototype.profilePhoto = function (callback) {
-            this.graph.profilePhotoForUser(this._data.userPrincipalName, callback);
+        User.prototype.profilePhoto = function (callback, odataQuery) {
+            this.graph.profilePhotoForUser(this._data.userPrincipalName, callback, odataQuery);
         };
-        User.prototype.profilePhotoAsync = function () {
-            return this.graph.profilePhotoForUserAsync(this._data.userPrincipalName);
+        User.prototype.profilePhotoAsync = function (odataQuery) {
+            return this.graph.profilePhotoForUserAsync(this._data.userPrincipalName, odataQuery);
         };
-        User.prototype.profilePhotoValue = function (callback) {
-            this.graph.profilePhotoValueForUser(this._data.userPrincipalName, callback);
+        User.prototype.profilePhotoValue = function (callback, odataQuery) {
+            this.graph.profilePhotoValueForUser(this._data.userPrincipalName, callback, odataQuery);
         };
-        User.prototype.profilePhotoValueAsync = function () {
-            return this.graph.profilePhotoValueForUserAsync(this._data.userPrincipalName);
+        User.prototype.profilePhotoValueAsync = function (odataQuery) {
+            return this.graph.profilePhotoValueForUserAsync(this._data.userPrincipalName, odataQuery);
         };
         User.prototype.calendarView = function (callback, odataQuery) {
-            this.graph.eventsForUser(this._data.userPrincipalName, EventEndpoint.calendarView, callback, odataQuery);
+            this.graph.eventsForUser(this._data.userPrincipalName, EventsEndpoint.calendarView, callback, odataQuery);
         };
         User.prototype.calendarViewAsync = function (odataQuery) {
-            return this.graph.eventsForUserAsync(this._data.userPrincipalName, EventEndpoint.calendarView, odataQuery);
+            return this.graph.eventsForUserAsync(this._data.userPrincipalName, EventsEndpoint.calendarView, odataQuery);
+        };
+        User.prototype.mailFolders = function (callback, odataQuery) {
+            this.graph.mailFoldersForUser(this._data.userPrincipalName, callback, odataQuery);
+        };
+        User.prototype.mailFoldersAsync = function (odataQuery) {
+            return this.graph.mailFoldersForUserAsync(this._data.userPrincipalName, odataQuery);
         };
         return User;
-    })();
+    })(DataModelWrapper);
     Kurve.User = User;
-    var Users = (function () {
-        function Users(graph, _data) {
-            this.graph = graph;
-            this._data = _data;
+    var Users = (function (_super) {
+        __extends(Users, _super);
+        function Users() {
+            _super.apply(this, arguments);
         }
-        Object.defineProperty(Users.prototype, "data", {
-            get: function () {
-                return this._data;
-            },
-            enumerable: true,
-            configurable: true
-        });
         return Users;
-    })();
+    })(DataModelListWrapper);
     Kurve.Users = Users;
     var MessageDataModel = (function () {
         function MessageDataModel() {
@@ -923,35 +948,21 @@ var Kurve;
         return MessageDataModel;
     })();
     Kurve.MessageDataModel = MessageDataModel;
-    var Message = (function () {
-        function Message(graph, _data) {
-            this.graph = graph;
-            this._data = _data;
+    var Message = (function (_super) {
+        __extends(Message, _super);
+        function Message() {
+            _super.apply(this, arguments);
         }
-        Object.defineProperty(Message.prototype, "data", {
-            get: function () {
-                return this._data;
-            },
-            enumerable: true,
-            configurable: true
-        });
         return Message;
-    })();
+    })(DataModelWrapper);
     Kurve.Message = Message;
-    var Messages = (function () {
-        function Messages(graph, _data) {
-            this.graph = graph;
-            this._data = _data;
+    var Messages = (function (_super) {
+        __extends(Messages, _super);
+        function Messages() {
+            _super.apply(this, arguments);
         }
-        Object.defineProperty(Messages.prototype, "data", {
-            get: function () {
-                return this._data;
-            },
-            enumerable: true,
-            configurable: true
-        });
         return Messages;
-    })();
+    })(DataModelListWrapper);
     Kurve.Messages = Messages;
     var EventDataModel = (function () {
         function EventDataModel() {
@@ -959,36 +970,24 @@ var Kurve;
         return EventDataModel;
     })();
     Kurve.EventDataModel = EventDataModel;
-    var Event = (function () {
-        function Event(graph, _data) {
-            this.graph = graph;
-            this._data = _data;
+    var Event = (function (_super) {
+        __extends(Event, _super);
+        function Event() {
+            _super.apply(this, arguments);
         }
-        Object.defineProperty(Event.prototype, "data", {
-            get: function () {
-                return this._data;
-            },
-            enumerable: true,
-            configurable: true
-        });
         return Event;
-    })();
+    })(DataModelWrapper);
     Kurve.Event = Event;
-    var Events = (function () {
+    var Events = (function (_super) {
+        __extends(Events, _super);
         function Events(graph, endpoint, _data) {
+            _super.call(this, graph, _data);
             this.graph = graph;
-            this._data = _data;
             this.endpoint = endpoint;
+            this._data = _data;
         }
-        Object.defineProperty(Events.prototype, "data", {
-            get: function () {
-                return this._data;
-            },
-            enumerable: true,
-            configurable: true
-        });
         return Events;
-    })();
+    })(DataModelListWrapper);
     Kurve.Events = Events;
     var Contact = (function () {
         function Contact() {
@@ -1002,34 +1001,82 @@ var Kurve;
         return GroupDataModel;
     })();
     Kurve.GroupDataModel = GroupDataModel;
-    var Group = (function () {
-        function Group(graph, _data) {
-            this.graph = graph;
-            this._data = _data;
+    var Group = (function (_super) {
+        __extends(Group, _super);
+        function Group() {
+            _super.apply(this, arguments);
         }
-        Object.defineProperty(Group.prototype, "data", {
-            get: function () { return this._data; },
-            enumerable: true,
-            configurable: true
-        });
         return Group;
-    })();
+    })(DataModelWrapper);
     Kurve.Group = Group;
-    var Groups = (function () {
-        function Groups(graph, _data) {
-            this.graph = graph;
-            this._data = _data;
+    var Groups = (function (_super) {
+        __extends(Groups, _super);
+        function Groups() {
+            _super.apply(this, arguments);
         }
-        Object.defineProperty(Groups.prototype, "data", {
-            get: function () {
-                return this._data;
-            },
-            enumerable: true,
-            configurable: true
-        });
         return Groups;
-    })();
+    })(DataModelListWrapper);
     Kurve.Groups = Groups;
+    var MailFolderDataModel = (function () {
+        function MailFolderDataModel() {
+        }
+        return MailFolderDataModel;
+    })();
+    Kurve.MailFolderDataModel = MailFolderDataModel;
+    var MailFolder = (function (_super) {
+        __extends(MailFolder, _super);
+        function MailFolder() {
+            _super.apply(this, arguments);
+        }
+        return MailFolder;
+    })(DataModelWrapper);
+    Kurve.MailFolder = MailFolder;
+    var MailFolders = (function (_super) {
+        __extends(MailFolders, _super);
+        function MailFolders() {
+            _super.apply(this, arguments);
+        }
+        return MailFolders;
+    })(DataModelListWrapper);
+    Kurve.MailFolders = MailFolders;
+    (function (AttachmentType) {
+        AttachmentType[AttachmentType["fileAttachment"] = 0] = "fileAttachment";
+        AttachmentType[AttachmentType["itemAttachment"] = 1] = "itemAttachment";
+        AttachmentType[AttachmentType["referenceAttachment"] = 2] = "referenceAttachment";
+    })(Kurve.AttachmentType || (Kurve.AttachmentType = {}));
+    var AttachmentType = Kurve.AttachmentType;
+    var AttachmentDataModel = (function () {
+        function AttachmentDataModel() {
+        }
+        return AttachmentDataModel;
+    })();
+    Kurve.AttachmentDataModel = AttachmentDataModel;
+    var Attachment = (function (_super) {
+        __extends(Attachment, _super);
+        function Attachment() {
+            _super.apply(this, arguments);
+        }
+        Attachment.prototype.getType = function () {
+            switch (this._data['@odata.type']) {
+                case "#microsoft.graph.fileAttachment":
+                    return AttachmentType.fileAttachment;
+                case "#microsoft.graph.itemAttachment":
+                    return AttachmentType.itemAttachment;
+                case "#microsoft.graph.referenceAttachment":
+                    return AttachmentType.referenceAttachment;
+            }
+        };
+        return Attachment;
+    })(DataModelWrapper);
+    Kurve.Attachment = Attachment;
+    var Attachments = (function (_super) {
+        __extends(Attachments, _super);
+        function Attachments() {
+            _super.apply(this, arguments);
+        }
+        return Attachments;
+    })(DataModelListWrapper);
+    Kurve.Attachments = Attachments;
     var Graph = (function () {
         function Graph(identityInfo) {
             this.req = null;
@@ -1056,14 +1103,7 @@ var Kurve;
         //Users
         Graph.prototype.meAsync = function (odataQuery) {
             var d = new Kurve.Deferred();
-            this.me(function (user, error) {
-                if (error) {
-                    d.reject(error);
-                }
-                else {
-                    d.resolve(user);
-                }
-            }, odataQuery);
+            this.me(function (user, error) { return error ? d.reject(error) : d.resolve(user); }, odataQuery);
             return d.promise;
         };
         Graph.prototype.me = function (callback, odataQuery) {
@@ -1074,60 +1114,31 @@ var Kurve;
         Graph.prototype.userAsync = function (userId, odataQuery, basicProfileOnly) {
             if (basicProfileOnly === void 0) { basicProfileOnly = true; }
             var d = new Kurve.Deferred();
-            this.user(userId, function (user, error) {
-                if (error) {
-                    d.reject(error);
-                }
-                else {
-                    d.resolve(user);
-                }
-            }, odataQuery, basicProfileOnly);
+            this.user(userId, function (user, error) { return error ? d.reject(error) : d.resolve(user); }, odataQuery, basicProfileOnly);
             return d.promise;
         };
         Graph.prototype.user = function (userId, callback, odataQuery, basicProfileOnly) {
             if (basicProfileOnly === void 0) { basicProfileOnly = true; }
-            var scopes = [];
-            if (basicProfileOnly)
-                scopes = [Scopes.User.ReadBasicAll];
-            else
-                scopes = [Scopes.User.ReadAll];
+            var scopes = basicProfileOnly ? [Scopes.User.ReadBasicAll] : [Scopes.User.ReadAll];
             var urlString = this.buildUsersUrl(userId, odataQuery);
             this.getUser(urlString, callback, this.scopesForV2(scopes));
         };
         Graph.prototype.usersAsync = function (odataQuery, basicProfileOnly) {
             if (basicProfileOnly === void 0) { basicProfileOnly = true; }
             var d = new Kurve.Deferred();
-            this.users(function (users, error) {
-                if (error) {
-                    d.reject(error);
-                }
-                else {
-                    d.resolve(users);
-                }
-            }, odataQuery, basicProfileOnly);
+            this.users(function (users, error) { return error ? d.reject(error) : d.resolve(users); }, odataQuery, basicProfileOnly);
             return d.promise;
         };
         Graph.prototype.users = function (callback, odataQuery, basicProfileOnly) {
             if (basicProfileOnly === void 0) { basicProfileOnly = true; }
-            var scopes = [];
-            if (basicProfileOnly)
-                scopes = [Scopes.User.ReadBasicAll];
-            else
-                scopes = [Scopes.User.ReadAll];
+            var scopes = basicProfileOnly ? [Scopes.User.ReadBasicAll] : [Scopes.User.ReadAll];
             var urlString = this.buildUsersUrl("", odataQuery);
             this.getUsers(urlString, callback, this.scopesForV2(scopes), basicProfileOnly);
         };
         //Groups
         Graph.prototype.groupAsync = function (groupId, odataQuery) {
             var d = new Kurve.Deferred();
-            this.group(groupId, function (group, error) {
-                if (error) {
-                    d.reject(error);
-                }
-                else {
-                    d.resolve(group);
-                }
-            }, odataQuery);
+            this.group(groupId, function (group, error) { return error ? d.reject(error) : d.resolve(group); }, odataQuery);
             return d.promise;
         };
         Graph.prototype.group = function (groupId, callback, odataQuery) {
@@ -1137,14 +1148,7 @@ var Kurve;
         };
         Graph.prototype.groupsAsync = function (odataQuery) {
             var d = new Kurve.Deferred();
-            this.groups(function (groups, error) {
-                if (error) {
-                    d.reject(error);
-                }
-                else {
-                    d.resolve(groups);
-                }
-            }, odataQuery);
+            this.groups(function (groups, error) { return error ? d.reject(error) : d.resolve(groups); }, odataQuery);
             return d.promise;
         };
         Graph.prototype.groups = function (callback, odataQuery) {
@@ -1155,14 +1159,7 @@ var Kurve;
         // Messages For User
         Graph.prototype.messagesForUserAsync = function (userPrincipalName, odataQuery) {
             var d = new Kurve.Deferred();
-            this.messagesForUser(userPrincipalName, function (messages, error) {
-                if (error) {
-                    d.reject(error);
-                }
-                else {
-                    d.resolve(messages);
-                }
-            }, odataQuery);
+            this.messagesForUser(userPrincipalName, function (messages, error) { return error ? d.reject(error) : d.resolve(messages); }, odataQuery);
             return d.promise;
         };
         Graph.prototype.messagesForUser = function (userPrincipalName, callback, odataQuery) {
@@ -1170,35 +1167,32 @@ var Kurve;
             var urlString = this.buildUsersUrl(userPrincipalName + "/messages", odataQuery);
             this.getMessages(urlString, function (result, error) { return callback(result, error); }, this.scopesForV2(scopes));
         };
+        // MailFolders For User
+        Graph.prototype.mailFoldersForUserAsync = function (userPrincipalName, odataQuery) {
+            var d = new Kurve.Deferred();
+            this.mailFoldersForUser(userPrincipalName, function (messages, error) { return error ? d.reject(error) : d.resolve(messages); }, odataQuery);
+            return d.promise;
+        };
+        Graph.prototype.mailFoldersForUser = function (userPrincipalName, callback, odataQuery) {
+            var scopes = [Scopes.Mail.Read];
+            var urlString = this.buildUsersUrl(userPrincipalName + "/mailFolders", odataQuery);
+            this.getMailFolders(urlString, function (result, error) { return callback(result, error); }, this.scopesForV2(scopes));
+        };
         // Events For User
         Graph.prototype.eventsForUserAsync = function (userPrincipalName, endpoint, odataQuery) {
             var d = new Kurve.Deferred();
-            this.eventsForUser(userPrincipalName, endpoint, function (items, error) {
-                if (error) {
-                    d.reject(error);
-                }
-                else {
-                    d.resolve(items);
-                }
-            }, odataQuery);
+            this.eventsForUser(userPrincipalName, endpoint, function (events, error) { return error ? d.reject(error) : d.resolve(events); }, odataQuery);
             return d.promise;
         };
         Graph.prototype.eventsForUser = function (userPrincipalName, endpoint, callback, odataQuery) {
             var scopes = [Scopes.Calendars.Read];
-            var urlString = this.buildUsersUrl(userPrincipalName + "/" + EventEndpoint[endpoint], odataQuery);
+            var urlString = this.buildUsersUrl(userPrincipalName + "/" + EventsEndpoint[endpoint], odataQuery);
             this.getEvents(urlString, endpoint, function (result, error) { return callback(result, error); }, this.scopesForV2(scopes));
         };
         // Groups/Relationships For User
         Graph.prototype.memberOfForUserAsync = function (userPrincipalName, odataQuery) {
             var d = new Kurve.Deferred();
-            this.memberOfForUser(userPrincipalName, function (result, error) {
-                if (error) {
-                    d.reject(error);
-                }
-                else {
-                    d.resolve(result);
-                }
-            }, odataQuery);
+            this.memberOfForUser(userPrincipalName, function (groups, error) { return error ? d.reject(error) : d.resolve(groups); }, odataQuery);
             return d.promise;
         };
         Graph.prototype.memberOfForUser = function (userPrincipalName, callback, odataQuery) {
@@ -1208,14 +1202,7 @@ var Kurve;
         };
         Graph.prototype.managerForUserAsync = function (userPrincipalName, odataQuery) {
             var d = new Kurve.Deferred();
-            this.managerForUser(userPrincipalName, function (result, error) {
-                if (error) {
-                    d.reject(error);
-                }
-                else {
-                    d.resolve(result);
-                }
-            }, odataQuery);
+            this.managerForUser(userPrincipalName, function (user, error) { return error ? d.reject(error) : d.resolve(user); }, odataQuery);
             return d.promise;
         };
         Graph.prototype.managerForUser = function (userPrincipalName, callback, odataQuery) {
@@ -1225,14 +1212,7 @@ var Kurve;
         };
         Graph.prototype.directReportsForUserAsync = function (userPrincipalName, odataQuery) {
             var d = new Kurve.Deferred();
-            this.directReportsForUser(userPrincipalName, function (result, error) {
-                if (error) {
-                    d.reject(error);
-                }
-                else {
-                    d.resolve(result);
-                }
-            }, odataQuery);
+            this.directReportsForUser(userPrincipalName, function (users, error) { return error ? d.reject(error) : d.resolve(users); }, odataQuery);
             return d.promise;
         };
         Graph.prototype.directReportsForUser = function (userPrincipalName, callback, odataQuery) {
@@ -1240,51 +1220,51 @@ var Kurve;
             var urlString = this.buildUsersUrl(userPrincipalName + "/directReports", odataQuery);
             this.getUsers(urlString, callback, this.scopesForV2(scopes));
         };
-        Graph.prototype.profilePhotoForUserAsync = function (userPrincipalName) {
+        Graph.prototype.profilePhotoForUserAsync = function (userPrincipalName, odataQuery) {
             var d = new Kurve.Deferred();
-            this.profilePhotoForUser(userPrincipalName, function (result, error) {
-                if (error) {
-                    d.reject(error);
-                }
-                else {
-                    d.resolve(result);
-                }
-            });
+            this.profilePhotoForUser(userPrincipalName, function (profilePhoto, error) { return error ? d.reject(error) : d.resolve(profilePhoto); }, odataQuery);
             return d.promise;
         };
-        Graph.prototype.profilePhotoForUser = function (userPrincipalName, callback) {
+        Graph.prototype.profilePhotoForUser = function (userPrincipalName, callback, odataQuery) {
             var scopes = [Scopes.User.ReadBasicAll];
-            var urlString = this.buildUsersUrl(userPrincipalName + "/photo");
+            var urlString = this.buildUsersUrl(userPrincipalName + "/photo", odataQuery);
             this.getPhoto(urlString, callback, this.scopesForV2(scopes));
         };
-        Graph.prototype.profilePhotoValueForUserAsync = function (userPrincipalName) {
+        Graph.prototype.profilePhotoValueForUserAsync = function (userPrincipalName, odataQuery) {
             var d = new Kurve.Deferred();
-            this.profilePhotoValueForUser(userPrincipalName, function (result, error) {
-                if (error) {
-                    d.reject(error);
-                }
-                else {
-                    d.resolve(result);
-                }
-            });
+            this.profilePhotoValueForUser(userPrincipalName, function (result, error) { return error ? d.reject(error) : d.resolve(result); }, odataQuery);
             return d.promise;
         };
-        Graph.prototype.profilePhotoValueForUser = function (userPrincipalName, callback) {
+        Graph.prototype.profilePhotoValueForUser = function (userPrincipalName, callback, odataQuery) {
             var scopes = [Scopes.User.ReadBasicAll];
-            var urlString = this.buildUsersUrl(userPrincipalName + "/photo/$value");
+            var urlString = this.buildUsersUrl(userPrincipalName + "/photo/$value", odataQuery);
             this.getPhotoValue(urlString, callback, this.scopesForV2(scopes));
+        };
+        // Message Attachments
+        Graph.prototype.messageAttachmentsForUserAsync = function (userPrincipalName, messageId, odataQuery) {
+            var d = new Kurve.Deferred();
+            this.messageAttachmentsForUser(userPrincipalName, messageId, function (result, error) { return error ? d.reject(error) : d.resolve(result); }, odataQuery);
+            return d.promise;
+        };
+        Graph.prototype.messageAttachmentsForUser = function (userPrincipalName, messageId, callback, odataQuery) {
+            var scopes = [Scopes.Mail.Read];
+            var urlString = this.buildUsersUrl(userPrincipalName + "/messages/" + messageId + "/attachments", odataQuery);
+            this.getMessageAttachments(urlString, callback, this.scopesForV2(scopes));
+        };
+        Graph.prototype.messageAttachmentForUserAsync = function (userPrincipalName, messageId, attachmentId, odataQuery) {
+            var d = new Kurve.Deferred();
+            this.messageAttachmentForUser(userPrincipalName, messageId, attachmentId, function (attachment, error) { return error ? d.reject(error) : d.resolve(attachment); }, odataQuery);
+            return d.promise;
+        };
+        Graph.prototype.messageAttachmentForUser = function (userPrincipalName, messageId, attachmentId, callback, odataQuery) {
+            var scopes = [Scopes.Mail.Read];
+            var urlString = this.buildUsersUrl(userPrincipalName + "/messages/" + messageId + "/attachments/" + attachmentId, odataQuery);
+            this.getMessageAttachment(urlString, callback, this.scopesForV2(scopes));
         };
         //http verbs
         Graph.prototype.getAsync = function (url) {
             var d = new Kurve.Deferred();
-            this.get(url, function (response, error) {
-                if (!error) {
-                    d.resolve(response);
-                }
-                else {
-                    d.reject(error);
-                }
-            });
+            this.get(url, function (response, error) { return error ? d.reject(error) : d.resolve(response); });
             return d.promise;
         };
         Graph.prototype.get = function (url, callback, responseType, scopes) {
@@ -1292,17 +1272,13 @@ var Kurve;
             var xhr = new XMLHttpRequest();
             if (responseType)
                 xhr.responseType = responseType;
-            xhr.onreadystatechange = (function () {
-                if (xhr.readyState === 4 && xhr.status === 200) {
-                    if (!responseType)
-                        callback(xhr.responseText, null);
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4)
+                    if (xhr.status === 200)
+                        callback(responseType ? xhr.response : xhr.responseText, null);
                     else
-                        callback(xhr.response, null);
-                }
-                else if (xhr.readyState === 4 && xhr.status !== 200) {
-                    callback(null, _this.generateError(xhr));
-                }
-            });
+                        callback(null, _this.generateError(xhr));
+            };
             xhr.open("GET", url);
             this.addAccessTokenAndSend(xhr, function (addTokenError) {
                 if (addTokenError) {
@@ -1324,7 +1300,7 @@ var Kurve;
         Graph.prototype.getUsers = function (urlString, callback, scopes, basicProfileOnly) {
             var _this = this;
             if (basicProfileOnly === void 0) { basicProfileOnly = true; }
-            this.get(urlString, (function (result, errorGet) {
+            this.get(urlString, function (result, errorGet) {
                 if (errorGet) {
                     callback(null, errorGet);
                     return;
@@ -1337,35 +1313,23 @@ var Kurve;
                     return;
                 }
                 var resultsArray = (usersODATA.value ? usersODATA.value : [usersODATA]);
-                var users = new Kurve.Users(_this, resultsArray.map(function (o) {
-                    return new User(_this, o);
-                }));
-                //implement nextLink
+                var users = new Users(_this, resultsArray.map(function (o) { return new User(_this, o); }));
                 var nextLink = usersODATA['@odata.nextLink'];
                 if (nextLink) {
                     users.nextLink = function (callback) {
-                        var scopes = [];
-                        if (basicProfileOnly)
-                            scopes = [Scopes.User.ReadBasicAll];
-                        else
-                            scopes = [Scopes.User.ReadAll];
+                        var scopes = basicProfileOnly ? [Scopes.User.ReadBasicAll] : [Scopes.User.ReadAll];
                         var d = new Kurve.Deferred();
                         _this.getUsers(nextLink, function (result, error) {
-                            if (callback) {
+                            if (callback)
                                 callback(result, error);
-                            }
-                            else if (error) {
-                                d.reject(error);
-                            }
-                            else {
-                                d.resolve(result);
-                            }
+                            else
+                                error ? d.reject(error) : d.resolve(result);
                         }, _this.scopesForV2(scopes), basicProfileOnly);
                         return d.promise;
                     };
                 }
                 callback(users, null);
-            }), null, scopes);
+            }, null, scopes);
         };
         Graph.prototype.getUser = function (urlString, callback, scopes) {
             var _this = this;
@@ -1421,7 +1385,7 @@ var Kurve;
         };
         Graph.prototype.getMessages = function (urlString, callback, scopes) {
             var _this = this;
-            this.get(urlString, (function (result, errorGet) {
+            this.get(urlString, function (result, errorGet) {
                 if (errorGet) {
                     callback(null, errorGet);
                     return;
@@ -1434,34 +1398,27 @@ var Kurve;
                     return;
                 }
                 var resultsArray = (messagesODATA.value ? messagesODATA.value : [messagesODATA]);
-                var messages = new Kurve.Messages(_this, resultsArray.map(function (o) {
-                    return new Message(_this, o);
-                }));
+                var messages = new Messages(_this, resultsArray.map(function (o) { return new Message(_this, o); }));
                 var nextLink = messagesODATA['@odata.nextLink'];
                 if (nextLink) {
                     messages.nextLink = function (callback) {
                         var scopes = [Scopes.Mail.Read];
                         var d = new Kurve.Deferred();
                         _this.getMessages(nextLink, function (messages, error) {
-                            if (callback) {
+                            if (callback)
                                 callback(messages, error);
-                            }
-                            else if (error) {
-                                d.reject(error);
-                            }
-                            else {
-                                d.resolve(messages);
-                            }
+                            else
+                                error ? d.reject(error) : d.resolve(messages);
                         }, _this.scopesForV2(scopes));
                         return d.promise;
                     };
                 }
                 callback(messages, null);
-            }), null, scopes);
+            }, null, scopes);
         };
         Graph.prototype.getEvents = function (urlString, endpoint, callback, scopes) {
             var _this = this;
-            this.get(urlString, (function (result, errorGet) {
+            this.get(urlString, function (result, errorGet) {
                 if (errorGet) {
                     callback(null, errorGet);
                     return;
@@ -1474,32 +1431,27 @@ var Kurve;
                     return;
                 }
                 var resultsArray = (odata.value ? odata.value : [odata]);
-                var events = new Kurve.Events(_this, endpoint, resultsArray.map(function (o) { return new Event(_this, o); }));
+                var events = new Events(_this, endpoint, resultsArray.map(function (o) { return new Event(_this, o); }));
                 var nextLink = odata['@odata.nextLink'];
                 if (nextLink) {
                     events.nextLink = function (callback) {
                         var scopes = [Scopes.Mail.Read];
                         var d = new Kurve.Deferred();
-                        _this.getEvents(nextLink, endpoint, function (stuff, error) {
-                            if (callback) {
-                                callback(stuff, error);
-                            }
-                            else if (error) {
-                                d.reject(error);
-                            }
-                            else {
-                                d.resolve(stuff);
-                            }
+                        _this.getEvents(nextLink, endpoint, function (result, error) {
+                            if (callback)
+                                callback(result, error);
+                            else
+                                error ? d.reject(error) : d.resolve(result);
                         }, _this.scopesForV2(scopes));
                         return d.promise;
                     };
                 }
                 callback(events, null);
-            }), null, scopes);
+            }, null, scopes);
         };
         Graph.prototype.getGroups = function (urlString, callback, scopes) {
             var _this = this;
-            this.get(urlString, (function (result, errorGet) {
+            this.get(urlString, function (result, errorGet) {
                 if (errorGet) {
                     callback(null, errorGet);
                     return;
@@ -1512,30 +1464,23 @@ var Kurve;
                     return;
                 }
                 var resultsArray = (groupsODATA.value ? groupsODATA.value : [groupsODATA]);
-                var groups = new Kurve.Groups(_this, resultsArray.map(function (o) {
-                    return new Group(_this, o);
-                }));
+                var groups = new Groups(_this, resultsArray.map(function (o) { return new Group(_this, o); }));
                 var nextLink = groupsODATA['@odata.nextLink'];
                 if (nextLink) {
                     groups.nextLink = function (callback) {
                         var scopes = [Scopes.Group.ReadAll];
                         var d = new Kurve.Deferred();
                         _this.getGroups(nextLink, function (result, error) {
-                            if (callback) {
+                            if (callback)
                                 callback(result, error);
-                            }
-                            else if (error) {
-                                d.reject(error);
-                            }
-                            else {
-                                d.resolve(result);
-                            }
+                            else
+                                error ? d.reject(error) : d.resolve(result);
                         }, _this.scopesForV2(scopes));
                         return d.promise;
                     };
                 }
                 callback(groups, null);
-            }), null, scopes);
+            }, null, scopes);
         };
         Graph.prototype.getGroup = function (urlString, callback, scopes) {
             var _this = this;
@@ -1551,7 +1496,7 @@ var Kurve;
                     callback(null, ODATAError);
                     return;
                 }
-                var group = new Kurve.Group(_this, ODATA);
+                var group = new Group(_this, ODATA);
                 callback(group, null);
             }, null, scopes);
         };
@@ -1582,6 +1527,89 @@ var Kurve;
                 callback(result, null);
             }, "blob", scopes);
         };
+        Graph.prototype.getMailFolders = function (urlString, callback, scopes) {
+            var _this = this;
+            this.get(urlString, function (result, errorGet) {
+                if (errorGet) {
+                    callback(null, errorGet);
+                    return;
+                }
+                var odata = JSON.parse(result);
+                if (odata.error) {
+                    var errorODATA = new Kurve.Error();
+                    errorODATA.other = odata.error;
+                    callback(null, errorODATA);
+                }
+                var resultsArray = (odata.value ? odata.value : [odata]);
+                var mailFolders = new MailFolders(_this, resultsArray.map(function (o) { return new MailFolder(_this, o); }));
+                var nextLink = odata['@odata.nextLink'];
+                if (nextLink) {
+                    mailFolders.nextLink = function (callback) {
+                        var scopes = [Scopes.User.ReadAll];
+                        var d = new Kurve.Deferred();
+                        _this.getMailFolders(nextLink, function (result, error) {
+                            if (callback)
+                                callback(result, error);
+                            else
+                                error ? d.reject(error) : d.resolve(result);
+                        }, _this.scopesForV2(scopes));
+                        return d.promise;
+                    };
+                }
+                callback(mailFolders, null);
+            }, null, scopes);
+        };
+        Graph.prototype.getMessageAttachments = function (urlString, callback, scopes) {
+            var _this = this;
+            this.get(urlString, function (result, errorGet) {
+                if (errorGet) {
+                    callback(null, errorGet);
+                    return;
+                }
+                var attachmentsODATA = JSON.parse(result);
+                if (attachmentsODATA.error) {
+                    var errorODATA = new Kurve.Error();
+                    errorODATA.other = attachmentsODATA.error;
+                    callback(null, errorODATA);
+                    return;
+                }
+                var resultsArray = (attachmentsODATA.value ? attachmentsODATA.value : [attachmentsODATA]);
+                var attachments = new Attachments(_this, resultsArray.map(function (o) { return new Attachment(_this, o); }));
+                var nextLink = attachmentsODATA['@odata.nextLink'];
+                if (nextLink) {
+                    attachments.nextLink = function (callback) {
+                        var scopes = [Scopes.Mail.Read];
+                        var d = new Kurve.Deferred();
+                        _this.getMessageAttachments(nextLink, function (attachments, error) {
+                            if (callback)
+                                callback(attachments, error);
+                            else
+                                error ? d.reject(error) : d.resolve(attachments);
+                        }, _this.scopesForV2(scopes));
+                        return d.promise;
+                    };
+                }
+                callback(attachments, null);
+            }, null, scopes);
+        };
+        Graph.prototype.getMessageAttachment = function (urlString, callback, scopes) {
+            var _this = this;
+            this.get(urlString, function (result, errorGet) {
+                if (errorGet) {
+                    callback(null, errorGet);
+                    return;
+                }
+                var ODATA = JSON.parse(result);
+                if (ODATA.error) {
+                    var ODATAError = new Kurve.Error();
+                    ODATAError.other = ODATA.error;
+                    callback(null, ODATAError);
+                    return;
+                }
+                var attachment = new Attachment(_this, ODATA);
+                callback(attachment, null);
+            }, null, scopes);
+        };
         Graph.prototype.buildUrl = function (root, path, odataQuery) {
             return this.baseUrl + root + path + (odataQuery ? "?" + odataQuery : "");
         };
@@ -1601,32 +1629,32 @@ var Kurve;
     })();
     Kurve.Graph = Graph;
 })(Kurve || (Kurve = {}));
-//*********************************************************   
-//   
+//*********************************************************
+//
 //Kurve js, https://github.com/microsoftdx/kurvejs
-//  
-//Copyright (c) Microsoft Corporation  
-//All rights reserved.   
-//  
-// MIT License:  
-// Permission is hereby granted, free of charge, to any person obtaining  
-// a copy of this software and associated documentation files (the  
-// ""Software""), to deal in the Software without restriction, including  
-// without limitation the rights to use, copy, modify, merge, publish,  
-// distribute, sublicense, and/or sell copies of the Software, and to  
-// permit persons to whom the Software is furnished to do so, subject to  
-// the following conditions:  
-// The above copyright notice and this permission notice shall be  
-// included in all copies or substantial portions of the Software.  
-// THE SOFTWARE IS PROVIDED ""AS IS"", WITHOUT WARRANTY OF ANY KIND,  
-// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF  
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND  
-// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE  
-// LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION  
-// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION  
-// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  
-//   
-//*********************************************************   
+//
+//Copyright (c) Microsoft Corporation
+//All rights reserved.
+//
+// MIT License:
+// Permission is hereby granted, free of charge, to any person obtaining
+// a copy of this software and associated documentation files (the
+// ""Software""), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+// THE SOFTWARE IS PROVIDED ""AS IS"", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+// LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//
+//*********************************************************
 
 if (((typeof window != "undefined" && window.module) || (typeof module != "undefined")) && typeof module.exports != "undefined") {
     module.exports = Kurve;
