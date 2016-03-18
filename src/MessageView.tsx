@@ -69,7 +69,7 @@ export default class MessageView extends React.Component<MessageViewProps, any> 
         
         console.log("rendering message", message.subject);
         var sender = message.sender && message.sender.emailAddress && message.sender.emailAddress.name;
-        var from = sender ? <p style={ big }>{from}</p> : null;
+        var from = sender ? <p style={ big }>{ sender }</p> : null;
         var body = message.body && message.body.content || message.bodyPreview;
         var received = message.receivedDateTime ? <p style={ small }>{ ShortTimeString(message.receivedDateTime) }</p> : null;
         var subject = message.subject ? <p style={ smallEmphasis }>{message.subject}</p> : null;
