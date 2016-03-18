@@ -64,9 +64,10 @@ class DateSpan {
 }
 
 export default class EventSummary extends React.Component<EventSummaryProps, any> {
-    private handleClick = (e: React.SyntheticEvent) => {
+    private handleClick = () => {
         this.props.onSelect(this.props.event.id);
-    };
+    }
+
     render() {
         var big = Combine(bigStyle, noOverflowStyle, tightStyle, this.props.style);
         var small = Combine(smallStyle, noOverflowStyle, tightStyle, this.props.style);

@@ -18,17 +18,11 @@ const informationStyle = Combine(summaryStyle, {
 
 interface EventListProps extends React.Props<EventList> {
     events: Kurve.EventDataModel[];
-    selected?: string;
-    onSelection?(id: string);
+    selectedEvent?: Kurve.EventDataModel;
+    onSelect(eventId: string);
 }
 
 export default class EventList extends React.Component<EventListProps, any> {
-    constructor(props, state) {
-        super(props, state);
-    }
-    private handleSelect = (id: string) => {
-        this.props.onSelection(id);
-    };
     render() {
         var lastDate = "";
         var eventSummaries = this.props.events.map(event => {
@@ -38,7 +32,7 @@ export default class EventList extends React.Component<EventListProps, any> {
             return (
                 <div key={ event.id }>
                     { dateSeparator }
-                    <EventSummary onSelect={ this.handleSelect } selected={ this.props.selected === event.id } event={ event } />
+                    <EventSummary onSelect={ this.props.onSelect } selected={  this.props.selectedEvent && this.props.selectedEvent.id == event.id } event={ event } />
                 </div>
             );
         });

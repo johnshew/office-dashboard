@@ -26,38 +26,22 @@ const itemViewStyle: React.CSSProperties = {
 }
 
 interface CalendarProps extends React.Props<Calendar> {
-    events: Kurve.EventDataModel[];
-    scroll: boolean;
+    events?: Kurve.EventDataModel[];
+    selectedEvent?: Kurve.EventDataModel;
+    onSelect(eventId:string);    
+    scroll: boolean
 }
 
-interface CalendarState {
-    selected?: string;
-}
-
-export default class Calendar extends React.Component<CalendarProps, CalendarState> {
-    constructor(props, state) {
-        super(props, state);
-        this.state = { selected: null };
-    }
-
-    private handleSelection = (id: string) => {
-        this.setState({ selected: id });
-    }
-
-    private selectedCalendarEvent(): Kurve.EventDataModel {
-        var found = this.props.events.filter(event => (event.id === this.state.selected));
-        return (found.length > 0) ? found[0] : null;
-    }
-
+export default class Calendar extends React.Component<CalendarProps, any> {
     render() {
         var contentLayoutStyle = (this.props.scroll) ? scrollingContentStyle : {};
         return (
             <div style={ contentLayoutStyle }>
                 <div className="col-xs-12 col-sm-4 col-lg-3" style={ listStyle }>
-                    <EventList onSelection={ this.handleSelection } selected={ this.state.selected } events={ this.props.events } />
+                    <EventList onSelect={ this.props.onSelect } events={ this.props.events } selectedEvent={ this.props.selectedEvent } />
                 </div>
                 <div className="col-xs-12 col-sm-8 col-lg-9" style={ itemViewStyle }>
-                    <EventView event={this.selectedCalendarEvent() } />
+                    <EventView event={ this.props.selectedEvent } /> 
                 </div>
             </div>
         );

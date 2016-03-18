@@ -937,6 +937,12 @@ var Kurve;
         User.prototype.messageAsync = function (messageId, odataQuery) {
             return this.graph.messageForUserAsync(this._data.userPrincipalName, messageId, odataQuery);
         };
+        User.prototype.event = function (eventId, callback, odataQuery) {
+            this.graph.eventForUser(this._data.userPrincipalName, eventId, callback, odataQuery);
+        };
+        User.prototype.eventAsync = function (eventId, odataQuery) {
+            return this.graph.eventForUserAsync(this._data.userPrincipalName, eventId, odataQuery);
+        };
         User.prototype.messageAttachment = function (messageId, attachmentId, callback, odataQuery) {
             this.graph.messageAttachmentForUser(this._data.userPrincipalName, messageId, attachmentId, callback, odataQuery);
         };
@@ -1201,6 +1207,16 @@ var Kurve;
             this.getMailFolders(urlString, function (result, error) { return callback(result, error); }, this.scopesForV2(scopes));
         };
         // Events For User
+        Graph.prototype.eventForUserAsync = function (userPrincipalName, eventId, odataQuery) {
+            var d = new Kurve.Deferred();
+            this.eventForUser(userPrincipalName, eventId, function (event, error) { return error ? d.reject(error) : d.resolve(event); }, odataQuery);
+            return d.promise;
+        };
+        Graph.prototype.eventForUser = function (userPrincipalName, eventId, callback, odataQuery) {
+            var scopes = [Scopes.Calendars.Read];
+            var urlString = this.buildUsersUrl(userPrincipalName + "/events/" + eventId, odataQuery);
+            this.getEvent(urlString, eventId, function (result, error) { return callback(result, error); }, this.scopesForV2(scopes));
+        };
         Graph.prototype.eventsForUserAsync = function (userPrincipalName, endpoint, odataQuery) {
             var d = new Kurve.Deferred();
             this.eventsForUser(userPrincipalName, endpoint, function (events, error) { return error ? d.reject(error) : d.resolve(events); }, odataQuery);
@@ -1454,6 +1470,24 @@ var Kurve;
                     };
                 }
                 callback(messages, null);
+            }, null, scopes);
+        };
+        Graph.prototype.getEvent = function (urlString, EventId, callback, scopes) {
+            var _this = this;
+            this.get(urlString, function (result, errorGet) {
+                if (errorGet) {
+                    callback(null, errorGet);
+                    return;
+                }
+                var ODATA = JSON.parse(result);
+                if (ODATA.error) {
+                    var ODATAError = new Kurve.Error();
+                    ODATAError.other = ODATA.error;
+                    callback(null, ODATAError);
+                    return;
+                }
+                var event = new Event(_this, ODATA);
+                callback(event, null);
             }, null, scopes);
         };
         Graph.prototype.getEvents = function (urlString, endpoint, callback, scopes) {

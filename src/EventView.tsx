@@ -33,13 +33,16 @@ const plainTextStyle: React.CSSProperties = {
 }
 
 interface EventViewProps extends React.Props<EventView> {
-    event: Kurve.EventDataModel;
+    event?: Kurve.EventDataModel;
     style?: React.CSSProperties;
 }
 
 export default class EventView extends React.Component<EventViewProps, any> {
     private attendees() {
+        
         var x = this.props.event.attendees;
+        if (!x)
+            return;
         return x.reduce((p, a) => {
             var result = ((p != null) ? p + '; ' : '') + a.emailAddress.name;
             return result;
@@ -47,31 +50,33 @@ export default class EventView extends React.Component<EventViewProps, any> {
     }
 
     render() {
+        var event = this.props.event;
+        if (!event) { return null; }
+
         var big = Combine(bigStyle, noOverflowStyle, this.props.style);
         var small = Combine(smallStyle, noOverflowStyle, this.props.style);
         var smallEmphasis = Combine(smallStyle, emphasisStyle, noOverflowStyle, this.props.style);
         var smallScrolling = Combine(smallStyle, this.props.style);
         var messageBody = Combine(bodyStyle, this.props.style);
-        var event = this.props.event;
-        if (!event) { return null; }
-        var subject = event.subject || "";
-        var organizer = event.organizer && event.organizer.emailAddress && event.organizer.emailAddress.name || "";
-        var attendees = this.attendees() || "";
-        var location = event.location.displayName;
-        var body = event.body && event.body.content || "";
-        if (event.body && event.body.contentType === "text") {
+        
+        console.log("rendering event", this.props.event);
+        var subject = event.subject;
+        var organizer = event.organizer && event.organizer.emailAddress && event.organizer.emailAddress.name;
+        var attendees = this.attendees();
+        var location =  event.location && event.location.displayName;
+        var body = event.body && event.body.content || event.bodyPreview;
+        if (event.body && event.body.contentType === "text" || !event.body && event.bodyPreview)
             messageBody = Combine(messageBody, plainTextStyle);
-        }
         return (
             <div>
                 <div className="well" style={  { padding: 10 } }>
-                    <p style={ big }>{organizer}</p>
-                    <p style={ smallEmphasis }>{subject}</p>
-                    <p style={ small }>{attendees}</p>
+                    <p style={ big }>{ organizer }</p>
+                    <p style={ smallEmphasis }> {subject }</p>
+                    <p style={ small }>{ attendees }</p>
                     <p style={ small }>{ location }</p>
                 </div>
 
-                <ItemViewHtmlBody style={messageBody} body={body} />
+                <ItemViewHtmlBody style={ messageBody } body={ body } />
             </div>
         );
     }

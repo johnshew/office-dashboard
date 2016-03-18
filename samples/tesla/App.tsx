@@ -28,6 +28,7 @@ interface AppState {
     selectedMessage?: Kurve.MessageDataModel;
     messageIdToIndex?: Object;
     events?: Kurve.EventDataModel[];
+    selectedEvent?: Kurve.EventDataModel;
     eventIdToIndex?: Object;
     show?: ShowState;
     settings?: SettingsValues;
@@ -118,7 +119,7 @@ class App extends React.Component<AppProps, AppState> {
     public render() {
         var welcome = (this.state.show == ShowState.Welcome) ? <div className="jumbotron"> <h2> { "Welcome" }</h2> <p> { "Please login to access your information" } </p> </div> : null;
         var mail = (this.state.show == ShowState.Mail) ? this.renderMail() : null;
-        var calendar = (this.state.show == ShowState.Calendar) ? <Calendar events={ this.state.events } scroll={ this.state.settings.scroll } /> : null;
+        var calendar = (this.state.show == ShowState.Calendar) ? <Calendar events={ this.state.events } selectedEvent = { this.state.selectedEvent } onSelect = { this.SelectEvent } scroll={ this.state.settings.scroll } /> : null;
         var loadingMessage = (this.state.fetchingMail || this.state.fetchingCalendar) ? <div style={ loadingMessageStyle }>Loading...</div> : null;
 
         return (
@@ -185,7 +186,7 @@ class App extends React.Component<AppProps, AppState> {
         var nextWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate()+7);
         this.setState({ fetchingCalendar: true });
 
-        this.me.calendarViewAsync("$orderby=start/dateTime&startDateTime=" + now.toISOString() + "&endDateTime=" + nextWeek.toISOString())
+        this.me.calendarViewAsync("$select=attendees,bodyPreview,end,id,location,organizer,subject,start&$expand=attachments($select=id,isInline)&$orderby=start/dateTime&startDateTime=" + now.toISOString() + "&endDateTime=" + nextWeek.toISOString())
             .then((events) => {
                 console.log('Got calendar.  Now rendering.');
                 this.ProcessEvents([], {}, events);
@@ -264,6 +265,41 @@ class App extends React.Component<AppProps, AppState> {
         .fail(error => console.log('Could not load the message.', error))
     }
 
+    public SelectEvent = (eventId: string) => {
+        console.log("Selecting Event", eventId);
+        var events = this.state.events.filter(e => e.id === eventId);
+        if (events.length == 0)
+            return;
+
+        // First render the basic metadata (including body preview)
+        this.setState({ selectedEvent: events[0] });
+        
+        // Next, get the rest of the message metadata and full body text 
+        this.me.eventAsync(eventId)
+        .then(event => this.setState({ selectedEvent: event.data }))
+/*
+        .then(() =>
+            // Finally, load up the inline images
+
+            events[0].attachments
+                .filter(a => a.isInline)
+                .forEach(attachment =>
+                    this.me.messageAttachmentAsync(eventId, attachment.id)
+                    .then(attachment => {
+                        if (attachment.getType() === Kurve.AttachmentType.fileAttachment) {
+                            // keep state immutable by creating a new message with new attachments for every re-render
+                            var message = Utilities.ObjectAssign({}, this.state.selectedMessage, { attachments: (this.state.selectedMessage.attachments || []).slice() })
+                            message.attachments.push(attachment.data);
+                            this.setState({ selectedMessage: message });
+                        }
+                    })
+                    .fail(error => console.log('Could not load the attachment.', error))
+                )
+        )
+*/
+        .fail(error => console.log('Could not load the event.', error))
+    }
+    
     private ProcessMessages(newList: Kurve.MessageDataModel[], idMap: Object, result: Kurve.Messages) {
         result.data.map(message => {
             var index = idMap[message.data.id];

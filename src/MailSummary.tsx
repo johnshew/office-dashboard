@@ -64,7 +64,7 @@ interface MailSummaryProps extends React.Props<MailSummary> {
 }
 
 export default class MailSummary extends React.Component<MailSummaryProps, any> {
-    private handleClick = (e: React.SyntheticEvent) => {
+    private handleClick = () => {
         this.props.onSelect(this.props.message.id);
     };
 
