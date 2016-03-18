@@ -44,6 +44,7 @@ export default class ItemViewHtmlBody extends React.Component<ItemViewHtmlBodyPr
 
         // Inline attachments
         var inlineImages = doc.body.querySelectorAll("img[src^='cid']");
+        attachments = attachments || [];
 
         [].forEach.call(inlineImages, image => {
             var contentId = image.src.replace('cid:', '');

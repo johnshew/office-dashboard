@@ -220,7 +220,7 @@ class App extends React.Component<AppProps, AppState> {
         console.log('Now getting messages.');
         this.setState({ fetchingMail: true });
 
-        this.me.messagesAsync('$expand=attachments($select=id,isInline)')
+        this.me.messagesAsync('$select=bodyPreview,id,importance,receivedDateTime,sender,subject&$expand=attachments($select=id,isInline)')
             .then((messages) => {
                 console.log('Got messages.  Now rendering.');
                 if (this.mounted && this.state.show === ShowState.Welcome) { this.setState({ show: ShowState.Mail }); }
@@ -237,25 +237,31 @@ class App extends React.Component<AppProps, AppState> {
         if (messages.length == 0)
             return;
 
-        // Set up an initial message with no attachments
-        this.setState({ selectedMessage: Utilities.ObjectAssign({}, messages[0], {attachments: []}) });
+        // First render the basic metadata (including body preview)
+        this.setState({ selectedMessage: messages[0] });
 
-        // Loop on the original message attachments metadata
-        messages[0].attachments
-            .filter(a => a.isInline)
-            .forEach(attachment => {
-                this.graph.messageAttachmentForUserAsync(this.me.data.userPrincipalName, messageId, attachment.id)
-                .then(attachment => {
-                    if (attachment.getType() === Kurve.AttachmentType.fileAttachment) {
-                        // keep state immutable by creating a new message with new attachments
-                        var newAttachments = this.state.selectedMessage.attachments.slice();
-                        newAttachments.push(attachment.data);
-                        this.setState({ selectedMessage: Utilities.ObjectAssign({}, this.state.selectedMessage, {attachments: newAttachments}) });
-                    }
-                }).fail(error => {
-                    console.log('Could not load the attachment.', error);
-                });
-            });
+        // Next, get the rest of the message metadata and full body text 
+        this.me.messageAsync(messageId)
+            .then(message => {
+                this.setState({ selectedMessage: message.data });
+                
+                // Finally, load up the inline images
+                messages[0].attachments
+                    .filter(a => a.isInline)
+                    .forEach(attachment =>
+                        this.me.messageAttachmentAsync(messageId, attachment.id)
+                            .then(attachment => {
+                                if (attachment.getType() === Kurve.AttachmentType.fileAttachment) {
+                                    // keep state immutable by creating a new message with new attachments
+                                    var newAttachments = (this.state.selectedMessage.attachments || []).slice();
+                                    newAttachments.push(attachment.data);
+                                    this.setState({ selectedMessage: Utilities.ObjectAssign({}, this.state.selectedMessage, {attachments: newAttachments}) });
+                                }
+                            })
+                            .fail(error => console.log('Could not load the attachment.', error))
+                    )
+            })
+            .fail(error => console.log('Could not load the message.', error))
     }
 
     private ProcessMessages(newList: Kurve.MessageDataModel[], idMap: Object, result: Kurve.Messages) {

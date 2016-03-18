@@ -212,6 +212,10 @@ declare module Kurve {
         calendarViewAsync(odataQuery?: string): Promise<Events, Error>;
         mailFolders(callback: PromiseCallback<MailFolders>, odataQuery?: string): void;
         mailFoldersAsync(odataQuery?: string): Promise<MailFolders, Error>;
+        message(messageId: string, callback: PromiseCallback<Message>, odataQuery?: string): void;
+        messageAsync(messageId: string, odataQuery?: string): Promise<Message, Error>;
+        messageAttachment(messageId: string, attachmentId: string, callback: PromiseCallback<Attachment>, odataQuery?: string): void;
+        messageAttachmentAsync(messageId: string, attachmentId: string, odataQuery?: string): Promise<Attachment, Error>;
     }
     interface NextLink<T> {
         (callback?: PromiseCallback<T>): Promise<T, Error>;
@@ -399,6 +403,8 @@ declare module Kurve {
         group(groupId: string, callback: PromiseCallback<Group>, odataQuery?: string): void;
         groupsAsync(odataQuery?: string): Promise<Groups, Error>;
         groups(callback: PromiseCallback<Groups>, odataQuery?: string): void;
+        messageForUserAsync(userPrincipalName: string, messageId: string, odataQuery?: string): Promise<Message, Error>;
+        messageForUser(userPrincipalName: string, messageId: string, callback: PromiseCallback<Message>, odataQuery?: string): void;
         messagesForUserAsync(userPrincipalName: string, odataQuery?: string): Promise<Messages, Error>;
         messagesForUser(userPrincipalName: string, callback: PromiseCallback<Messages>, odataQuery?: string): void;
         mailFoldersForUserAsync(userPrincipalName: string, odataQuery?: string): Promise<MailFolders, Error>;
@@ -425,6 +431,7 @@ declare module Kurve {
         private getUsers(urlString, callback, scopes?, basicProfileOnly?);
         private getUser(urlString, callback, scopes?);
         private addAccessTokenAndSend(xhr, callback, scopes?);
+        private getMessage(urlString, messageId, callback, scopes?);
         private getMessages(urlString, callback, scopes?);
         private getEvents(urlString, endpoint, callback, scopes?);
         private getGroups(urlString, callback, scopes?);
