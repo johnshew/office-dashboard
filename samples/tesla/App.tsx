@@ -290,10 +290,7 @@ class App extends React.Component<AppProps, AppState> {
     }
 
     public LoggedIn() {
-        var idtoken:Kurve.IdToken = this.identity.getIdToken();
-        var username = idtoken.UPN.replace(/[,;=| ]+/g, "_");
-        console.log("Successful login", username);
-        window["appInsights"].setAuthenticatedUserContext(username);
+        console.log('Successful login.');
         this.UpdateLoginState();
         if (this.mounted) {
             this.setState({ show: ShowState.Mail });
