@@ -52,16 +52,3 @@ export function ShortTimeString(dateString: string) {
         return Days[date.getDay()] + " " + date.getMonth() + "/" + date.getDate();
     }
 }
-
-export interface AttachmentDictionary {
-    [index:string]: Kurve.AttachmentDataModel;
-}
-
-export class MessageAttachments {
-    constructor(public messageId: string, public attachments?: AttachmentDictionary) {
-        this.attachments = {}
-        if (attachments)
-            for(var key in attachments)
-                this.attachments[key] = attachments[key];
-    }
-}
