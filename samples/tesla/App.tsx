@@ -166,11 +166,11 @@ class App extends React.Component<AppProps, AppState> {
         this.RefreshFromCloud(updated.refreshIntervalSeconds);
     }
 
-    private handleSettingsModalCloseRequest = (event) => {
+    private handleSettingsModalCloseRequest = () => {
         this.setState({ settingsModalIsOpen: false });
     }
 
-    private handleAboutModalCloseRequest = (event) => {
+    private handleAboutModalCloseRequest = () => {
         this.setState({ aboutModalIsOpen: false });
     }
 

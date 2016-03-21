@@ -19,7 +19,7 @@ interface SettingsProps extends React.Props<Settings> {
     values: SettingsValues;
     onChange: (SettingsValue) => void;
     modalIsOpen: boolean;
-    onModalCloseRequest: (event: any) => void;
+    onModalCloseRequest: () => void;
 }
 
 export class Settings extends React.Component<SettingsProps, any> {
@@ -56,17 +56,22 @@ export class Settings extends React.Component<SettingsProps, any> {
         this.forceUpdate();
     }
 
-    private handleModalCloseRequest = (event) => {
-        this.applySettings();
-        this.props.onModalCloseRequest(event);
+    private handleModalCloseRequest = () => {
+        this.handleCancelButtonClick();
     }
 
     private applySettings = () => {
         this.props.onChange(Utilities.ObjectAssign({}, this.state.settings) );
     }
 
-    private handleDimissButtonClick = () => {
+    private handleSaveButtonClick = () => {
+        this.applySettings();
+        this.props.onModalCloseRequest();
+    }
+
+    private handleCancelButtonClick = () => {
         this.setState({ settings: Utilities.ObjectAssign({}, this.props.values) });
+        this.props.onModalCloseRequest();
     }
 
     private settingsChanged = () => {
@@ -90,10 +95,6 @@ export class Settings extends React.Component<SettingsProps, any> {
             >
                 <div className="modal-content">
                     <div className="modal-header">
-                        <button type="button" className="close" onClick={this.handleModalCloseRequest}>
-                            <span aria-hidden="true">&times;</span>
-                            <span className="sr-only">Close</span>
-                        </button>
                         <h4 className="modal-title">Settings</h4>
                     </div>
                     <div className="modal-body">
@@ -105,8 +106,8 @@ export class Settings extends React.Component<SettingsProps, any> {
                         <input type="textbox" style={ { width: "80px" } } value={ (values.refreshIntervalSeconds == null) ? "" : values.refreshIntervalSeconds.toString() } onChange={ this.handleRefreshChange }/> Refresh interval in seconds.  0 to disable <br/>
                     </div>
                     <div className="modal-footer">
-                        <button type="button" className="btn btn-primary" onClick={this.handleModalCloseRequest} disabled={!this.settingsChanged()}>Save</button>
-                        <button type="button" className="btn btn-default" onClick={this.handleDimissButtonClick}>Cancel</button>
+                        <button type="button" className="btn btn-primary" onClick={this.handleSaveButtonClick} disabled={!this.settingsChanged()}>Apply</button>
+                        <button type="button" className="btn btn-default" onClick={this.handleCancelButtonClick}>Cancel</button>
                     </div>
                 </div>
             </Modal>

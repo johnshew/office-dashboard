@@ -1,3 +1,4 @@
+//TODO: type with ReactModal.ModalStyle
 export default {
     modal: {
         overlay: {
