@@ -1702,6 +1702,57 @@ var Kurve;
         return Graph;
     })();
     Kurve.Graph = Graph;
+    var GraphInfo = (function () {
+        function GraphInfo(path, scopes, odataQuery) {
+            this.path = path;
+            this.scopes = scopes;
+            this.odataQuery = odataQuery;
+        }
+        GraphInfo.prototype.getAsync = function (graph) {
+            var d = new Kurve.Deferred();
+            this.get(graph, function (result, error) { return error ? d.reject(error) : d.resolve(result); });
+            return d.promise;
+        };
+        GraphInfo.prototype.get = function (graph, callback) {
+            var url = "https://graph.microsoft.com/v1.0/" + this.path + (this.odataQuery ? "?" + this.odataQuery : "");
+            graph.get(url, function (result, errorGet) {
+                if (errorGet) {
+                    callback(null, errorGet);
+                    return;
+                }
+                var ODATA = JSON.parse(result);
+                if (ODATA.error) {
+                    var ODATAError = new Kurve.Error();
+                    ODATAError.other = ODATA.error;
+                    callback(null, ODATAError);
+                    return;
+                }
+                callback(ODATA, null);
+            }, null, graph.scopesForV2(this.scopes));
+        };
+        return GraphInfo;
+    })();
+    Kurve.GraphInfo = GraphInfo;
+    var ItemAttachmentDataModel = (function () {
+        function ItemAttachmentDataModel() {
+        }
+        return ItemAttachmentDataModel;
+    })();
+    Kurve.ItemAttachmentDataModel = ItemAttachmentDataModel;
+    var ItemAttachment = (function (_super) {
+        __extends(ItemAttachment, _super);
+        function ItemAttachment() {
+            _super.apply(this, arguments);
+        }
+        ItemAttachment.fromMessageForMe = function (messageId, attachmentId, odataQuery) {
+            return new GraphInfo("/me/messages/" + messageId + "/attachments/" + attachmentId, [Scopes.Mail.Read], odataQuery);
+        };
+        ItemAttachment.fromMessageForUser = function (userId, messageId, attachmentId, odataQuery) {
+            return new GraphInfo("/users/#{userId}/messages/" + messageId + "/attachments/" + attachmentId, [Scopes.Mail.Read], odataQuery);
+        };
+        return ItemAttachment;
+    })(ItemAttachmentDataModel);
+    Kurve.ItemAttachment = ItemAttachment;
 })(Kurve || (Kurve = {}));
 //*********************************************************
 //

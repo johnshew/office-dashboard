@@ -1,6 +1,6 @@
 declare module Kurve {
     interface PromiseCallback<T> {
-        (T: any, Error: any): void;
+        (result: T, error: Error): void;
     }
     class Deferred<T, E> {
         private _dispatcher;
@@ -214,7 +214,7 @@ declare module Kurve {
         mailFoldersAsync(odataQuery?: string): Promise<MailFolders, Error>;
         message(messageId: string, callback: PromiseCallback<Message>, odataQuery?: string): void;
         messageAsync(messageId: string, odataQuery?: string): Promise<Message, Error>;
-        event(eventId: string, callback: PromiseCallback<Message>, odataQuery?: string): void;
+        event(eventId: string, callback: PromiseCallback<Event>, odataQuery?: string): void;
         eventAsync(eventId: string, odataQuery?: string): Promise<Event, Error>;
         messageAttachment(messageId: string, attachmentId: string, callback: PromiseCallback<Attachment>, odataQuery?: string): void;
         messageAttachmentAsync(messageId: string, attachmentId: string, odataQuery?: string): Promise<Attachment, Error>;
@@ -394,7 +394,7 @@ declare module Kurve {
         constructor(identityInfo: {
             defaultAccessToken: string;
         });
-        private scopesForV2(scopes);
+        scopesForV2(scopes: string[]): string[];
         meAsync(odataQuery?: string): Promise<User, Error>;
         me(callback: PromiseCallback<User>, odataQuery?: string): void;
         userAsync(userId: string, odataQuery?: string, basicProfileOnly?: boolean): Promise<User, Error>;
@@ -450,5 +450,28 @@ declare module Kurve {
         private buildMeUrl(path?, odataQuery?);
         private buildUsersUrl(path?, odataQuery?);
         private buildGroupsUrl(path?, odataQuery?);
+    }
+    class GraphInfo<T> {
+        protected path: string;
+        protected scopes: string[];
+        protected odataQuery: string;
+        constructor(path: string, scopes: string[], odataQuery?: string);
+        getAsync(graph: Graph): Promise<T, Error>;
+        get(graph: Graph, callback: PromiseCallback<T>): void;
+    }
+    class ItemAttachmentDataModel {
+        contentId: string;
+        id: string;
+        isInline: boolean;
+        lastModifiedDateTime: Date;
+        name: string;
+        size: number;
+        contentBytes: string;
+        contentLocation: string;
+        contentType: string;
+    }
+    class ItemAttachment extends ItemAttachmentDataModel {
+        static fromMessageForMe: (messageId: string, attachmentId: string, odataQuery?: string) => GraphInfo<ItemAttachmentDataModel>;
+        static fromMessageForUser: (userId: string, messageId: string, attachmentId: string, odataQuery?: string) => GraphInfo<ItemAttachmentDataModel>;
     }
 }

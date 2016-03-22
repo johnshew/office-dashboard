@@ -250,12 +250,13 @@ class App extends React.Component<AppProps, AppState> {
             messages[0].attachments
                 .filter(a => a.isInline)
                 .forEach(attachment =>
-                    this.me.messageAttachmentAsync(messageId, attachment.id)
+                    Kurve.ItemAttachment.fromMessageForMe(messageId,attachment.id).getAsync(this.graph)
+                    //this.me.messageAttachmentAsync(messageId, attachment.id)
                     .then(attachment => {
-                        if (attachment.getType() === Kurve.AttachmentType.fileAttachment) {
+                        if (true) {
                             // keep state immutable by creating a new message with new attachments for every re-render
                             var message = Utilities.ObjectAssign({}, this.state.selectedMessage, { attachments: (this.state.selectedMessage.attachments || []).slice() })
-                            message.attachments.push(attachment.data);
+                            message.attachments.push(attachment);
                             this.setState({ selectedMessage: message });
                         }
                     })
