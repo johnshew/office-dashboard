@@ -4,6 +4,7 @@
   "description": "",
   "main": "server.js",
   "dependencies": {
+    "Kurve": "git://github.com/southworkscom/kurvejs.git#7477f0bb049b4169433f48cd119a831d9f759729",
     "bootstrap": "^3.3.6",
     "react": "^0.14.5",
     "react-dom": "^0.14.3",

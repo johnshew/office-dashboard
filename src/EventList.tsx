@@ -1,4 +1,5 @@
 import * as React from 'react';
+import * as Kurve from 'Kurve';
 import * as Utilities from './Utilities';
 
 import Combine = Utilities.Combine;

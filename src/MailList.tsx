@@ -1,4 +1,5 @@
 import * as React from 'react';
+import * as Kurve from 'Kurve';
 
 import MailSummary from './MailSummary';
 

@@ -1,5 +1,6 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
+import * as Kurve from 'Kurve';
 import * as Utilities from './Utilities';
 import TokenLocalStorage from './TokenStorage';
 import About from './About';
@@ -241,8 +242,8 @@ class App extends React.Component<AppProps, AppState> {
 
         // First render the basic metadata (including body preview)
         this.setState({ selectedMessage: messages[0] });
-        
-        // Next, get the rest of the message metadata and full body text 
+
+        // Next, get the rest of the message metadata and full body text
         this.me.messageAsync(messageId)
         .then(message => this.setState({ selectedMessage: message.data }))
         .then(() =>
@@ -273,8 +274,8 @@ class App extends React.Component<AppProps, AppState> {
 
         // First render the basic metadata (including body preview)
         this.setState({ selectedEvent: events[0] });
-        
-        // Next, get the rest of the message metadata and full body text 
+
+        // Next, get the rest of the message metadata and full body text
         this.me.eventAsync(eventId)
         .then(event => this.setState({ selectedEvent: event.data }))
 /*
@@ -299,7 +300,7 @@ class App extends React.Component<AppProps, AppState> {
 */
         .fail(error => console.log('Could not load the event.', error))
     }
-    
+
     private ProcessMessages(newList: Kurve.MessageDataModel[], idMap: Object, result: Kurve.Messages) {
         result.data.map(message => {
             var index = idMap[message.data.id];

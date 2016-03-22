@@ -1,4 +1,5 @@
 import * as React from 'react';
+import * as Kurve from 'Kurve';
 import MailList from './MailList';
 import MessageView from './MessageView';
 

@@ -1,3 +1,4 @@
+import * as Kurve from 'Kurve';
 import * as Utilities from './utilities';
 
 export default class TokenLocalStorage implements Kurve.TokenStorage {
