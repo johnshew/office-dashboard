@@ -1,6 +1,7 @@
 import * as React from 'react';
 import MailList from './MailList';
 import MessageView from './MessageView';
+import MailFolderFilter from './MailFolderFilter';
 
 const itemViewStyle: React.CSSProperties = {
     height: "100%",
@@ -25,6 +26,9 @@ const listStyle: React.CSSProperties = {
 }
 
 interface MailProps extends React.Props<Mail> {
+    mailFolders?: Kurve.MailFolderDataModel[];
+    selectedMailFolder: Kurve.MailFolderDataModel;
+    onMailFolderSelect?(id:Kurve.MailFolderDataModel);
     messages?: Kurve.MessageDataModel[];
     selectedMessage?: Kurve.MessageDataModel;
     onSelect(id:string);
@@ -41,12 +45,13 @@ export default class Mail extends React.Component<MailProps, any> {
 //      var selectedMessage = this.props.selectedMessage ? this.props.selectedMessage : new Kurve.MessageDataModel();
 
         return (
-            <div style={ contentLayoutStyle }>
-                <div className="col-xs-12 col-sm-4 col-lg-3" style={ listStyle }>
-                    <MailList onSelect={ this.props.onSelect } messages={ this.props.messages } selectedMessage={ this.props.selectedMessage } />
+            <div style={contentLayoutStyle}>
+                <div className="col-xs-12 col-sm-4 col-lg-3" style={listStyle}>
+                    <MailFolderFilter mailFolders={this.props.mailFolders} onSelect={this.props.onMailFolderSelect} selectedMailFolder={this.props.selectedMailFolder} />
+                    <MailList onSelect={this.props.onSelect} messages={this.props.messages} selectedMessage={this.props.selectedMessage} selectedMailFolder={this.props.selectedMailFolder} />
                 </div>
-                <div className="col-xs-12 col-sm-8 col-lg-9" style={ itemViewStyle }>
-                    <MessageView ref={ (c) => this.messageView = c } message={ this.props.selectedMessage }/>
+                <div className="col-xs-12 col-sm-8 col-lg-9" style={itemViewStyle}>
+                    <MessageView ref={(c) => this.messageView = c} message={this.props.selectedMessage}/>
                 </div>
             </div>
         );

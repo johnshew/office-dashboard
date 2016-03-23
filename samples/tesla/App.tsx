@@ -24,6 +24,9 @@ interface AppProps extends React.Props<App> {
 interface AppState {
     fetchingMail? : Boolean;
     fetchingCalendar? : Boolean;
+    fetchingMailFolders? : Boolean;
+    mailFolders?: Kurve.MailFolderDataModel[];
+    selectedMailFolder?: Kurve.MailFolderDataModel;
     messages?: Kurve.MessageDataModel[];
     selectedMessage?: Kurve.MessageDataModel;
     messageIdToIndex?: Object;
@@ -53,6 +56,8 @@ class App extends React.Component<AppProps, AppState> {
         this.state = {
             fetchingMail: false,
             fetchingCalendar: false,
+            fetchingMailFolders: false,
+            mailFolders: [],
             messages: [],
             messageIdToIndex: {},
             events: [],
@@ -109,6 +114,9 @@ class App extends React.Component<AppProps, AppState> {
 
     private renderMail() {
         return <Mail
+            mailFolders={this.state.mailFolders}
+            selectedMailFolder={this.state.selectedMailFolder}
+            onMailFolderSelect={this.SelectMailFolder}
             messages={this.state.messages}
             selectedMessage={this.state.selectedMessage}
             onSelect={this.SelectMessage}
@@ -219,18 +227,34 @@ class App extends React.Component<AppProps, AppState> {
             this.GetMe();
             return;
         }
-        console.log('Now getting messages.');
-        this.setState({ fetchingMail: true });
 
-        this.me.messagesAsync('$select=bccRecipients,bodyPreview,ccRecipients,id,importance,receivedDateTime,sender,subject,toRecipients&$expand=attachments($select=id,isInline)')
-            .then((messages) => {
-                console.log('Got messages.  Now rendering.');
-                if (this.mounted && this.state.show === ShowState.Welcome) { this.setState({ show: ShowState.Mail }); }
-                this.ProcessMessages([], {}, messages);
-                this.setState({ fetchingMail: false });
-            }).fail((error) => {
-                this.setState({ fetchingMail: false });
-            });
+        console.log('Now getting mail folders.');
+
+        this.setState({ fetchingMail: true });
+        this.GetMailFolders()
+            .then(() => {
+                if (this.state.mailFolders.length === 0) { return; }
+
+                if (!this.state.selectedMailFolder) {
+                    this.setState({ selectedMailFolder: this.state.mailFolders[0] });
+                }
+
+                console.log('Now getting messages.');
+                this.me.messagesAsync('$select=parentFolderId,bccRecipients,bodyPreview,ccRecipients,id,importance,receivedDateTime,sender,subject,toRecipients&$expand=attachments($select=id,isInline)')
+                    .then((messages) => {
+                        console.log('Got messages.  Now rendering.');
+                        if (this.mounted && this.state.show === ShowState.Welcome) { this.setState({ show: ShowState.Mail }); }
+                        this.ProcessMessages([], {}, messages);
+                        this.setState({ fetchingMail: false });
+                    }).fail((error) => {
+                        this.setState({ fetchingMail: false });
+                    });
+
+            })
+    }
+
+    public SelectMailFolder = (mailFolder: Kurve.MailFolderDataModel) => {
+        this.setState({ selectedMailFolder: mailFolder, selectedMessage: null });
     }
 
     public SelectMessage = (messageId: string) => {
@@ -241,8 +265,8 @@ class App extends React.Component<AppProps, AppState> {
 
         // First render the basic metadata (including body preview)
         this.setState({ selectedMessage: messages[0] });
-        
-        // Next, get the rest of the message metadata and full body text 
+
+        // Next, get the rest of the message metadata and full body text
         this.me.messageAsync(messageId)
         .then(message => this.setState({ selectedMessage: message.data }))
         .then(() =>
@@ -273,8 +297,8 @@ class App extends React.Component<AppProps, AppState> {
 
         // First render the basic metadata (including body preview)
         this.setState({ selectedEvent: events[0] });
-        
-        // Next, get the rest of the message metadata and full body text 
+
+        // Next, get the rest of the message metadata and full body text
         this.me.eventAsync(eventId)
         .then(event => this.setState({ selectedEvent: event.data }))
 /*
@@ -299,7 +323,7 @@ class App extends React.Component<AppProps, AppState> {
 */
         .fail(error => console.log('Could not load the event.', error))
     }
-    
+
     private ProcessMessages(newList: Kurve.MessageDataModel[], idMap: Object, result: Kurve.Messages) {
         result.data.map(message => {
             var index = idMap[message.data.id];
@@ -316,6 +340,52 @@ class App extends React.Component<AppProps, AppState> {
                 this.ProcessMessages(newList, idMap, moreMessages);
             });
         }
+    }
+
+    public GetMailFolders() : Kurve.Promise<void, Kurve.Error> {
+        if (!this.me) {
+            this.GetMe();
+            return;
+        }
+
+        this.setState({ fetchingMailFolders: true });
+
+        return this.me.mailFoldersAsync()
+            .then((mailFolders) => {
+                return this.ProcessMailFolders([], {}, mailFolders);
+            }).fail((error) => {
+                this.setState({ fetchingMailFolders: false });
+                throw error;
+            });
+    }
+
+    private ProcessMailFolders(newList: Kurve.MailFolderDataModel[], idMap: Object, result: Kurve.MailFolders): Kurve.Promise<any, Kurve.Error> {
+        var d = new Kurve.Deferred<void, Kurve.Error>();
+
+        result.data.map(mailFolder => {
+            var index = idMap[mailFolder.data.id];
+            if (index) {
+                newList[index] = mailFolder.data; // do an update.
+            } else {
+                idMap[mailFolder.data.id] = newList.push(mailFolder.data); // add it to the list and record index.
+            }
+        });
+
+        newList = newList.sort((a, b) => { return  b.totalItemCount - a.totalItemCount });
+
+        this.setState({ mailFolders: newList, messageIdToIndex: idMap });
+        if (newList.length < 40 && result.nextLink) {
+            result.nextLink().then(moreMessages => {
+                this.ProcessMailFolders(newList, idMap, moreMessages);
+                d.resolve();
+            })
+            .fail(d.reject);
+        } else {
+            this.setState({ fetchingMailFolders: false });
+            d.resolve();
+        }
+
+        return d.promise;
     }
 
     public UpdateLoginState() {
