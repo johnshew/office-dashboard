@@ -7,6 +7,7 @@ import { Settings, SettingsValues } from './Settings';
 import Mail from '../../src/Mail';
 import Calendar from '../../src/Calendar';
 
+const exludedMailFolders = ['Drafts', 'Sent Items', 'Deleted Items', 'Clutter', 'Junk Email'];
 
 const loadingMessageStyle: React.CSSProperties = {
     position: 'fixed',
@@ -26,7 +27,7 @@ interface AppState {
     fetchingCalendar? : Boolean;
     fetchingMailFolders? : Boolean;
     mailFolders?: Kurve.MailFolderDataModel[];
-    selectedMailFolder?: Kurve.MailFolderDataModel;
+    selectedMailFolders?: Kurve.MailFolderDataModel[];
     messages?: Kurve.MessageDataModel[];
     selectedMessage?: Kurve.MessageDataModel;
     messageIdToIndex?: Object;
@@ -115,8 +116,7 @@ class App extends React.Component<AppProps, AppState> {
     private renderMail() {
         return <Mail
             mailFolders={this.state.mailFolders}
-            selectedMailFolder={this.state.selectedMailFolder}
-            onMailFolderSelect={this.SelectMailFolder}
+            selectedMailFolders={this.state.selectedMailFolders}
             messages={this.state.messages}
             selectedMessage={this.state.selectedMessage}
             onSelect={this.SelectMessage}
@@ -235,8 +235,11 @@ class App extends React.Component<AppProps, AppState> {
             .then(() => {
                 if (this.state.mailFolders.length === 0) { return; }
 
-                if (!this.state.selectedMailFolder) {
-                    this.setState({ selectedMailFolder: this.state.mailFolders[0] });
+                if (!this.state.selectedMailFolders) {
+                    var filteredFolders = this.state.mailFolders.filter((mailFolder) => {
+                        return !exludedMailFolders.some((excludedFolder) => excludedFolder == mailFolder.displayName);
+                    });
+                    this.setState({ selectedMailFolders: filteredFolders });
                 }
 
                 console.log('Now getting messages.');
@@ -249,12 +252,7 @@ class App extends React.Component<AppProps, AppState> {
                     }).fail((error) => {
                         this.setState({ fetchingMail: false });
                     });
-
-            })
-    }
-
-    public SelectMailFolder = (mailFolder: Kurve.MailFolderDataModel) => {
-        this.setState({ selectedMailFolder: mailFolder, selectedMessage: null });
+            });
     }
 
     public SelectMessage = (messageId: string) => {
