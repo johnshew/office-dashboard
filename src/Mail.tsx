@@ -1,7 +1,6 @@
 import * as React from 'react';
 import MailList from './MailList';
 import MessageView from './MessageView';
-import MailFolderFilter from './MailFolderFilter';
 
 const itemViewStyle: React.CSSProperties = {
     height: "100%",
