@@ -22,7 +22,6 @@ export default class About extends React.Component<AboutProps, {}> {
         return (
             <Modal
                 className="modal-dialog"
-                closeTimeoutMS={150}
                 isOpen={this.props.modalIsOpen}
                 onRequestClose={this.handleModalCloseRequest}
                 style={Styles.modal}
@@ -30,10 +29,6 @@ export default class About extends React.Component<AboutProps, {}> {
                 <div className="modal-dialog">
                     <div className="modal-content">
                         <div className="modal-header">
-                            <button type="button" className="close" onClick={this.handleModalCloseRequest}>
-                                <span aria-hidden="true">&times;</span>
-                                <span className="sr-only">Close</span>
-                            </button>
                             <h4 className="modal-title">About</h4>
                         </div>
                         <div className="modal-body">

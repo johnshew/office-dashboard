@@ -88,7 +88,6 @@ export class Settings extends React.Component<SettingsProps, any> {
         return (
             <Modal
                 className="modal-dialog"
-                closeTimeoutMS={150}
                 isOpen={this.props.modalIsOpen}
                 onRequestClose={this.handleModalCloseRequest}
                 style={Styles.modal}
