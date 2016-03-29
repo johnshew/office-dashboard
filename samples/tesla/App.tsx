@@ -26,7 +26,6 @@ interface AppState {
     fetchingMail? : Boolean;
     fetchingCalendar? : Boolean;
     fetchingMailFolders? : Boolean;
-    mailFolders?: Kurve.MailFolderDataModel[];
     selectedMailFolders?: Kurve.MailFolderDataModel[];
     messages?: Kurve.MessageDataModel[];
     selectedMessage?: Kurve.MessageDataModel;
@@ -58,7 +57,7 @@ class App extends React.Component<AppProps, AppState> {
             fetchingMail: false,
             fetchingCalendar: false,
             fetchingMailFolders: false,
-            mailFolders: [],
+            selectedMailFolders: [],
             messages: [],
             messageIdToIndex: {},
             events: [],
@@ -115,8 +114,6 @@ class App extends React.Component<AppProps, AppState> {
 
     private renderMail() {
         return <Mail
-            mailFolders={this.state.mailFolders}
-            selectedMailFolders={this.state.selectedMailFolders}
             messages={this.state.messages}
             selectedMessage={this.state.selectedMessage}
             onSelect={this.SelectMessage}
@@ -233,14 +230,7 @@ class App extends React.Component<AppProps, AppState> {
         this.setState({ fetchingMail: true });
         this.GetMailFolders()
             .then(() => {
-                if (this.state.mailFolders.length === 0) { return; }
-
-                if (!this.state.selectedMailFolders) {
-                    var filteredFolders = this.state.mailFolders.filter((mailFolder) => {
-                        return !exludedMailFolders.some((excludedFolder) => excludedFolder == mailFolder.displayName);
-                    });
-                    this.setState({ selectedMailFolders: filteredFolders });
-                }
+                if (this.state.selectedMailFolders.length === 0) { return; }
 
                 console.log('Now getting messages.');
                 this.me.messagesAsync('$select=parentFolderId,bccRecipients,bodyPreview,ccRecipients,id,importance,receivedDateTime,sender,subject,toRecipients&$expand=attachments($select=id,isInline)')
@@ -323,12 +313,14 @@ class App extends React.Component<AppProps, AppState> {
     }
 
     private ProcessMessages(newList: Kurve.MessageDataModel[], idMap: Object, result: Kurve.Messages) {
-        result.data.map(message => {
-            var index = idMap[message.data.id];
-            if (index) {
-                newList[index] = message.data; // do an update.
-            } else {
-                idMap[message.data.id] = newList.push(message.data); // add it to the list and record index.
+        result.data.forEach(message => {
+            if (this.state.selectedMailFolders.some((mailFolder) => message.data.parentFolderId === mailFolder.id)) {
+                var index = idMap[message.data.id];
+                if (index) {
+                    newList[index] = message.data; // do an update.
+                } else {
+                    idMap[message.data.id] = newList.push(message.data); // add it to the list and record index.
+                }
             }
         });
 
@@ -357,24 +349,26 @@ class App extends React.Component<AppProps, AppState> {
             });
     }
 
-    private ProcessMailFolders(newList: Kurve.MailFolderDataModel[], idMap: Object, result: Kurve.MailFolders): Kurve.Promise<any, Kurve.Error> {
+    private ProcessMailFolders(mailFolders: Kurve.MailFolderDataModel[], idMap: Object, result: Kurve.MailFolders): Kurve.Promise<any, Kurve.Error> {
         var d = new Kurve.Deferred<void, Kurve.Error>();
 
         result.data.map(mailFolder => {
             var index = idMap[mailFolder.data.id];
             if (index) {
-                newList[index] = mailFolder.data; // do an update.
+                mailFolders[index] = mailFolder.data; // do an update.
             } else {
-                idMap[mailFolder.data.id] = newList.push(mailFolder.data); // add it to the list and record index.
+                idMap[mailFolder.data.id] = mailFolders.push(mailFolder.data); // add it to the list and record index.
             }
         });
 
-        newList = newList.sort((a, b) => { return  b.totalItemCount - a.totalItemCount });
+        var filteredFolders = mailFolders.filter((mailFolder) => {
+            return !exludedMailFolders.some((excludedFolder) => excludedFolder == mailFolder.displayName);
+        });
 
-        this.setState({ mailFolders: newList, messageIdToIndex: idMap });
-        if (newList.length < 40 && result.nextLink) {
-            result.nextLink().then(moreMessages => {
-                this.ProcessMailFolders(newList, idMap, moreMessages);
+        this.setState({ selectedMailFolders: this.state.selectedMailFolders.concat(filteredFolders) });
+        if (mailFolders.length < 40 && result.nextLink) {
+            result.nextLink().then(moreFolders => {
+                this.ProcessMailFolders(mailFolders, idMap, moreFolders);
                 d.resolve();
             })
             .fail(d.reject);
