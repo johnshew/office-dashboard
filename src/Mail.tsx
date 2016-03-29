@@ -41,12 +41,12 @@ export default class Mail extends React.Component<MailProps, any> {
 //      var selectedMessage = this.props.selectedMessage ? this.props.selectedMessage : new Kurve.MessageDataModel();
 
         return (
-            <div style={ contentLayoutStyle }>
-                <div className="col-xs-12 col-sm-4 col-lg-3" style={ listStyle }>
-                    <MailList onSelect={ this.props.onSelect } messages={ this.props.messages } selectedMessage={ this.props.selectedMessage } />
+            <div style={contentLayoutStyle}>
+                <div className="col-xs-12 col-sm-4 col-lg-3" style={listStyle}>
+                    <MailList onSelect={this.props.onSelect} messages={this.props.messages} selectedMessage={this.props.selectedMessage} />
                 </div>
-                <div className="col-xs-12 col-sm-8 col-lg-9" style={ itemViewStyle }>
-                    <MessageView ref={ (c) => this.messageView = c } message={ this.props.selectedMessage }/>
+                <div className="col-xs-12 col-sm-8 col-lg-9" style={itemViewStyle}>
+                    <MessageView ref={(c) => this.messageView = c} message={this.props.selectedMessage}/>
                 </div>
             </div>
         );

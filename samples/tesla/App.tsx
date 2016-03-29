@@ -7,6 +7,7 @@ import { Settings, SettingsValues } from './Settings';
 import Mail from '../../src/Mail';
 import Calendar from '../../src/Calendar';
 
+const excludedMailFolders = ['Drafts', 'Sent Items', 'Deleted Items', 'Clutter', 'Junk Email'];
 
 const loadingMessageStyle: React.CSSProperties = {
     position: 'fixed',
@@ -24,6 +25,8 @@ interface AppProps extends React.Props<App> {
 interface AppState {
     fetchingMail? : Boolean;
     fetchingCalendar? : Boolean;
+    fetchingMailFolders? : Boolean;
+    selectedMailFolders?: Kurve.MailFolderDataModel[];
     messages?: Kurve.MessageDataModel[];
     selectedMessage?: Kurve.MessageDataModel;
     messageIdToIndex?: Object;
@@ -53,6 +56,8 @@ class App extends React.Component<AppProps, AppState> {
         this.state = {
             fetchingMail: false,
             fetchingCalendar: false,
+            fetchingMailFolders: false,
+            selectedMailFolders: [],
             messages: [],
             messageIdToIndex: {},
             events: [],
@@ -219,17 +224,22 @@ class App extends React.Component<AppProps, AppState> {
             this.GetMe();
             return;
         }
-        console.log('Now getting messages.');
-        this.setState({ fetchingMail: true });
 
-        this.me.messagesAsync('$select=bccRecipients,bodyPreview,ccRecipients,id,importance,receivedDateTime,sender,subject,toRecipients&$expand=attachments($select=id,isInline)')
-            .then((messages) => {
-                console.log('Got messages.  Now rendering.');
-                if (this.mounted && this.state.show === ShowState.Welcome) { this.setState({ show: ShowState.Mail }); }
-                this.ProcessMessages([], {}, messages);
-                this.setState({ fetchingMail: false });
-            }).fail((error) => {
-                this.setState({ fetchingMail: false });
+        this.setState({ fetchingMail: true });
+        this.GetMailFolders()
+            .then(() => {
+                if (this.state.selectedMailFolders.length === 0) { return; }
+
+                console.log('Now getting messages.');
+                this.me.messagesAsync('$select=parentFolderId,bccRecipients,bodyPreview,ccRecipients,id,importance,receivedDateTime,sender,subject,toRecipients&$expand=attachments($select=id,isInline)')
+                    .then((messages) => {
+                        console.log('Got messages.  Now rendering.');
+                        if (this.mounted && this.state.show === ShowState.Welcome) { this.setState({ show: ShowState.Mail }); }
+                        this.ProcessMessages([], {}, messages);
+                        this.setState({ fetchingMail: false });
+                    }).fail((error) => {
+                        this.setState({ fetchingMail: false });
+                    });
             });
     }
 
@@ -241,8 +251,8 @@ class App extends React.Component<AppProps, AppState> {
 
         // First render the basic metadata (including body preview)
         this.setState({ selectedMessage: messages[0] });
-        
-        // Next, get the rest of the message metadata and full body text 
+
+        // Next, get the rest of the message metadata and full body text
         this.me.messageAsync(messageId)
         .then(message => this.setState({ selectedMessage: message.data }))
         .then(() =>
@@ -273,8 +283,8 @@ class App extends React.Component<AppProps, AppState> {
 
         // First render the basic metadata (including body preview)
         this.setState({ selectedEvent: events[0] });
-        
-        // Next, get the rest of the message metadata and full body text 
+
+        // Next, get the rest of the message metadata and full body text
         this.me.eventAsync(eventId)
         .then(event => this.setState({ selectedEvent: event.data }))
 /*
@@ -299,14 +309,16 @@ class App extends React.Component<AppProps, AppState> {
 */
         .fail(error => console.log('Could not load the event.', error))
     }
-    
+
     private ProcessMessages(newList: Kurve.MessageDataModel[], idMap: Object, result: Kurve.Messages) {
-        result.data.map(message => {
-            var index = idMap[message.data.id];
-            if (index) {
-                newList[index] = message.data; // do an update.
-            } else {
-                idMap[message.data.id] = newList.push(message.data); // add it to the list and record index.
+        result.data.forEach(message => {
+            if (this.state.selectedMailFolders.some((mailFolder) => message.data.parentFolderId === mailFolder.id)) {
+                var index = idMap[message.data.id];
+                if (index) {
+                    newList[index] = message.data; // do an update.
+                } else {
+                    idMap[message.data.id] = newList.push(message.data); // add it to the list and record index.
+                }
             }
         });
 
@@ -316,6 +328,62 @@ class App extends React.Component<AppProps, AppState> {
                 this.ProcessMessages(newList, idMap, moreMessages);
             });
         }
+    }
+
+    public GetMailFolders() : Kurve.Promise<void, Kurve.Error> {
+        if (this.state.selectedMailFolders.length > 0) {
+            var d = new Kurve.Deferred<void, Kurve.Error>();
+            d.resolve();
+            return d.promise;
+        }
+
+        if (!this.me) {
+            this.GetMe();
+            return;
+        }
+
+        console.log('Now getting mail folders.');
+
+        this.setState({ fetchingMailFolders: true });
+
+        return this.me.mailFoldersAsync()
+            .then((mailFolders) => {
+                return this.ProcessMailFolders([], {}, mailFolders);
+            }).fail((error) => {
+                this.setState({ fetchingMailFolders: false });
+                throw error;
+            });
+    }
+
+    private ProcessMailFolders(mailFolders: Kurve.MailFolderDataModel[], idMap: Object, result: Kurve.MailFolders): Kurve.Promise<any, Kurve.Error> {
+        var d = new Kurve.Deferred<void, Kurve.Error>();
+
+        result.data.map(mailFolder => {
+            var index = idMap[mailFolder.data.id];
+            if (index) {
+                mailFolders[index] = mailFolder.data; // do an update.
+            } else {
+                idMap[mailFolder.data.id] = mailFolders.push(mailFolder.data); // add it to the list and record index.
+            }
+        });
+
+        var filteredFolders = mailFolders.filter((mailFolder) => {
+            return !excludedMailFolders.some((excludedFolder) => excludedFolder == mailFolder.displayName);
+        });
+
+        this.setState({ selectedMailFolders: this.state.selectedMailFolders.concat(filteredFolders) });
+        if (mailFolders.length < 40 && result.nextLink) {
+            result.nextLink().then(moreFolders => {
+                this.ProcessMailFolders(mailFolders, idMap, moreFolders);
+                d.resolve();
+            })
+            .fail(d.reject);
+        } else {
+            this.setState({ fetchingMailFolders: false });
+            d.resolve();
+        }
+
+        return d.promise;
     }
 
     public UpdateLoginState() {
