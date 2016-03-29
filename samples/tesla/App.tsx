@@ -7,7 +7,7 @@ import { Settings, SettingsValues } from './Settings';
 import Mail from '../../src/Mail';
 import Calendar from '../../src/Calendar';
 
-const exludedMailFolders = ['Drafts', 'Sent Items', 'Deleted Items', 'Clutter', 'Junk Email'];
+const excludedMailFolders = ['Drafts', 'Sent Items', 'Deleted Items', 'Clutter', 'Junk Email'];
 
 const loadingMessageStyle: React.CSSProperties = {
     position: 'fixed',
@@ -225,8 +225,6 @@ class App extends React.Component<AppProps, AppState> {
             return;
         }
 
-        console.log('Now getting mail folders.');
-
         this.setState({ fetchingMail: true });
         this.GetMailFolders()
             .then(() => {
@@ -333,10 +331,18 @@ class App extends React.Component<AppProps, AppState> {
     }
 
     public GetMailFolders() : Kurve.Promise<void, Kurve.Error> {
+        if (this.state.selectedMailFolders.length > 0) {
+            var d = new Kurve.Deferred<void, Kurve.Error>();
+            d.resolve();
+            return d.promise;
+        }
+
         if (!this.me) {
             this.GetMe();
             return;
         }
+
+        console.log('Now getting mail folders.');
 
         this.setState({ fetchingMailFolders: true });
 
@@ -362,7 +368,7 @@ class App extends React.Component<AppProps, AppState> {
         });
 
         var filteredFolders = mailFolders.filter((mailFolder) => {
-            return !exludedMailFolders.some((excludedFolder) => excludedFolder == mailFolder.displayName);
+            return !excludedMailFolders.some((excludedFolder) => excludedFolder == mailFolder.displayName);
         });
 
         this.setState({ selectedMailFolders: this.state.selectedMailFolders.concat(filteredFolders) });
