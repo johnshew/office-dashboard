@@ -10,7 +10,7 @@ IMPORTANT: In Settings make sure “Login without a new window” is checked. If
 
 ## Release Notes
 
-### Release 0.2 – Public Alpha 2
+### Release 0.3 – Public Alpha 3
  
 This app provides a Tesla-friendly way to access your Office information.
  
@@ -18,13 +18,10 @@ This is a pure client app that talks directly to Microsoft’s servers over HTTP
  
 New in this release:
 
-* Embedded pictures (in either email or calendar) are now supported
-* Calendar events display location
-* Once you click "login" you shouldn't have to do so again until you log out
+* Under-the-cover changes (now using public KurveJS npm package)
 
 There are still a number of significant limitations and issues in this release:
 
-* The email view shows all messages from every folder in your mailbox – including sent mail
 * Attachments sometimes show up as separate messages
 * Calendar meeting times are shown in military time
 * Loading the messages takes a little while on Tesla and there is no message indicating it is loading
