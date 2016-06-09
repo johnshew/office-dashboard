@@ -1,4 +1,5 @@
 import * as React from 'react';
+import * as Kurve from 'kurvejs';
 import * as Utilities from './Utilities';
 
 import ItemViewHtmlBody from './ItemViewHtmlBody';
@@ -39,7 +40,7 @@ interface EventViewProps extends React.Props<EventView> {
 
 export default class EventView extends React.Component<EventViewProps, any> {
     private attendees() {
-        
+
         var x = this.props.event.attendees;
         if (!x)
             return;
@@ -58,7 +59,7 @@ export default class EventView extends React.Component<EventViewProps, any> {
         var smallEmphasis = Combine(smallStyle, emphasisStyle, noOverflowStyle, this.props.style);
         var smallScrolling = Combine(smallStyle, this.props.style);
         var messageBody = Combine(bodyStyle, this.props.style);
-        
+
         console.log("rendering event", this.props.event);
         var subject = event.subject;
         var organizer = event.organizer && event.organizer.emailAddress && event.organizer.emailAddress.name;

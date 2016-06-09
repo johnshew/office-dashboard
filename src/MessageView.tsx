@@ -1,4 +1,5 @@
 import * as React from 'react';
+import * as Kurve from 'kurvejs';
 
 import * as Utilities from './Utilities';
 import ItemViewHtmlBody from './ItemViewHtmlBody';
@@ -58,7 +59,7 @@ export default class MessageView extends React.Component<MessageViewProps, any> 
     render() {
         var message = this.props.message;
         if (!message) { return null; }
-        
+
         var big = Combine(bigStyle, noOverflowStyle, this.props.style);
         var small = Combine(smallStyle, noOverflowStyle, this.props.style);
         var smallEmphasis = Combine(smallStyle, emphasisStyle, noOverflowStyle, this.props.style);
@@ -66,7 +67,7 @@ export default class MessageView extends React.Component<MessageViewProps, any> 
         var messageBody = Combine(bodyStyle, this.props.style);
         if (message.body && message.body.contentType === "text" || !message.body && message.bodyPreview)
             messageBody = Combine(messageBody, plainTextStyle);
-        
+
         console.log("rendering message", message.subject);
         var sender = message.sender && message.sender.emailAddress && message.sender.emailAddress.name;
         var from = sender ? <p style={ big }>{ sender }</p> : null;

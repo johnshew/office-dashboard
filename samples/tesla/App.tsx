@@ -1,5 +1,6 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
+import * as Kurve from 'kurvejs';
 import * as Utilities from './Utilities';
 import TokenLocalStorage from './TokenStorage';
 import About from './About';
@@ -7,7 +8,7 @@ import { Settings, SettingsValues } from './Settings';
 import Mail from '../../src/Mail';
 import Calendar from '../../src/Calendar';
 
-const excludedMailFolderNames = ['Archive', 'Clutter', 'Deleted Items', 'Drafts', 'Junk Email', 'Sent Items'];
+const excludedMailFolderNames = ['Archive', 'Drafts', 'Sent Items', 'Deleted Items', 'Clutter', 'Junk Email'];
 
 const loadingMessageStyle: React.CSSProperties = {
     position: 'fixed',
@@ -39,12 +40,14 @@ interface AppState {
 class App extends React.Component<AppProps, AppState> {
     private identity: Kurve.Identity;
     private graph: Kurve.Graph;
-    private me: Kurve.User;
+/*
+    private me: Kurve.UserDataModel;
+*/
     // private eventIdToIndex: {};  now in state
     private mounted = false;
     private storage: Utilities.Storage;
     private tokenStorage: TokenLocalStorage;
-
+    
     // private loginNewWindow: boolean;
     private timerHandle: any;
 
@@ -55,7 +58,7 @@ class App extends React.Component<AppProps, AppState> {
         this.state = {
             fetchingMail: false,
             fetchingCalendar: false,
-            excludedMailFolders: undefined,
+            excludedMailFolders: [],
             messages: [],
             messageIdToIndex: {},
             events: [],
@@ -76,13 +79,17 @@ class App extends React.Component<AppProps, AppState> {
 
         var here = document.location;
         this.identity = new Kurve.Identity({
-            clientId: "b8dd3290-662a-4f91-92b9-3e70fbabe04e",
+            clientId: "b8dd3290-662a-4f91-92b9-3e70fbabe04e",   // v1
+            //clientId: "bdb197ab-5178-4609-af0d-76d8b3b796a2",   // v2
             tokenProcessingUri: here.protocol + '//' + here.host + here.pathname.substring(0, here.pathname.lastIndexOf('/') + 1) + '../public/login.html',
-            version: null,
+            version: Kurve.EndPointVersion.v1,
+            mode: Kurve.Mode.Client,
             tokenStorage: this.tokenStorage
         });
-        this.graph = new Kurve.Graph({ identity: this.identity });
+        this.graph = new Kurve.Graph({ identity: this.identity }, Kurve.Mode.Client);
+/*
         this.me = null;
+*/
 
         var params = document.location.search.replace(/.*?\?/, "").split("&").map(function(kv) { return kv.split('='); }).reduce(function(prev, kva) { prev[kva[0]] = (!kva[1]) ? true : kva[1]; return prev }, {});
 
@@ -161,86 +168,80 @@ class App extends React.Component<AppProps, AppState> {
         if (this.state.settings.console && !Utilities.LocalConsole) { Utilities.LocalConsoleInitialize(); }
     }
 
-    public GetMe(): Kurve.User {
+/*
+    public GetMe(): Kurve.UserDataModel {
         if (this.me) {
             return this.me;
         }
         console.log('Getting me');
-        this.graph.meAsync()
-            .then(result => {
+        this.graph.me.GET()
+            .then((result) => {
                 console.log("Got me.");
                 this.me = result;
-                this.me.mailFoldersAsync()
-                .then(mailFolders => {
-                    console.log("Getting folders.");
-                    var filteredFolders = mailFolders.data
-                        .filter(mailFolder =>
-                            excludedMailFolderNames.some(excludedFolderName => excludedFolderName == mailFolder.data.displayName))
-                        .map(mailFolder => mailFolder.data.id);
-                    this.setState({ excludedMailFolders: filteredFolders });
-                    this.RefreshFromCloud(1); // do it now, note that zero would mean never.
-                });
+                this.RefreshFromCloud(1); // do it now, note that zero would mean never.
             })
             .fail((error) => {
                 console.log("Get me failed.");
             });
         return null;
     }
-
+*/
     public GetCalendarEvents() {
+/*
         if (!this.me) {
             this.GetMe();
             return;
         }
+*/
         console.log('Now getting calendar events.');
         var now = new Date(Date.now())
         var today = new Date();
         var nextWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate()+7);
         this.setState({ fetchingCalendar: true });
 
-        this.me.calendarViewAsync("$select=attendees,bodyPreview,end,id,location,organizer,subject,start&$expand=attachments($select=id,isInline)&$orderby=start/dateTime&startDateTime=" + now.toISOString() + "&endDateTime=" + nextWeek.toISOString())
-            .then((events) => {
-                console.log('Got calendar.  Now rendering.');
-                this.ProcessEvents([], {}, events);
-                this.setState({ fetchingCalendar: false });
-            })
-            .fail((error) => {
-                this.setState({ fetchingCalendar: false });
-            });
+        this.graph.me.calendarView.GetEvents(new Kurve.OData()
+            .odata(Kurve.CalendarView.dateRange(today, nextWeek))
+            .select("attendees", "bodyPreview","end", "id", "location", "organizer", "subject", "start")
+            .orderby("start/dateTime")
+            .expand("attachments($select=id,isInline)")
+        ).then(events => {
+            this.ProcessEvents([], {}, events);
+            console.log('Got calendar.  Now rendering.');
+            this.setState({ fetchingCalendar: false });
+        });
     }
 
-    private ProcessEvents(newEvents: Kurve.EventDataModel[], idMap: Object, events: Kurve.Events) {
-        events.data.map(event => {
-            var index = idMap[event.data.id];
+    private ProcessEvents(newEvents: Kurve.EventDataModel[], idMap: Object, events: Kurve.GraphCollection<Kurve.EventDataModel, Kurve.CalendarView, Kurve.Event>) {
+        events.value.forEach(event => {
+            var index = idMap[event.id];
             if (index) {
-                newEvents[index] = event.data; // do an update.
+                newEvents[index] = event; // do an update.
             } else {
-                idMap[event.data.id] = newEvents.push(event.data); // add it to the list and record index.
+                idMap[event.id] = newEvents.push(event); // add it to the list and record index.
             }
         });
         this.setState({ events: newEvents, eventIdToIndex: idMap });  // We have new data so update state and it will cause a render.
-        if (newEvents.length < 40 && events.nextLink) {
-            events.nextLink().then((moreEvents) => {
-                this.ProcessEvents(newEvents, idMap, moreEvents);
-            });
-        }
+        if (newEvents.length < 40 && events._next)
+            events._next().then(nextEvents => this.ProcessEvents(newEvents, idMap, nextEvents));
     }
 
     public GetMessages() {
+/*
         if (!this.me) {
             this.GetMe();
             return;
         }
-
+*/
         this.setState({ fetchingMail: true });
         console.log('Now getting messages.');
-        this.me.messagesAsync('$select=parentFolderId,bccRecipients,bodyPreview,ccRecipients,id,importance,receivedDateTime,sender,subject,toRecipients&$expand=attachments($select=id,isInline)')
-        .then((messages) => {
-            console.log('Got messages.  Now rendering.');
-            if (this.mounted && this.state.show === ShowState.Welcome) { this.setState({ show: ShowState.Mail }); }
+        this.graph.me.messages.GetMessages(new Kurve.OData()
+            .select("parentFolderId", "bccRecipients", "bodyPreview", "ccRecipients", "id", "importance", "receivedDateTime", "sender", "subject", "toRecipients") 
+            .expand("attachments($select=id,isInline)")
+            .top(60)
+        ).then(messages => {
             this.ProcessMessages([], {}, messages);
-            this.setState({ fetchingMail: false });
-        }).fail((error) => {
+            if (this.mounted && this.state.show === ShowState.Welcome) { this.setState({ show: ShowState.Mail }); }
+            console.log('Got messages.  Now rendering.');
             this.setState({ fetchingMail: false });
         });
     }
@@ -255,25 +256,26 @@ class App extends React.Component<AppProps, AppState> {
         this.setState({ selectedMessage: messages[0] });
 
         // Next, get the rest of the message metadata and full body text
-        this.me.messageAsync(messageId)
-        .then(message => this.setState({ selectedMessage: message.data }))
-        .then(() =>
-            // Finally, load up the inline images
+        this.graph.me.messages.$(messageId).GetMessage()
+        .then(responseMessage => {
+            this.setState({ selectedMessage: responseMessage });
+            // Finally, load up the inline images. We use messages[0] because it has the list of attachment ids
             messages[0].attachments
                 .filter(a => a.isInline)
                 .forEach(attachment =>
-                    this.me.messageAttachmentAsync(messageId, attachment.id)
-                    .then(attachment => {
-                        if (attachment.getType() === Kurve.AttachmentType.fileAttachment) {
+                    responseMessage._context.attachments.$(attachment.id)
+                    .GetAttachment()
+                    .then(responseAttachment => {
+//                      if (attachment.getType() === Kurve.AttachmentType.fileAttachment) {
                             // keep state immutable by creating a new message with new attachments for every re-render
                             var message = Utilities.ObjectAssign({}, this.state.selectedMessage, { attachments: (this.state.selectedMessage.attachments || []).slice() })
-                            message.attachments.push(attachment.data);
+                            message.attachments.push(responseAttachment);
                             this.setState({ selectedMessage: message });
-                        }
+  //                    }
                     })
                     .fail(error => console.log('Could not load the attachment.', error))
                 )
-        )
+        })
         .fail(error => console.log('Could not load the message.', error))
     }
 
@@ -286,9 +288,9 @@ class App extends React.Component<AppProps, AppState> {
         // First render the basic metadata (including body preview)
         this.setState({ selectedEvent: events[0] });
 
-        // Next, get the rest of the message metadata and full body text
-        this.me.eventAsync(eventId)
-        .then(event => this.setState({ selectedEvent: event.data }))
+        // Next, get the rest of the event metadata and full body text
+        this.graph.me.events.$(eventId).GetEvent()
+        .then(event => this.setState({ selectedEvent: event }))
 /*
         .then(() =>
             // Finally, load up the inline images
@@ -312,24 +314,21 @@ class App extends React.Component<AppProps, AppState> {
         .fail(error => console.log('Could not load the event.', error))
     }
 
-    private ProcessMessages(newList: Kurve.MessageDataModel[], idMap: Object, result: Kurve.Messages) {
-        result.data.forEach(message => {
-            if (this.state.excludedMailFolders && this.state.excludedMailFolders.indexOf(message.data.parentFolderId) == -1) {
-                var index = idMap[message.data.id];
+    private ProcessMessages(newList: Kurve.MessageDataModel[], idMap: Object, messages:Kurve.GraphCollection<Kurve.MessageDataModel, Kurve.Messages, Kurve.Message>) {
+        messages.value.forEach(message => {
+            if (this.state.excludedMailFolders.indexOf(message.parentFolderId) == -1) {
+                var index = idMap[message.id];
                 if (index) {
-                    newList[index] = message.data; // do an update.
+                    newList[index] = message; // do an update.
                 } else {
-                    idMap[message.data.id] = newList.push(message.data); // add it to the list and record index.
+                    idMap[message.id] = newList.push(message); // add it to the list and record index.
                 }
             }
         });
 
         this.setState({ messages: newList, messageIdToIndex: idMap });
-        if (newList.length < 40 && result.nextLink) {
-            result.nextLink().then(moreMessages => {
-                this.ProcessMessages(newList, idMap, moreMessages);
-            });
-        }
+        if (newList.length < 40 && messages._next)
+            messages._next().then(nextMessages => this.ProcessMessages(newList, idMap, nextMessages));
     }
 
     public UpdateLoginState() {
@@ -356,7 +355,19 @@ class App extends React.Component<AppProps, AppState> {
         if (this.mounted) {
             this.setState({ show: ShowState.Mail });
         }
+        
+        this.graph.me.mailFolders.GetMailFolders().then(mailFolders => {
+            var filteredFolders = mailFolders.value
+                .filter(mailFolder =>
+                    excludedMailFolderNames.some(excludedFolderName => excludedFolderName == mailFolder.displayName))
+                .map(mailFolder => mailFolder.id);
+            this.setState({ excludedMailFolders: filteredFolders });
+            this.RefreshFromCloud(1); // do it now, note that zero would mean never.
+        });
+
+/*
         this.GetMe();
+*/
     }
 
     public IsLoggedIn(): boolean {

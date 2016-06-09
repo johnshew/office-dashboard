@@ -1,4 +1,5 @@
 import * as React from 'react';
+import * as Kurve from 'kurvejs';
 
 import EventList from './EventList';
 import EventView from './EventView';
@@ -28,7 +29,7 @@ const itemViewStyle: React.CSSProperties = {
 interface CalendarProps extends React.Props<Calendar> {
     events?: Kurve.EventDataModel[];
     selectedEvent?: Kurve.EventDataModel;
-    onSelect(eventId:string);    
+    onSelect(eventId:string);
     scroll: boolean
 }
 
@@ -41,7 +42,7 @@ export default class Calendar extends React.Component<CalendarProps, any> {
                     <EventList onSelect={ this.props.onSelect } events={ this.props.events } selectedEvent={ this.props.selectedEvent } />
                 </div>
                 <div className="col-xs-12 col-sm-8 col-lg-9" style={ itemViewStyle }>
-                    <EventView event={ this.props.selectedEvent } /> 
+                    <EventView event={ this.props.selectedEvent } />
                 </div>
             </div>
         );
