@@ -349,7 +349,7 @@ class App extends React.Component<AppProps, AppState> {
         if (idtoken && idtoken.UPN) {
             var username = idtoken.UPN.replace(/[,;=| ]+/g, "_");
             console.log("Username", username);
-            window["appInsights"].setAuthenticatedUserContext(username);
+//          window["appInsights"].setAuthenticatedUserContext(username);
         }
         this.UpdateLoginState();
         if (this.mounted) {
