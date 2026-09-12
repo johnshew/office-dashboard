@@ -33,7 +33,9 @@ function browserIdentity() {
 test('device-only initialization removes the legacy token cache', async t => {
     const removed = [];
     t.mock.method(localStorage, 'removeItem', key => removed.push(key));
-    await new Identity().initialize();
+    const identity = new Identity();
+    await identity.initialize();
+    assert.equal(identity.ready, true);
     assert.deepEqual(removed, ['kurve-identity-token-store']);
 });
 
@@ -93,6 +95,10 @@ test('device login QR information excludes the session credential and logout cle
     const calls = [];
     t.mock.method(globalThis, 'fetch', async (url, options) => {
         calls.push({ url, options });
+        if (options.method === 'POST') {
+            assert.equal(options.headers['Content-Type'], 'application/json');
+            assert.equal(options.body, '{}');
+        }
         if (url.endsWith('/start')) return Response.json({
             sessionToken: 'test-session-credential', userCode: 'ABCD-EFGH',
             verificationUri: 'https://microsoft.com/devicelogin', expiresAt: Date.now() + 60000, interval: 1
@@ -140,4 +146,37 @@ test('logout during polling cannot reactivate the device session', async t => {
     resolve(Response.json({ status: 'complete' }));
     assert.equal(await poll, 'cancelled');
     assert.equal(identity.isLoggedIn(), false);
+});
+
+test('late unauthorized response does not invalidate a replacement session', async t => {
+    let resolve;
+    t.mock.method(globalThis, 'fetch', url => url.endsWith('/status')
+        ? new Promise(done => { resolve = done; }) : Promise.resolve(Response.json({ status: 'ok' })));
+    const identity = new Identity();
+    identity.sessionToken = 'old-session';
+    const poll = identity.checkDeviceLogin();
+    await identity.cancelDeviceLogin();
+    identity.sessionToken = 'new-session';
+    identity.deviceAuthenticated = true;
+    resolve(new Response(null, { status: 401 }));
+    await assert.rejects(poll, /sign-in/);
+    assert.equal(identity.isLoggedIn(), true);
+});
+
+test('cancelling while a device code is being issued releases the late session', async t => {
+    let resolve;
+    const logoutTokens = [];
+    t.mock.method(globalThis, 'fetch', (url, options) => {
+        if (url.endsWith('/start')) return new Promise(done => { resolve = done; });
+        logoutTokens.push(options.headers.Authorization);
+        return Promise.resolve(Response.json({ status: 'ok' }));
+    });
+    const identity = new Identity();
+    const start = identity.startDeviceLogin();
+    await new Promise(resolve => setImmediate(resolve));
+    await identity.cancelDeviceLogin();
+    resolve(Response.json({ sessionToken: 'late-session' }));
+    await assert.rejects(start, /cancelled/);
+    assert.equal(identity.sessionToken, undefined);
+    assert.deepEqual(logoutTokens, ['Bearer ' + 'late-session']);
 });

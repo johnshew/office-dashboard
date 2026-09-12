@@ -141,7 +141,10 @@ class App extends React.Component<AppProps, AppState> {
         this.identity.initialize().then(() => {
             this.setState({ ready: true });
             if (this.IsLoggedIn()) this.LoggedIn();
-        }).catch(error => this.showError(error));
+        }).catch(error => {
+            this.setState({ ready: this.identity.ready });
+            this.showError(error);
+        });
     }
 
     public componentWillUnmount() {

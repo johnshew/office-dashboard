@@ -18,6 +18,8 @@ export default class Identity {
     private client: PublicClientApplication;
     private sessionToken: string;
     private deviceAuthenticated = false;
+    private deviceAttempt = 0;
+    public ready = false;
     public readonly deviceEnabled = !!deviceService;
 
     public async initialize() {
@@ -31,7 +33,7 @@ export default class Identity {
             }
         }
         if (!clientId) {
-            if (this.deviceEnabled) return;
+            if (this.deviceEnabled) { this.ready = true; return; }
             throw new Error('Sign-in is not configured. Set VITE_CLIENT_ID and rebuild the application.');
         }
         const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -48,6 +50,7 @@ export default class Identity {
             cache: { cacheLocation: 'sessionStorage' }
         });
         await this.client.initialize();
+        this.ready = true;
         const result = await this.client.handleRedirectPromise();
         if (result?.account) this.client.setActiveAccount(result.account);
         else if (!this.client.getActiveAccount() && this.client.getAllAccounts().length === 1) {
@@ -73,16 +76,20 @@ export default class Identity {
     }
 
     private async deviceRequest(path: string, method = 'GET', token = this.sessionToken) {
+        const headers: Record<string, string> = {};
+        if (token) headers.Authorization = 'Bearer ' + token;
+        if (method === 'POST') headers['Content-Type'] = 'application/json';
         const response = await fetch(`${deviceService}${path}`, {
             method,
-            headers: token ? { Authorization: 'Bearer ' + token } : {},
+            headers,
+            body: method === 'POST' ? '{}' : undefined,
             credentials: 'omit',
             cache: 'no-store',
             redirect: 'error',
             signal: AbortSignal.timeout(35000)
         });
         if (!response.ok) {
-            if (response.status === 401) this.deviceAuthenticated = false;
+            if (response.status === 401 && token === this.sessionToken) this.deviceAuthenticated = false;
             throw new Error(response.status === 429
                 ? 'Too many sign-in requests. Wait a minute and try again.'
                 : 'Device sign-in or data access failed. Please sign in again.');
@@ -92,7 +99,12 @@ export default class Identity {
 
     public async startDeviceLogin(): Promise<DeviceCode> {
         await this.cancelDeviceLogin();
+        const attempt = ++this.deviceAttempt;
         const result = await this.deviceRequest('/api/device/start', 'POST');
+        if (attempt !== this.deviceAttempt) {
+            try { await this.deviceRequest('/api/device/logout', 'POST', result.sessionToken); } catch { }
+            throw new Error('Device login cancelled.');
+        }
         this.sessionToken = result.sessionToken;
         // Only encode Microsoft's documented verification URL, never a token or an invented prefill URL.
         if (result.verificationUri !== 'https://microsoft.com/devicelogin'
@@ -117,6 +129,7 @@ export default class Identity {
     }
 
     public async cancelDeviceLogin() {
+        this.deviceAttempt++;
         const token = this.sessionToken;
         this.sessionToken = undefined;
         this.deviceAuthenticated = false;

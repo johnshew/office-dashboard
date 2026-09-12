@@ -54,6 +54,12 @@ function graphUrl(path) {
   }
   const params = new URLSearchParams(query.join('?'));
   const allowed = new Set(['$select', '$top', '$filter', '$orderby', '$skip', '$skiptoken', 'startDateTime', 'endDateTime']);
+  const expansions = params.getAll('$expand');
+  if (expansions.length) {
+    if (pathname !== '/me/messages' || expansions.length !== 1 ||
+        expansions[0] !== 'attachments($select=id,isInline)') throw error(400, 'Invalid Graph query');
+    allowed.add('$expand');
+  }
   for (const key of params.keys()) if (!allowed.has(key)) throw error(400, 'Invalid Graph query');
   return `https://graph.microsoft.com/v1.0${pathname}${params.size ? `?${params}` : ''}`;
 }

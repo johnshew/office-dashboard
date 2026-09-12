@@ -174,6 +174,32 @@ test('approves read paths and encoded IDs but rejects URL, traversal, expansion 
   assert.equal(f.calls.length, 4);
 });
 
+test('allows only the frontend inline-attachment expansion on the messages collection', async t => {
+  const f = await fixture(t);
+  const token = (await f.start()).body.sessionToken;
+  await f.complete();
+  const path = '/me/messages?$orderby=receivedDateTime%20desc&$expand=attachments($select=id,isInline)';
+  assert.equal((await f.call(`/api/graph?path=${encodeURIComponent(path)}`, { token })).response.status, 200);
+  const forwarded = new URL(f.calls[0].url);
+  assert.equal(forwarded.pathname, '/v1.0/me/messages');
+  assert.equal(forwarded.searchParams.get('$orderby'), 'receivedDateTime desc');
+  assert.equal(forwarded.searchParams.get('$expand'), 'attachments($select=id,isInline)');
+  for (const rejected of [
+    '/me?$expand=attachments($select=id,isInline)',
+    '/me/calendarView?$expand=attachments($select=id,isInline)',
+    '/me/messages/id/attachments/id?$expand=attachments($select=id,isInline)',
+    '/me/messages?$expand=attachments',
+    '/me/messages?$expand=attachments($select=id,isInline,contentBytes)',
+    '/me/messages?$expand=attachments($select=id,isInline),manager',
+    '/me/messages?$expand=attachments($select=id,isInline)&$expand=attachments($select=id,isInline)',
+    '/me/messages?$expand=attachments($select=id,isInline)&%24expand=manager',
+    '/me/messages?$expand=',
+  ]) {
+    assert.equal((await f.call(`/api/graph?path=${encodeURIComponent(rejected)}`, { token })).response.status, 400, rejected);
+  }
+  assert.equal(f.calls.length, 1);
+});
+
 test('malformed requests, routes, verbs and bearer credentials fail safely', async t => {
   const f = await fixture(t, { startLimit: 30 });
   for (const body of ['', '{', 'null', '[]', '1', '{"scope":"Mail.ReadWrite"}']) {
