@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-interface AboutProps extends React.Props<About> {
+interface AboutProps {
 }
 
 interface AboutState {
@@ -18,7 +18,7 @@ export default class About extends React.Component<AboutProps, AboutState> {
                 <div className="modal-dialog">
                     <div className="modal-content">
                         <div className="modal-header">
-                            <button type="button" className="close" data-dismiss="modal" aria-hidden="true">&times; </button>
+                            <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close" />
                             <h4 className="modal-title">About</h4>
                         </div>
                         <div className="modal-body">
@@ -28,7 +28,7 @@ export default class About extends React.Component<AboutProps, AboutState> {
                             <p>This is an open source application.  For more information please see the <a href="https://github.com/johnshew/office-dashboard/blob/gh-pages/LICENSE">license</a>.</p>
                         </div>
                         <div className="modal-footer">
-                            <button type="button" className="btn btn-default" data-dismiss="modal">Close</button>
+                            <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                         </div>
                     </div>
                 </div>

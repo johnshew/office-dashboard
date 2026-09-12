@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <meta name="referrer" content="no-referrer">
+    <title>Office Dashboard</title>
+
+    <style>
+        .tight {
+            margin-bottom: 0px;
+            margin-top: 0px;
+            margin-left: 0px;
+            margin-right: 0px;
+            padding: 0px;
+        }
+    </style>
+    
+</head>
+
+<body>
+    <nav id="top-nav" class="navbar navbar-expand-sm navbar-dark bg-dark tight">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#NavBarActions" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <a class="navbar-brand" href="#">Dashboard</a>
+            </div>
+            <div class="navbar-collapse collapse" id="NavBarActions">
+                <ul class="navbar-nav">
+                    <li><a class="nav-link" id="ShowMail" href="#">Mail</a></li>
+                    <li><a class="nav-link" id="ShowCalendar" href="#">Calendar</a></li>
+                    <li style="display: none"><a id="ShowContacts" href="#">Contacts</a></li>
+                    <li style="display: none"><a id="ShowNotes" href="#">Notes</a></li>
+                </ul>
+                <ul class="navbar-nav ms-auto">
+                    <li class="refreshButton">
+                        <a class="nav-link" id="RefreshCurrentView" href="#" style="display: none;">Refresh</a>
+                    </li>
+                    <li class="dropdown">
+                        <a class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" href="#">
+                            <span id="UsernameText"></span> Account
+                        </a>
+                        <ul id="account-menu" class="dropdown-menu" role="menu">
+                            <li><a class="dropdown-item" id="DoLogout" href="#">Logout</a></li>
+                            <li><a class="dropdown-item" id="ShowAbout" href="#About" data-bs-toggle="modal">About...</a></li>
+                            <li><a class="dropdown-item" id="ShowSettings" href="#Settings" data-bs-toggle="modal">Settings...</a></li>
+                        </ul>
+                    </li>
+                    <li><a class="nav-link" id="DoLogin" href="#">Login</a></li>
+                </ul>
+            </nav>
+        </div>
+        <!-- /container -->
+    </div>
+
+
+    <!-- Modal HTML -->
+
+
+    <div class="container-fluid tight">
+
+        <div id="App" class="row tight">
+        </div>
+
+
+    </div>
+
+    <script type="module" src="/samples/tesla/App.tsx"></script>
+</body>
+
+</html>

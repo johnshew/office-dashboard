@@ -1,4 +1,5 @@
 import * as React from 'react';
+import type { Message } from '@microsoft/microsoft-graph-types';
 import * as Utilities from './Utilities';
 
 import Combine = Utilities.Combine;
@@ -55,9 +56,9 @@ const selectedSummaryStyle = Combine(summaryStyle, {
     backgroundColor: "LightBlue"
 });
 
-interface MailSummaryProps extends React.Props<MailSummary> {
+interface MailSummaryProps {
     key: string;
-    message: Kurve.MessageDataModel;
+    message: Message;
     style?: Object;
     selected?: boolean;
     onSelect?(messageId: string);

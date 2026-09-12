@@ -1,4 +1,5 @@
 import * as React from 'react';
+import type { Event } from '@microsoft/microsoft-graph-types';
 import * as Utilities from './Utilities';
 
 import ItemViewHtmlBody from './ItemViewHtmlBody';
@@ -32,15 +33,15 @@ const plainTextStyle: React.CSSProperties = {
     whiteSpace: "pre-wrap"
 }
 
-interface EventViewProps extends React.Props<EventView> {
-    event: Kurve.EventDataModel;
+interface EventViewProps {
+    event: Event;
     style?: React.CSSProperties;
 }
 
 export default class EventView extends React.Component<EventViewProps, any> {
     private attendees() {
-        var x = this.props.event.attendees;
-        return x.reduce((p, a) => {
+        var x = this.props.event.attendees || [];
+        return x.reduce<string>((p, a) => {
             var result = ((p != null) ? p + '; ' : '') + a.emailAddress.name;
             return result;
         }, null);
@@ -57,7 +58,7 @@ export default class EventView extends React.Component<EventViewProps, any> {
         var subject = event.subject || "";
         var organizer = event.organizer && event.organizer.emailAddress && event.organizer.emailAddress.name || "";
         var attendees = this.attendees() || "";
-        var location = event.location.displayName;
+        var location = event.location && event.location.displayName;
         var body = event.body && event.body.content || "";
         if (event.body && event.body.contentType === "text") {
             messageBody = Combine(messageBody, plainTextStyle);
@@ -71,7 +72,7 @@ export default class EventView extends React.Component<EventViewProps, any> {
                     <p style={ small }>{ location }</p>
                 </div>
 
-                <ItemViewHtmlBody style={messageBody} body={body} />
+                <ItemViewHtmlBody style={messageBody} body={body} plainText={event.body?.contentType === "text"} />
             </div>
         );
     }

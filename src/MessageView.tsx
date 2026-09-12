@@ -1,4 +1,5 @@
 import * as React from 'react';
+import type { Message, Recipient } from '@microsoft/microsoft-graph-types';
 import { AttachmentDictionary } from './Utilities';
 
 import * as Utilities from './Utilities';
@@ -34,8 +35,8 @@ const plainTextStyle: React.CSSProperties = {
     whiteSpace: "pre-wrap"
 }
 
-interface MessageViewProps extends React.Props<MessageView> {
-    message: Kurve.MessageDataModel;
+interface MessageViewProps {
+    message: Message;
     attachments?: AttachmentDictionary;
     onMessageAttachmentDownloadRequest: (messageId: string) => void;
     style?: React.CSSProperties;
@@ -44,17 +45,16 @@ interface MessageViewProps extends React.Props<MessageView> {
 export default class MessageView extends React.Component<MessageViewProps, any> {
     private Header: HTMLDivElement;
 
-    componentWillUpdate(nextProps: MessageViewProps) {
-        console.log("checking for inline images for subject", nextProps.message && nextProps.message.subject);
+    componentDidUpdate() {
+        const nextProps = this.props;
         if (!nextProps.attachments && nextProps.message && nextProps.message.attachments &&
             nextProps.message.attachments.some(attachment => attachment.isInline)) {
-            console.log("requesting download of message attachments");
             nextProps.onMessageAttachmentDownloadRequest(nextProps.message.id);
         }
     }
 
-    private recipients(mailboxes: Kurve.Recipient[], style: React.CSSProperties, prefix: string) {
-        var recipientList = mailboxes.reduce((p, c) => { return (p ? p + "; " : "") + c.emailAddress.name; }, null);
+    private recipients(mailboxes: Recipient[], style: React.CSSProperties, prefix: string) {
+        var recipientList = (mailboxes || []).reduce<string>((p, c) => { return (p ? p + "; " : "") + c.emailAddress.name; }, null);
         if (recipientList) {
             return <p style={ style }> { prefix }: { recipientList }</p>;
         }
@@ -74,7 +74,6 @@ export default class MessageView extends React.Component<MessageViewProps, any> 
         var message = this.props.message;
         if (!message) { return null; }
         var subject = message.subject || "";
-        console.log("rendering message", subject);
         var from = message.sender && message.sender.emailAddress && message.sender.emailAddress.name || "";
         var body = message.body && message.body.content || "";
         if (message.body && message.body.contentType === "text") {
@@ -92,7 +91,7 @@ export default class MessageView extends React.Component<MessageViewProps, any> 
                     <p style={ small }>{ ShortTimeString(message.receivedDateTime) }</p>
                 </div>
 
-                <ItemViewHtmlBody style={messageBody} body={body} attachments={this.props.attachments} />
+                <ItemViewHtmlBody style={messageBody} body={body} attachments={this.props.attachments} plainText={message.body?.contentType === "text"} />
             </div>
         );
     }

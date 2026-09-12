@@ -1,4 +1,5 @@
 import * as React from 'react';
+import type { Event } from '@microsoft/microsoft-graph-types';
 
 import EventList from './EventList';
 import EventView from './EventView';
@@ -25,8 +26,8 @@ const itemViewStyle: React.CSSProperties = {
     overflow: "auto"
 }
 
-interface CalendarProps extends React.Props<Calendar> {
-    events: Kurve.EventDataModel[];
+interface CalendarProps {
+    events: Event[];
     scroll: boolean;
 }
 
@@ -44,7 +45,7 @@ export default class Calendar extends React.Component<CalendarProps, CalendarSta
         this.setState({ selected: id });
     }
 
-    private selectedCalendarEvent(): Kurve.EventDataModel {
+    private selectedCalendarEvent(): Event {
         var found = this.props.events.filter(event => (event.id === this.state.selected));
         return (found.length > 0) ? found[0] : null;
     }

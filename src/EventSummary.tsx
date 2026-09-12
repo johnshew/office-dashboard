@@ -1,4 +1,5 @@
 import * as React from 'react';
+import type { Event } from '@microsoft/microsoft-graph-types';
 import * as Utilities from './Utilities';
 
 import Combine = Utilities.Combine;
@@ -39,8 +40,8 @@ const selectedSummaryStyle = Combine(summaryStyle, {
     backgroundColor: "LightBlue"
 });
 
-interface EventSummaryProps extends React.Props<EventSummary> {
-    event: Kurve.EventDataModel;
+interface EventSummaryProps {
+    event: Event;
     style?: Object;
     selected?: boolean;
     onSelect?(messageId: string);
@@ -52,8 +53,8 @@ class DateSpan {
     public minutes: number;
 
     constructor(e: any, s: any) {
-        var em = typeof e == 'string' ? Date.parse(e) : typeof e == 'number' ? e : typeof e == 'Date' ? (e as Date).getTime() : null;
-        var sm = typeof s == 'string' ? Date.parse(s) : typeof s == 'number' ? s : typeof s == 'Date' ? (s as Date).getTime() : null;
+        var em = typeof e == 'string' ? Date.parse(e) : typeof e == 'number' ? e : e instanceof Date ? e.getTime() : null;
+        var sm = typeof s == 'string' ? Date.parse(s) : typeof s == 'number' ? s : s instanceof Date ? s.getTime() : null;
         if (!sm || !em) throw new Error("DataSpan: constructor bad argument type");
         this.minutes = Math.floor((em - sm) / (60 * 1000));
         this.hours = Math.floor(this.minutes / 60);

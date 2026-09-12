@@ -1,4 +1,5 @@
 import * as React from 'react';
+import type { FileAttachment } from '@microsoft/microsoft-graph-types';
 
 export function Hook(rootObject: any, functionToHook: string, hookingFunction: (...optionalParams: any[]) => void): void {
     var previousFunction = rootObject[functionToHook];
@@ -24,7 +25,7 @@ export function sortBy(key?: (any) => any, reverse?: boolean) {
     var direction = !reverse ? 1 : -1;
     return (a: any, b: any) => {
         var x = key(a), y = key(b);
-        return direction * ((x as any > y as any) - (y as any > x as any));
+        return direction * (Number(x > y) - Number(y > x));
     }
 }
 
@@ -54,7 +55,7 @@ export function ShortTimeString(dateString: string) {
 }
 
 export interface AttachmentDictionary {
-    [index:string]: Kurve.AttachmentDataModel;
+    [index:string]: FileAttachment;
 }
 
 export class MessageAttachments {

@@ -1,9 +1,10 @@
 import * as React from 'react';
+import type { Message } from '@microsoft/microsoft-graph-types';
 
 import MailSummary from './MailSummary';
 
-interface MailListProps extends React.Props<MailList> {
-    messages: Kurve.MessageDataModel[];
+interface MailListProps {
+    messages: Message[];
     selected?: string;
     onSelection?(id: string);
 }

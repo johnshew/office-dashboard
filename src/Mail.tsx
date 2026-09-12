@@ -1,4 +1,5 @@
 import * as React from 'react';
+import type { Message } from '@microsoft/microsoft-graph-types';
 import { MessageAttachments } from './Utilities';
 
 import MailList from './MailList';
@@ -26,8 +27,8 @@ const listStyle: React.CSSProperties = {
     overflow: "auto"
 }
 
-interface MailProps extends React.Props<Mail> {
-    messages: Kurve.MessageDataModel[];
+interface MailProps {
+    messages: Message[];
     messageAttachments?: MessageAttachments;
     onMessageAttachmentDownloadRequest: (messageId: string) => void;
     mailboxes: string[];
@@ -61,7 +62,7 @@ export default class Mail extends React.Component<MailProps, MailState> {
         this.messageView.scrollToTop();
     }
 
-    private selectedMessage(): Kurve.MessageDataModel {
+    private selectedMessage(): Message {
         var found = this.props.messages.filter((message) => (message.id === this.state.selected));
         return (found.length > 0) ? found[0] : null;
     }
@@ -83,7 +84,7 @@ export default class Mail extends React.Component<MailProps, MailState> {
                 </div>
                 <div className="col-xs-12 col-sm-8 col-lg-9" style={ itemViewStyle }>
                     <MessageView
-                        ref={ (c) => this.messageView = c }
+                        ref={ (c) => { this.messageView = c; } }
                         message={ this.selectedMessage() }
                         attachments={ attachments }
                         onMessageAttachmentDownloadRequest={ this.props.onMessageAttachmentDownloadRequest } />

@@ -1,13 +1,19 @@
 
 {
   "compilerOptions": {
-    "jsx": "react",
-    "sourceMap": true,
-    "module": "commonjs",
-    "target": "es5"
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "types": ["vite/client"]
   },
   "exclude": [
       "node_modules",
-      "public"
+      "public",
+      "dist"
   ]
 }

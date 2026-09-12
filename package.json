@@ -2,33 +2,41 @@
   "name": "GraphDashboard",
   "version": "0.0.0",
   "description": "",
-  "main": "server.js",
-  "dependencies": {
-    "bootstrap": "^3.3.6",
-    "react": "^0.14.5",
-    "react-dom": "^0.14.3",
-    "restify": "^4.0.4"
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/johnshew/office-dashboard.git"
   },
-  "devDependencies": {
-    "browserify": "^12.0.1",
-    "http-server": "^0.8.5",
-    "tsd": "^0.6.5",
-    "tsify": "^0.13.1",
-    "typescript": "^1.7.5",
-    "watchify": "^3.6.1"
-  },
   "scripts": {
-    "start": "node server.js",
-    "start-http-server": "http-server . -o --cors -p 8000 -a localhost",
-    "build": "browserify samples/tesla/App.tsx typings/tsd.d.ts    -d -p tsify -o public/bundle.js ",
-    "watch": "watchify   samples/tesla/App.tsx typings/tsd.d.ts -v -d -p tsify -o public/bundle.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "typings": "tsd install"
+    "start": "vite --host localhost --port 8000",
+    "start-http-server": "npm start",
+    "start-device-server": "node server.js",
+    "build": "tsc --noEmit && vite build --base=./",
+    "watch": "vite --host localhost --port 8000",
+    "preview": "vite preview --host localhost --port 8000",
+    "test": "node --test test/*.test.js"
   },
   "author": "JohnShew",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@azure/msal-browser": "5.21.0",
+    "@azure/msal-node": "6.0.0",
+    "@popperjs/core": "2.11.8",
+    "bootstrap": "5.3.8",
+    "qrcode": "1.5.4",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@microsoft/microsoft-graph-types": "2.43.1",
+    "@types/qrcode": "1.5.6",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "typescript": "7.0.2",
+    "vite": "8.3.0"
+  }
 }
