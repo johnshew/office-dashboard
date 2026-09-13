@@ -173,6 +173,10 @@ test('Show Images enables HTTPS images only for the selected message', async ({ 
     const requests = [];
     await page.route('**://mail-content.example.test/**', async route => {
         requests.push({ url: route.request().url(), headers: route.request().headers() });
+        if (route.request().url().endsWith('/restricted.png')) {
+            await route.abort('blockedbyresponse');
+            return;
+        }
         await route.fulfill({ contentType: 'image/png', body: Buffer.from(
             'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aY1cAAAAASUVORK5CYII=', 'base64') });
     });
@@ -185,6 +189,7 @@ test('Show Images enables HTTPS images only for the selected message', async ({ 
             <form action="https://mail-content.example.test/form"><input></form>
             <a href="https://mail-content.example.test/link">Inert link</a>
             <img src="https://mail-content.example.test/${label}.png" alt="Remote banner" referrerpolicy="unsafe-url" onload="document.body.dataset.active='true'">
+            <img src="https://mail-content.example.test/restricted.png" alt="Host-restricted image">
             <img src="http://mail-content.example.test/insecure.png" alt="Insecure image">
             <img src="https://username:password@mail-content.example.test/credentials.png" alt="Credential URL">
             <p style="background-image:url('https://mail-content.example.test/${label}-background.png')">Message content</p>` }
@@ -197,16 +202,22 @@ test('Show Images enables HTTPS images only for the selected message', async ({ 
     const frame = page.frameLocator('iframe');
     await expect(frame.getByRole('img', { name: 'Blocked image: Remote banner', exact: true })).toBeVisible();
     expect(requests).toEqual([]);
-    await expect(page.getByText('Loading images may notify the sender.', { exact: true })).toBeVisible();
+    await expect(page.getByText('Loading images may notify the sender.', { exact: true })).toHaveCount(0);
+    const metadataBounds = await page.locator('.message-metadata').boundingBox();
+    const buttonBounds = await page.getByRole('button', { name: 'Show Images', exact: true }).boundingBox();
+    expect(buttonBounds.x).toBeGreaterThanOrEqual(metadataBounds.x + metadataBounds.width);
+    expect(Math.abs(buttonBounds.y + buttonBounds.height - metadataBounds.y - metadataBounds.height)).toBeLessThanOrEqual(1);
     await page.screenshot({ path: testInfo.outputPath('images-blocked.png') });
     await page.getByRole('button', { name: 'Show Images', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Images Shown', exact: true })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Images Enabled', exact: true })).toBeDisabled();
     await expect(frame.getByRole('img', { name: 'Remote banner', exact: true })).toHaveAttribute('src', 'https://mail-content.example.test/First.png');
     await expect.poll(() => frame.getByRole('img', { name: 'Remote banner', exact: true }).evaluate(image => image.complete && image.naturalWidth > 0)).toBe(true);
-    await expect.poll(() => requests.length).toBe(2);
+    await expect.poll(() => requests.length).toBe(3);
     expect(requests.map(request => request.url).sort()).toEqual([
-        'https://mail-content.example.test/First-background.png', 'https://mail-content.example.test/First.png'
+        'https://mail-content.example.test/First-background.png', 'https://mail-content.example.test/First.png',
+        'https://mail-content.example.test/restricted.png'
     ]);
+    await expect.poll(() => frame.getByRole('img', { name: 'Host-restricted image', exact: true }).evaluate(image => image.complete && image.naturalWidth === 0)).toBe(true);
     expect(requests.every(request => !request.headers.referer && !request.headers.authorization)).toBe(true);
     await expect(frame.locator('script, iframe, form, a[href]')).toHaveCount(0);
     await expect(frame.locator('body')).not.toHaveAttribute('data-active', 'true');
@@ -221,6 +232,6 @@ test('Show Images enables HTTPS images only for the selected message', async ({ 
         await expect(page.getByRole('button', { name: 'Show Images', exact: true })).toBeEnabled();
         await expect(frame.getByRole('img', { name: 'Blocked image: Remote banner', exact: true })).toBeVisible();
         await expect(frame.locator('meta[http-equiv="Content-Security-Policy"]')).toHaveAttribute('content', /img-src data:;/);
-        expect(requests.length).toBe(2);
+        expect(requests.length).toBe(3);
     }
 });

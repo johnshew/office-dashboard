@@ -36,6 +36,13 @@ disclose your IP address and viewing time, and a unique URL can identify the mes
 you opened. No referrer is sent, but that does not prevent tracking. HTTP images remain
 blocked. Visual differences from Outlook are intentional.
 
+The button sits at the lower-right of the address block; its tracking warning is
+available as a tooltip. **Images Enabled** means requests are permitted, not that
+every image loaded. A sender's image host may forbid cross-site embedding through
+Cross-Origin-Resource-Policy or reject requests without CORS permission. The browser
+must honor those restrictions. A separately hosted, trusted image proxy would be
+needed for such images; Pages alone cannot provide one. No proxy is currently used.
+
 ## Identity and security
 
 Sign-in uses the current Microsoft Authentication Library (`@azure/msal-browser`),

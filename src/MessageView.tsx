@@ -65,10 +65,10 @@ export default class MessageView extends React.Component<MessageViewProps, any> 
                     </dl>
                     {message.body?.contentType !== 'text' && <div className="message-image-controls">
                         <button type="button" className="btn btn-outline-secondary btn-sm" disabled={showImages}
+                            title="Loading images may notify the sender."
                             onClick={() => this.setState({ imageConsent: message })}>
-                            {showImages ? 'Images Shown' : 'Show Images'}
+                            {showImages ? 'Images Enabled' : 'Show Images'}
                         </button>
-                        <span>{showImages ? 'External images enabled for this message.' : 'Loading images may notify the sender.'}</span>
                     </div>}
                 </header>
                 <ItemViewHtmlBody style={{}} body={body} attachments={this.props.attachments} plainText={message.body?.contentType === 'text'} fitContainer showImages={showImages} />

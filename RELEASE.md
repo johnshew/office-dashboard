@@ -251,6 +251,30 @@ Production publication, HTTPS enforcement, logout/session-renewal acceptance, an
 the separately hosted QR service remain separate gates. The successful local test
 does not mean a modern production release has been published.
 
+## Image-host diagnosis, September 13, 2026, 09:04 PDT
+
+Moved Show Images to the lower-right of the address block without a new help-text
+line. The enabled label now says Images Enabled rather than implying every image
+loaded. The tracking warning remains a tooltip. Six focused desktop/mobile reader
+tests and the typecheck/build pass; screenshots verify alignment without overlap.
+
+Live diagnostics distinguished a successfully loaded remote tracking pixel from
+other images rejected with `ERR_BLOCKED_BY_RESPONSE.NotSameOrigin`. An anonymous
+CORS image retry was also rejected for a missing `Access-Control-Allow-Origin`
+header. This is an upstream cross-site embedding restriction, not evidence that the
+dashboard needs weaker sandbox or script permissions. No email link was followed.
+
+Tests cover permitted HTTPS loading and a simulated blocked-response image, plus
+consent reset and header geometry. Intercepted test responses did not reproduce
+the actual host-policy enforcement, so the blocked response is explicitly mocked;
+the host-policy diagnosis comes from the live browser, not that mock.
+
+Restricted images remain unavailable in the static app. A trusted image proxy is a
+separate hosting/security decision requiring approval, restricted fetch targets,
+redirect and private-network protection, size/time limits, no credential forwarding,
+and monitoring without logging message-specific URLs. Do not use a public third-party
+proxy or weaken the email sandbox as a shortcut. No proxy has been added.
+
 ## Subsequent updates
 
 Use a PR, update `package.json` and the lockfile together, and pass all CI gates.
