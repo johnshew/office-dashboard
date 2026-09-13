@@ -147,6 +147,27 @@ This verifies the authorization request, not token exchange or mailbox availabil
 The owner must complete personal consent directly and verify the intended mailbox;
 do not grant consent for the entire organization as a shortcut.
 
+### Personal mailbox sign-in
+
+Later on September 13, real sign-in with a personal Microsoft account loaded the
+profile but mail/calendar requests returned HTTP 401. The inspected mail response
+had no JSON error body or authentication diagnostic headers. This is consistent
+with the single-tenant guest identity being unsuitable for the personal mailbox;
+it is not evidence that a generic retry or broader Graph permissions are needed.
+
+The registration's supported accounts were changed to organizational directories
+plus personal Microsoft accounts. `VITE_TENANT_ID` is now `common` in GitHub and
+the local preview; the owning directory and client ID did not change. A fresh tab
+avoids cached tenant tokens. The corrected authorization request reached the
+personal-account consent page on `account.live.com`, rather than tenant consent.
+All three read-only delegated scopes and the SPA security settings are unchanged.
+
+This supersedes the earlier single-tenant configuration checkpoint. Personal
+consent and successful mail/calendar responses still need verification; reaching
+the right consent screen is not proof the HTTP 401 is resolved. No production
+release has been issued. Treat `VITE_TENANT_ID` as the authority selector, not
+necessarily the app's owning directory ID, when supporting multiple account types.
+
 ## Subsequent updates
 
 Use a PR, update `package.json` and the lockfile together, and pass all CI gates.

@@ -42,6 +42,13 @@ This is not a guarantee of risk-free access to a mailbox.
 All `VITE_` values are **public build-time configuration**. Never put credentials
 in them. Configure different registrations for development and production if appropriate.
 
+For Outlook.com/Hotmail mailboxes, enable personal Microsoft accounts in the
+registration and use `common` (work/school plus personal) or `consumers` (personal
+only), matching the registration's audience. Signing into an organizational tenant
+as a personal-account guest can load the profile while mailbox requests fail.
+After changing the audience or authority, start a fresh sign-in in a new tab to
+avoid reusing the previous tenant's session. See [the observed setup issue](RELEASE.md#personal-mailbox-sign-in).
+
 ### Sign in on an iPhone with a QR code
 
 **Pages-only, preferred:** choose Login with Microsoft → Sign-in options → Face,
