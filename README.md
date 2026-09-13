@@ -5,8 +5,9 @@ A simple web application that shows your email and other information from Office
 The application is optimized for the Tesla dashboard screen but it works well on desktop and larger mobile devices. 
 
 The static deployment uses GitHub Pages with a custom domain managed through
-Cloudflare. DNS now targets Pages; the first versioned release and HTTPS checks
-are in progress. See [current release status](RELEASE.md#current-status).
+Cloudflare. Version 0.3.0 is published and verified over HTTPS. GitHub's own
+custom-domain certificate enforcement is still pending; Cloudflare retains
+Full (strict) TLS. See [current release status](RELEASE.md#current-status).
 
 Normal Microsoft sign-in uses `@azure/msal-browser` and calls Microsoft Graph
 directly. No Azure website, Kurve library or Node service is required. Microsoft
@@ -14,12 +15,13 @@ may offer phone/passkey sign-in when the account and browsers support it; this
 is not a guaranteed QR option on every vehicle browser. The optional dashboard
 device-code service remains disabled for this deployment.
 
-## Current candidate
+## Current release
 
-Version 0.3.0 was merged in PR #58 on September 13, 2026; it has not been published
-as a modern production release. Local Microsoft sign-in, personal consent, profile, mail and
-calendar access have been verified. See [current release status](RELEASE.md#current-status)
-for the remaining publication and device-QR requirements.
+[Version 0.3.0](https://github.com/johnshew/office-dashboard/releases/tag/v0.3.0)
+was published on September 13, 2026 from the merged default-branch commit.
+Production Microsoft sign-in, Inbox and calendar requests, refresh, session
+restoration after reload, and logout have been verified. Phone/vehicle passkey
+acceptance remains untested. See [current release status](RELEASE.md#current-status).
 
 Mail now opens **Inbox**, newest first, instead of combining every mailbox folder.
 Junk, Deleted Items and Sent Items are excluded from this view. This does not filter
