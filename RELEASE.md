@@ -162,11 +162,34 @@ avoids cached tenant tokens. The corrected authorization request reached the
 personal-account consent page on `account.live.com`, rather than tenant consent.
 All three read-only delegated scopes and the SPA security settings are unchanged.
 
-This supersedes the earlier single-tenant configuration checkpoint. Personal
-consent and successful mail/calendar responses still need verification; reaching
-the right consent screen is not proof the HTTP 401 is resolved. No production
-release has been issued. Treat `VITE_TENANT_ID` as the authority selector, not
-necessarily the app's owning directory ID, when supporting multiple account types.
+This supersedes the earlier single-tenant configuration checkpoint. Treat
+`VITE_TENANT_ID` as the authority selector, not necessarily the app's owning
+directory ID, when supporting multiple account types.
+
+### Verified personal mailbox recovery
+
+At 08:38 PDT on September 13, a fresh local sign-in and subsequent page reload
+returned HTTP 200 for `/me`, `/me/messages`, and `/me/calendarView`. This confirms
+real personal-account profile, mail, and calendar access, not just a mocked test
+or successful consent screen. Response bodies and tokens were not recorded.
+
+The preceding authorization transaction had returned `AADSTS50194`, claiming the
+app was not multi-tenant despite the changed form. A freshly loaded Microsoft Graph
+app manifest confirmed `signInAudience: AzureADandPersonalMicrosoftAccount` was
+persisted. Starting a new sign-in in a fresh tab then succeeded without another
+configuration change. Propagation or the earlier in-progress transaction is a
+possible explanation; the exact server-side cause was not established.
+
+For this error, verify the saved manifest and matching authority first. A disabled
+Save button or the dropdown's displayed value alone is insufficient evidence.
+After an audience change, discard an already-started authorization transaction and
+start fresh. Do not keep broadening permissions, switch back to the guest tenant,
+or create a secret to work around it. If a new request still fails after checking
+the persisted settings, retain its correlation ID/timestamp for Microsoft support.
+
+Production publication, HTTPS enforcement, logout/session-renewal acceptance, and
+the separately hosted QR service remain separate gates. The successful local test
+does not mean a modern production release has been published.
 
 ## Subsequent updates
 
