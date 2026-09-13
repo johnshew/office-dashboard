@@ -1,33 +1,12 @@
 import * as React from 'react';
+import type { Message } from '@microsoft/microsoft-graph-types';
 import { MessageAttachments } from './Utilities';
 
 import MailList from './MailList';
 import MessageView from './MessageView';
 
-const itemViewStyle: React.CSSProperties = {
-    height: "100%",
-    paddingRight: 0,
-    paddingLeft: 0,
-    overflow: "auto"
-}
-
-const scrollingContentStyle: React.CSSProperties = {
-    position: "absolute",
-    width: "100%",
-    top: "51px",
-    bottom: "0px"
-}
-
-const listStyle: React.CSSProperties = {
-    height: "100%",
-    borderRight: "thin solid",
-    paddingRight: 0,
-    paddingLeft: 0,
-    overflow: "auto"
-}
-
-interface MailProps extends React.Props<Mail> {
-    messages: Kurve.MessageDataModel[];
+interface MailProps {
+    messages: Message[];
     messageAttachments?: MessageAttachments;
     onMessageAttachmentDownloadRequest: (messageId: string) => void;
     mailboxes: string[];
@@ -57,11 +36,15 @@ export default class Mail extends React.Component<MailProps, MailState> {
     }
 
     private handleSelection = (id: string) => {
-        this.setState({ selected: id });
-        this.messageView.scrollToTop();
+        this.setState({ selected: id }, () => this.messageView?.scrollToTop());
     }
 
-    private selectedMessage(): Kurve.MessageDataModel {
+    private showInbox = () => {
+        const selectedRow = document.querySelector<HTMLButtonElement>('.mail-summary[aria-pressed="true"]');
+        this.setState({ selected: null }, () => selectedRow?.focus({ preventScroll: true }));
+    }
+
+    private selectedMessage(): Message {
         var found = this.props.messages.filter((message) => (message.id === this.state.selected));
         return (found.length > 0) ? found[0] : null;
     }
@@ -73,21 +56,23 @@ export default class Mail extends React.Component<MailProps, MailState> {
                 );
         */
 
-        var contentLayoutStyle = (this.props.scroll) ? scrollingContentStyle : {};
         var attachments = this.props.messageAttachments && this.state.selected && this.props.messageAttachments.messageId === this.state.selected ? this.props.messageAttachments.attachments : null;
 
         return (
-            <div style={ contentLayoutStyle }>
-                <div className="col-xs-12 col-sm-4 col-lg-3" style={ listStyle }>
+            <div className={`mail-workspace${this.selectedMessage() ? ' has-selection' : ''}`}>
+                <section className="mail-list-pane" aria-label="Inbox">
+                    <h1 className="mail-list-heading">Inbox</h1>
                     <MailList onSelection={ this.handleSelection } selected={ this.state.selected } messages={ this.props.messages } />
-                </div>
-                <div className="col-xs-12 col-sm-8 col-lg-9" style={ itemViewStyle }>
+                </section>
+                <section className="mail-reader" aria-label="Reading pane">
+                    <button type="button" className="mail-back" onClick={this.showInbox}>Back to Inbox</button>
                     <MessageView
-                        ref={ (c) => this.messageView = c }
+                        key={this.state.selected}
+                        ref={ (c) => { this.messageView = c; } }
                         message={ this.selectedMessage() }
                         attachments={ attachments }
                         onMessageAttachmentDownloadRequest={ this.props.onMessageAttachmentDownloadRequest } />
-                </div>
+                </section>
             </div>
         );
     }

@@ -82,49 +82,6 @@ export function sortBy(key?: (any) => any, reverse?: boolean) {
     var direction = !reverse ? 1 : -1;
     return (a: any, b: any) => {
         var x = key(a), y = key(b);
-        return direction * ((x as any > y as any) - (y as any > x as any));
+        return direction * (Number(x > y) - Number(y > x));
     }
-}
-
-export class DebugConsole {
-    console : HTMLDivElement;
-    logger : HTMLDivElement;
-    command : HTMLInputElement;
-
-    public constructor() {
-        this.console = document.getElementById("DebugConsole") as HTMLDivElement;
-        this.command = document.getElementById("DebugCommand") as HTMLInputElement;
-        this.logger = document.getElementById("DebugLog") as HTMLDivElement;
-
-        if (!this.console || !this.command || !this.logger) { alert("Unable to initialize local console"); return; }
-
-        Hook(console, "log", this.Log );
-
-        this.console.style.display = "";
-        this.command.onchange = () => {
-            var result = ""
-            try { result = eval(this.command.value); } catch (err) { result = "Unable to evaluate " + this.command.value + " with error " + err.toString(); }
-            console.log(result);
-            try { this.command.scrollIntoView(); } catch (err) { }
-        }
-    }
-
-    public Log = (...args : any[]) => {
-        var message = args && args[0];
-        if (message) {
-            try {
-                message = typeof message == "string" ? message : JSON.stringify(message);
-            }
-            catch (err) {
-                message = "[Could not stringify object]";
-            };
-        }
-        if (message) { this.logger.innerHTML += '<p>' + message + '</p>'; }
-    }
-}
-
-export var LocalConsole = null;
-
-export function LocalConsoleInitialize() {
-    LocalConsole = new DebugConsole();
 }

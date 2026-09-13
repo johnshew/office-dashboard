@@ -1,4 +1,5 @@
 import * as React from 'react';
+import type { Event } from '@microsoft/microsoft-graph-types';
 import * as Utilities from './Utilities';
 
 import Combine = Utilities.Combine;
@@ -16,8 +17,8 @@ const informationStyle = Combine(summaryStyle, {
     backgroundColor: "LightGrey"
 });
 
-interface EventListProps extends React.Props<EventList> {
-    events: Kurve.EventDataModel[];
+interface EventListProps {
+    events: Event[];
     selected?: string;
     onSelection?(id: string);
 }

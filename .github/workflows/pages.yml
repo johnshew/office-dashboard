@@ -1,0 +1,168 @@
+name: CI and release
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing version tag to publish or redeploy (for example v0.3.0)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    outputs:
+      ref: ${{ steps.source.outputs.ref }}
+      release: ${{ steps.source.outputs.release }}
+    steps:
+      - id: source
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          release=false
+          ref="$REF"
+          if [[ "$EVENT" == workflow_dispatch ]]; then
+            [[ "$REF" == "refs/heads/$DEFAULT_BRANCH" ]] || { echo 'Dispatch releases from the default branch.'; exit 1; }
+            ref="refs/tags/$RELEASE_TAG"
+          fi
+          if [[ "$ref" == refs/tags/* ]]; then
+            [[ "$ref" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Use a stable vMAJOR.MINOR.PATCH tag.'; exit 1; }
+            release=true
+          fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Validate
+    needs: source
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VITE_CLIENT_ID: ${{ vars.VITE_CLIENT_ID }}
+      VITE_TENANT_ID: ${{ vars.VITE_TENANT_ID }}
+      VITE_DEVICE_LOGIN_URL: ${{ vars.VITE_DEVICE_LOGIN_URL }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+          ref: ${{ needs.source.outputs.ref }}
+          fetch-depth: 0
+      - name: Verify release source
+        if: needs.source.outputs.release == 'true'
+        env:
+          RELEASE_REF: ${{ needs.source.outputs.ref }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          git merge-base --is-ancestor HEAD "origin/$DEFAULT_BRANCH"
+          expected="v$(node -p "require('./package.json').version")"
+          [[ "$RELEASE_REF" == "refs/tags/$expected" ]] || { echo 'Tag must match package.json version.'; exit 1; }
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm audit --audit-level=high
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - name: Upload browser diagnostics
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: browser-diagnostics
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+      - run: npm run validate-release-config
+        if: needs.source.outputs.release == 'true'
+      - run: npm run build
+      - name: Stamp build provenance
+        run: |
+          node --input-type=module -e "
+            import { writeFileSync, readFileSync } from 'node:fs';
+            import { execFileSync } from 'node:child_process';
+            const version = JSON.parse(readFileSync('package.json')).version;
+            const commit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+            writeFileSync('dist/release.json', JSON.stringify({ version, commit }) + '\n');
+          "
+      - name: Package tested site
+        run: |
+          tar -czf office-dashboard.tar.gz -C dist .
+          sha256sum office-dashboard.tar.gz > SHA256SUMS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-site
+          path: |
+            office-dashboard.tar.gz
+            SHA256SUMS
+          retention-days: 30
+      - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        if: needs.source.outputs.release == 'true'
+        with:
+          path: dist
+
+  deploy:
+    if: needs.source.outputs.release == 'true'
+    needs: [source, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: production-pages
+      cancel-in-progress: false
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+      - uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+        id: deployment
+
+  release:
+    needs: [source, deploy]
+    if: needs.source.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-site
+      - name: Verify deployment and publish release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_REF: ${{ needs.source.outputs.ref }}
+          PAGE_URL: ${{ needs.deploy.outputs.page_url }}
+        run: |
+          sha256sum --check SHA256SUMS
+          mkdir site
+          tar -xzf office-dashboard.tar.gz -C site
+          curl --fail --silent --show-error --retry 5 --retry-all-errors "${PAGE_URL%/}/release.json?run=$GITHUB_RUN_ID" -o deployed.json
+          cmp site/release.json deployed.json
+          tag="${RELEASE_REF#refs/tags/}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo 'Existing release redeployed; original release assets retained.'
+          else
+            gh release create "$tag" office-dashboard.tar.gz SHA256SUMS --verify-tag --generate-notes --title "Office Dashboard $tag"
+          fi
