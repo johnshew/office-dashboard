@@ -2,12 +2,14 @@
 
 ## Current status
 
-September 13, 2026, 08:52 PDT. This section supersedes the historical setup
-checkpoints below. PR #58 is the 0.3.0 candidate, not a published production release.
+September 13, 2026, 10:14 PDT. This section supersedes the historical setup
+checkpoints below. PR #58 merged into `gh-pages` at 09:08 PDT as
+`dea22832e451d6ed56eee68d4dd133710d7e24f8`. Version 0.3.0 is not yet published.
 
 - The saved SPA audience supports organizational and personal Microsoft accounts;
   GitHub and local sign-in use `VITE_TENANT_ID=common`. Client ID and owning directory
-  are unchanged. Both SPA redirects and the three delegated read scopes are saved.
+  are unchanged. The custom-domain HTTPS root was added as a third SPA callback,
+  preserving localhost and github.io. The three delegated read scopes are unchanged.
   Implicit grants and public client flows are off; no secret or tenant-wide consent
   was added. Local personal consent, profile, mail and calendar succeeded.
 - Mail now reads `/me/mailFolders/inbox/messages` with the existing attachment
@@ -27,26 +29,61 @@ checkpoints below. PR #58 is the 0.3.0 candidate, not a published production rel
   hostile email, Inbox routing, per-message HTTPS image consent and its reset,
   no-referrer image requests, preview removal and QR success/failure/cancellation. No private message
   body or token was saved. These tests do not prove real device or production acceptance.
-- Pages uses Actions and permits `gh-pages` plus `v*` tags. A fresh API check still
-  reports no certificate and `https_enforced=false`. The QR-service URL is unset;
-  no service host or separate device registration has been provisioned.
+- Pages uses Actions and permits `gh-pages` plus `v*` tags. The custom domain is
+  configured in Pages, and its Cloudflare CNAME now targets `johnshew.github.io`,
+  retaining proxying and Full (strict) TLS. HTTPS provisioning and publication
+  still require verification. Exact account and DNS records are kept privately.
+- The chosen deployment is static-only with `@azure/msal-browser`. Microsoft may
+  offer phone/passkey QR depending on the account and browser; the dashboard does
+  not promise that option. `VITE_DEVICE_LOGIN_URL` remains unset. No Node host or
+  separate device registration is needed for this rollout. Optional device-service
+  code remains available but is not deployed, and its setup warning is hidden.
 
 ### Remaining publication steps
 
-1. Resolve Pages certificate provisioning with GitHub and enable HTTPS enforcement.
-   Keep the HTTPS SPA callback; never switch authentication to the reported HTTP URL.
+1. Verify Pages certificate provisioning and HTTPS enforcement for the configured
+  custom domain. DNS was changed before publication at the user's request.
+  Preserve strict origin TLS at Cloudflare; never use HTTP authentication.
 2. Complete real refresh, logout/session-renewal and target phone/vehicle acceptance.
    Verify the newly scoped Inbox query against the real mailbox; the earlier live
    HTTP 200 evidence used `/me/messages` before this change.
-3. Require `Validate` and PR review on `gh-pages`, restrict `v*` tags to maintainers,
-   review PR #58 and merge only after the latest CI passes. Do not self-approve or
-   bypass a required reviewer. No merge or tag has been created in this session.
+3. Require `Validate` and PR review on `gh-pages` and restrict `v*` tags to maintainers.
+  PR #58 merged after successful CI without an admin bypass. Follow-up changes
+  still need integration and checks; pushing its old branch does not update the
+  merged PR. No production tag has been created.
 4. Tag the accepted default-branch commit `v0.3.0`. Verify Pages provenance, sign-in,
    Inbox, calendar and logout on the deployed HTTPS site before announcing release.
 5. Dashboard-owned QR is a separate rollout: select/approve a trusted HTTPS Node
    host, configure the matching public-client audience and exact allowed origin,
    deploy/test the service, then set `VITE_DEVICE_LOGIN_URL` in a new version. Static
    sign-in does not require that service. See [QR rollout](#qr-service-rollout).
+
+## Hosting investigation
+
+Historical observation, September 13, 2026, 09:34 PDT, before the cutover above.
+The existing custom-domain CNAME was proxied by
+Cloudflare to an Azure App Service hostname. Cloudflare uses Full (strict) TLS.
+The public HTTPS request validates TLS but returns HTTP 530 / error 1016
+(Origin DNS error); the Azure hostname returns NXDOMAIN. No DNS, TLS, redirect,
+resource or billing setting was changed during this investigation.
+
+Fresh tenant MFA exposed three Enabled personal Azure subscriptions. The legacy
+Office Dashboard App Service was absent from their current resource lists, but
+this does not establish global deletion or a move destination. Other applications
+and identity resources remain in the older hosting subscription. Preserve their
+intentional placements; do not cancel a populated subscription as dashboard cleanup.
+Exact accounts, subscription IDs and resource inventory are maintained privately.
+
+The March 2016 deployment server (`0c821bc`, `d3b17c6`) served static files from
+`public` through Restify and redirected `/` to `./public/index.html`. The modern
+`server.js` is the optional device-login service, not that static deployment server.
+Reusing the old Azure startup configuration is not a verified deployment strategy.
+
+When adopting any custom hostname, register its exact SPA root URL, validate
+the frontend base path, host configuration, edge/origin TLS and release provenance,
+then test real sign-in/logout there. The custom-domain callback is now saved
+alongside github.io and localhost. The MSDN Azure credit benefit is limited to development
+and testing; it is not automatically an eligible production hosting destination.
 
 ### Reproduce validation
 

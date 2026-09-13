@@ -106,7 +106,7 @@ class App extends React.Component<AppProps, AppState> {
             <button className="btn btn-primary me-2" disabled={!this.state.ready || this.state.busy} onClick={() => this.Login()}>Login with Microsoft</button>
             {this.identity.deviceEnabled
                 ? <button className="btn btn-secondary" disabled={!this.state.ready || this.state.busy} onClick={() => this.DeviceLogin()}>Login with iPhone / device QR code</button>
-                : <p className="mt-3">Device QR login requires a configured device sign-in service. Microsoft sign-in may also offer an iPhone passkey QR code if your account and browsers support it.</p>}
+                : null}
         </div> : null;
         var mail = (this.state.show == ShowState.Mail) ? this.renderMail() : null;
         var calendar = (this.state.show == ShowState.Calendar) ? <Calendar events={ this.state.events } scroll={ this.state.settings.scroll } /> : null;
