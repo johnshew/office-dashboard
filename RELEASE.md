@@ -2,16 +2,29 @@
 
 ## Current status
 
-September 13, 2026, 10:14 PDT. This section supersedes the historical setup
-checkpoints below. PR #58 merged into `gh-pages` at 09:08 PDT as
-`dea22832e451d6ed56eee68d4dd133710d7e24f8`. Version 0.3.0 is not yet published.
+September 13, 2026, 10:26 PDT. This section supersedes the historical setup
+checkpoints below. PRs #58 and #59 merged into the default branch, `gh-pages`.
+[Version 0.3.0](https://github.com/johnshew/office-dashboard/releases/tag/v0.3.0)
+was published at 10:25 PDT from `7b3d8a7a53059496e950cd1925d87033c8808ac0`.
+The live HTTPS `release.json` matches that version and commit.
+
+The first tagged run deployed successfully, but release publication failed because
+Pages returned an HTTP URL and the verification response was not the JSON metadata.
+PR #60 passed CI and merged an HTTPS-only verifier. A default-branch dispatch of
+the unchanged `v0.3.0` tag then passed every job in
+[run 34771421455](https://github.com/johnshew/office-dashboard/actions/runs/34771421455).
+The release retains `office-dashboard.tar.gz` and `SHA256SUMS` for rollback.
 
 - The saved SPA audience supports organizational and personal Microsoft accounts;
   GitHub and local sign-in use `VITE_TENANT_ID=common`. Client ID and owning directory
   are unchanged. The custom-domain HTTPS root was added as a third SPA callback,
   preserving localhost and github.io. The three delegated read scopes are unchanged.
   Implicit grants and public client flows are off; no secret or tenant-wide consent
-  was added. Local personal consent, profile, mail and calendar succeeded.
+  was added. Production Microsoft sign-in succeeded using the existing personal
+  session. Inbox and calendar requests returned HTTP 200 with no app alert;
+  refresh and reload preserved access. Logout reached Microsoft's signed-out
+  confirmation; reopening the site showed the signed-out welcome screen.
+  Automatic return from Microsoft's logout page was not observed.
 - Mail now reads `/me/mailFolders/inbox/messages` with the existing attachment
   expansion and 40-message limit. The service permits this exact collection, not
   arbitrary folders. Inbox can still contain spam; no mailbox cleanup was performed.
@@ -31,28 +44,29 @@ checkpoints below. PR #58 merged into `gh-pages` at 09:08 PDT as
   body or token was saved. These tests do not prove real device or production acceptance.
 - Pages uses Actions and permits `gh-pages` plus `v*` tags. The custom domain is
   configured in Pages, and its Cloudflare CNAME now targets `johnshew.github.io`,
-  retaining proxying and Full (strict) TLS. HTTPS provisioning and publication
-  still require verification. Exact account and DNS records are kept privately.
+  retaining proxying and Full (strict) TLS. The live HTTPS site works and desktop
+  1440px/mobile 390px welcome screens have no horizontal overflow. GitHub still
+  reports that its custom-domain certificate does not exist, so its own
+  `https_enforced` setting remains false. Exact account and DNS records are private.
 - The chosen deployment is static-only with `@azure/msal-browser`. Microsoft may
   offer phone/passkey QR depending on the account and browser; the dashboard does
   not promise that option. `VITE_DEVICE_LOGIN_URL` remains unset. No Node host or
   separate device registration is needed for this rollout. Optional device-service
   code remains available but is not deployed, and its setup warning is hidden.
 
-### Remaining publication steps
+### Remaining acceptance and hardening
 
 1. Verify Pages certificate provisioning and HTTPS enforcement for the configured
   custom domain. DNS was changed before publication at the user's request.
   Preserve strict origin TLS at Cloudflare; never use HTTP authentication.
-2. Complete real refresh, logout/session-renewal and target phone/vehicle acceptance.
-   Verify the newly scoped Inbox query against the real mailbox; the earlier live
-   HTTP 200 evidence used `/me/messages` before this change.
+2. Complete target phone/vehicle and fresh-interactive-sign-in acceptance.
+  Production Inbox, calendar, refresh, reload and logout checks passed on desktop;
+  Microsoft phone/passkey availability and long-lived token renewal are untested.
 3. Require `Validate` and PR review on `gh-pages` and restrict `v*` tags to maintainers.
-  PR #58 merged after successful CI without an admin bypass. Follow-up changes
-  still need integration and checks; pushing its old branch does not update the
-  merged PR. No production tag has been created.
-4. Tag the accepted default-branch commit `v0.3.0`. Verify Pages provenance, sign-in,
-   Inbox, calendar and logout on the deployed HTTPS site before announcing release.
+  PRs #58, #59 and #60 merged after successful CI without an admin bypass.
+  Ruleset enforcement has not been established by these successful runs.
+4. For the next release, tag a new accepted default-branch commit with a matching
+  package version. Do not move `v0.3.0`; its provenance and release assets are fixed.
 5. Dashboard-owned QR is a separate rollout: select/approve a trusted HTTPS Node
    host, configure the matching public-client audience and exact allowed origin,
    deploy/test the service, then set `VITE_DEVICE_LOGIN_URL` in a new version. Static
