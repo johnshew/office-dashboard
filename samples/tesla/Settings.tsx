@@ -48,7 +48,7 @@ export class Settings extends React.Component<SettingsProps, any> {
                             <h4 className="modal-title">Settings</h4>
                         </div>
                         <div className="modal-body">
-                            <input type="checkbox" checked={ values.scroll } onChange={ this.handleScrollChange }/> Enable Scrolling <br/>
+                            <label><input type="checkbox" checked={ values.scroll } onChange={ this.handleScrollChange }/> Calendar pane scrolling</label><br/>
                             {/*<input type="checkbox" checked={ values.testData } onChange={ this.handleTestDataChange }/> Use Test Data <br/>*/}
                             <br/>
                             <input type="number" min="0" style={ { width: "80px" } } value={ values.refreshIntervalSeconds } onChange={ this.handleRefreshChange }/> Refresh interval in seconds.  0 to disable <br/>

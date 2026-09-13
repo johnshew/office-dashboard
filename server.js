@@ -39,7 +39,8 @@ function graphUrl(path) {
   if (!path || path.length > 8192 || /[#\\\s]/.test(path)) throw error(400, 'Invalid Graph path');
   const [pathname, ...query] = path.split('?');
   const attachment = /^\/me\/messages\/([^/]+)\/attachments\/([^/]+)$/.exec(pathname);
-  if (!['/me', '/me/messages', '/me/calendarView'].includes(pathname) && !attachment) {
+  const messageCollection = ['/me/messages', '/me/mailFolders/inbox/messages'].includes(pathname);
+  if (!['/me', '/me/calendarView'].includes(pathname) && !messageCollection && !attachment) {
     throw error(400, 'Invalid Graph path');
   }
   if (attachment) {
@@ -56,7 +57,7 @@ function graphUrl(path) {
   const allowed = new Set(['$select', '$top', '$filter', '$orderby', '$skip', '$skiptoken', 'startDateTime', 'endDateTime']);
   const expansions = params.getAll('$expand');
   if (expansions.length) {
-    if (pathname !== '/me/messages' || expansions.length !== 1 ||
+    if (!messageCollection || expansions.length !== 1 ||
         expansions[0] !== 'attachments($select=id,isInline)') throw error(400, 'Invalid Graph query');
     allowed.add('$expand');
   }

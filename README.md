@@ -6,6 +6,36 @@ The application is optimized for the Tesla dashboard screen but it works well on
 
 The static site is intended for https://johnshew.github.io/office-dashboard/.
 
+## Current candidate
+
+Version 0.3.0 is being prepared in PR #58; it has not been published as a modern
+production release. Local Microsoft sign-in, personal consent, profile, mail and
+calendar access have been verified. See [current release status](RELEASE.md#current-status)
+for the remaining publication and device-QR requirements.
+
+Mail now opens **Inbox**, newest first, instead of combining every mailbox folder.
+Junk, Deleted Items and Sent Items are excluded from this view. This does not filter
+spam already in Inbox or move/delete any messages. The existing fetch limit is 40
+messages; this is not a complete-mailbox browser.
+
+The Inbox list and message body scroll independently on desktop. On phones, selecting
+a message opens a full-width reader; Back to Inbox returns to the list. Rows show the
+sender, date and subject without body previews. Subjects wrap,
+metadata includes the full local received date, and keyboard selection is supported.
+Exceptionally long headers have their own bounded scroll area so the body stays usable.
+The Settings scrolling option now applies only to Calendar.
+
+Blocked decorative images are omitted; images with alternative text become small
+"Image blocked" placeholders. Supported inline attachments still render. Email tables
+and images are constrained to the available width where possible; unusually rigid
+email layouts can still scroll horizontally inside the isolated body. **Show Images**
+in the message header enables external HTTPS images, including CSS background images,
+only for that selection. Switching messages, refreshing the mailbox or reloading
+resets the choice; nothing is remembered in browser storage. Loading images may
+disclose your IP address and viewing time, and a unique URL can identify the message
+you opened. No referrer is sent, but that does not prevent tracking. HTTP images remain
+blocked. Visual differences from Outlook are intentional.
+
 ## Identity and security
 
 Sign-in uses the current Microsoft Authentication Library (`@azure/msal-browser`),
@@ -18,9 +48,11 @@ handles the small set of read-only endpoints instead of another API wrapper.
 
 MSAL manages browser tokens in **session storage**, not persistent local storage.
 The old Kurve token entry is deleted at startup. Log out before leaving a shared
-display. Email and event HTML is rendered in a sandboxed, network-blocked frame so
-it cannot access the dashboard or its tokens. External images, links, forms, scripts,
-and embedded content are disabled; inline PNG/JPEG/GIF/WebP images remain supported.
+display. Email and event HTML is rendered in a sandboxed frame so it cannot access
+the dashboard or its tokens. Network access is blocked by default. Mail's per-message
+Show Images control allows HTTPS image requests; it does not enable links, forms,
+scripts or embedded content. Calendar images remain default-blocked. Inline
+PNG/JPEG/GIF/WebP attachments remain supported without opting in.
 This is not a guarantee of risk-free access to a mailbox.
 
 ### Register Microsoft sign-in
@@ -81,8 +113,11 @@ Device flow is not an MSAL Browser API. To enable the dashboard-owned QR:
    (comma-separated exact origins, e.g. `https://johnshew.github.io` — **no path or
    trailing slash**). Set `PORT` if needed (default 8001).
 3. In the service's app registration, enable **Allow public client flows** and grant
-   the same delegated permissions. No client secret is needed. Prefer a separate
-   single-tenant registration and restrict access with tenant policy.
+   the same delegated permissions. No client secret is needed. Use a separate
+   registration with the intended audience: a tenant GUID for approved organizational
+   mailboxes, or matching personal-account support and `common`/`consumers` for personal
+   mailboxes. Apply tenant policy where applicable; a guest identity does not grant
+   access to the guest's personal mailbox.
 4. Set the static build's `VITE_DEVICE_LOGIN_URL` to the service's HTTPS base URL,
    then rebuild/redeploy Pages. For development only, `http://localhost:8001` is
    allowed when the dashboard also runs on `localhost`.
@@ -165,6 +200,8 @@ There are still a number of significant limitations and issues in this release:
 
 Please use this link to report bugs or provide suggestions: https://github.com/johnshew/office-dashboard/issues
 
+The all-folder behavior above describes 0.2 only; the current 0.3.0 candidate opens Inbox.
+
 ## Original implementation background
 
 This app was developed to: 
@@ -182,7 +219,9 @@ now live in `samples/tesla/Identity.ts`; the optional device service is `server.
 
 Once the information is acquired from Office and placed into app state it gets rendered by set of user interface components.
     
-The user interface is designed to work with both modern browsers and as well as more limited browsers as found on TVs and the Tesla. For these more limited browsers the application provides a layout option (in Settings) that is flat without any scrolling regions other than the page itself. 
+Mail uses a viewport-sized responsive list/reader. Calendar retains its optional
+pane-scrolling setting; it no longer controls Mail. The isolated HTML body cannot be
+auto-sized by reading its document from the dashboard without weakening its sandbox.
 
 The React display components in `src/` use Microsoft's Graph type definitions and
 do not acquire data themselves.
@@ -191,7 +230,8 @@ These Office React components may potentially be useful to build other applicati
 
 Bootstrap 5 supplies the navbar, dialogs, and grid styling without jQuery.
 
-Consistent with the recommended approach to React, the React components do not use any global CSS classes other than the grid system. As noted above, we use the Bootstrap grid system.  Bootstrap is used to provide responsive layout. 
+Bootstrap supplies shared controls. Mail-specific classes in `samples/tesla/dashboard.css`
+provide the responsive reading layout without changing Calendar's legacy grid.
 
 ### Working with the Tesla browser
 
@@ -199,6 +239,7 @@ The updated app requires a modern browser with Web Crypto, modules, and current
 web APIs. Obsolete vehicle browsers may no longer work; do not restore legacy
 implicit authentication or insecure polyfills to accommodate them.
 
-That said it is important to recognize that the Browser is pretty slow at rendering so don't make your user interface too complicated. In particular note that the Tesla browser is faster at scrolling an entire page relative to scrolling the contents of a div.  You can see this in the app by enabling scrolling in the settings dialog. 
+Test touch scrolling, text size, sign-in and logout on the actual target vehicle
+browser before release. Desktop/mobile Chromium automation is not vehicle acceptance.
 
 Use browser developer tools for debugging; avoid logging tokens or mailbox content.

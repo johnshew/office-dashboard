@@ -32,26 +32,15 @@ export function sortBy(key?: (any) => any, reverse?: boolean) {
 export enum Days { Mon = 1, Tue, Wed, Thu, Fri, Sat, Sun }
 
 export function ShortTimeString(dateString: string) {
-    var today = new Date();
-    var date = new Date(dateString);
-
-    if (date.toDateString() === today.toDateString()) {
-        var hours = date.getHours();
-        var suffix = " AM";
-        if (hours == 0) {
-            hours = 12;
-        } else if (hours >= 12) {
-            suffix = " PM";
-            hours -= 12;
-        }
-        var minutes = date.getMinutes().toString();
-        if (minutes.length == 1) {
-            minutes = "0" + minutes;
-        }
-        return hours + ":" + minutes + suffix;
-    } else {
-        return Days[date.getDay()] + " " + date.getMonth() + "/" + date.getDate();
-    }
+    const today = new Date();
+    const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toDateString() === today.toDateString()
+        ? date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+        : date.toLocaleDateString('en-US', {
+            weekday: 'short', month: 'numeric', day: 'numeric',
+            ...(date.getFullYear() !== today.getFullYear() ? { year: 'numeric' as const } : {})
+        });
 }
 
 export interface AttachmentDictionary {

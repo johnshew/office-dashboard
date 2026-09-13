@@ -178,13 +178,18 @@ test('allows only the frontend inline-attachment expansion on the messages colle
   const f = await fixture(t);
   const token = (await f.start()).body.sessionToken;
   await f.complete();
-  const path = '/me/messages?$orderby=receivedDateTime%20desc&$expand=attachments($select=id,isInline)';
-  assert.equal((await f.call(`/api/graph?path=${encodeURIComponent(path)}`, { token })).response.status, 200);
-  const forwarded = new URL(f.calls[0].url);
-  assert.equal(forwarded.pathname, '/v1.0/me/messages');
-  assert.equal(forwarded.searchParams.get('$orderby'), 'receivedDateTime desc');
-  assert.equal(forwarded.searchParams.get('$expand'), 'attachments($select=id,isInline)');
+  for (const collection of ['/me/messages', '/me/mailFolders/inbox/messages']) {
+    const path = `${collection}?$orderby=receivedDateTime%20desc&$expand=attachments($select=id,isInline)`;
+    assert.equal((await f.call(`/api/graph?path=${encodeURIComponent(path)}`, { token })).response.status, 200);
+    const forwarded = new URL(f.calls.at(-1).url);
+    assert.equal(forwarded.pathname, `/v1.0${collection}`);
+    assert.equal(forwarded.searchParams.get('$orderby'), 'receivedDateTime desc');
+    assert.equal(forwarded.searchParams.get('$expand'), 'attachments($select=id,isInline)');
+  }
   for (const rejected of [
+    '/me/mailFolders/junkemail/messages',
+    '/me/mailFolders/inbox/messages?$expand=attachments',
+    '/me/mailFolders/inbox/messages?$expand=attachments($select=id,isInline)&$expand=manager',
     '/me?$expand=attachments($select=id,isInline)',
     '/me/calendarView?$expand=attachments($select=id,isInline)',
     '/me/messages/id/attachments/id?$expand=attachments($select=id,isInline)',
@@ -197,7 +202,7 @@ test('allows only the frontend inline-attachment expansion on the messages colle
   ]) {
     assert.equal((await f.call(`/api/graph?path=${encodeURIComponent(rejected)}`, { token })).response.status, 400, rejected);
   }
-  assert.equal(f.calls.length, 1);
+  assert.equal(f.calls.length, 2);
 });
 
 test('malformed requests, routes, verbs and bearer credentials fail safely', async t => {

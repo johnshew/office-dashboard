@@ -15,7 +15,18 @@ const server = await createServer({
     }
 });
 const { default: Identity } = await server.ssrLoadModule('/samples/tesla/Identity.ts');
+const { ShortTimeString } = await server.ssrLoadModule('/src/Utilities.ts');
 after(() => server.close());
+
+test('mail dates use calendar months, Sunday, and twelve-hour noon and midnight', t => {
+    t.mock.timers.enable({ apis: ['Date'], now: new Date(2026, 8, 14, 15).getTime() });
+    assert.equal(ShortTimeString(new Date(2026, 8, 13, 8).toISOString()), 'Sun, 9/13');
+    assert.equal(ShortTimeString(new Date(2026, 8, 11, 8).toISOString()), 'Fri, 9/11');
+    assert.equal(ShortTimeString(new Date(2026, 8, 14, 12, 5).toISOString()), '12:05 PM');
+    assert.equal(ShortTimeString(new Date(2026, 8, 14, 0, 5).toISOString()), '12:05 AM');
+    assert.match(ShortTimeString(new Date(2025, 8, 11, 8).toISOString()), /2025/);
+    assert.equal(ShortTimeString('invalid'), '');
+});
 
 function browserIdentity() {
     const identity = new Identity();

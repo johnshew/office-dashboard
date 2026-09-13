@@ -113,7 +113,7 @@ class App extends React.Component<AppProps, AppState> {
         var loadingMessage = (this.state.fetchingMail || this.state.fetchingCalendar) ? <div style={ loadingMessageStyle }>Loading...</div> : null;
 
         return (
-            <div>
+            <div className={this.state.show === ShowState.Mail ? 'app-shell mail-active' : 'app-shell'}>
                 { loadingMessage }
                 {this.state.error && <div className="alert alert-danger" role="alert">{this.state.error}</div>}
                 { welcome }
@@ -194,7 +194,7 @@ class App extends React.Component<AppProps, AppState> {
         this.setState({ fetchingMail: true });
 
         try {
-            const messages = await this.identity.collection<Message>('/me/messages?$orderby=receivedDateTime desc&$expand=attachments($select=id,isInline)');
+            const messages = await this.identity.collection<Message>('/me/mailFolders/inbox/messages?$orderby=receivedDateTime desc&$expand=attachments($select=id,isInline)');
             if (generation === this.generation) this.setState({ messages });
         } catch (error) {
             if (generation === this.generation) this.showError(error);

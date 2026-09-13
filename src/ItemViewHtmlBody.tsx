@@ -6,13 +6,17 @@ interface ItemViewHtmlBodyProps {
     body: string;
     attachments?: AttachmentDictionary;
     plainText?: boolean;
+    fitContainer?: boolean;
+    showImages?: boolean;
 }
 
 export default class ItemViewHtmlBody extends React.Component<ItemViewHtmlBodyProps, any> {
     render() {
-        if (this.props.plainText) return <div style={{ ...this.props.style, whiteSpace: 'pre-wrap' }}>{this.props.body}</div>;
+        if (this.props.plainText) return <div className={this.props.fitContainer ? 'message-plain-body' : undefined}
+            style={{ ...this.props.style, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{this.props.body}</div>;
         return <iframe title="Message or event body" sandbox="" referrerPolicy="no-referrer"
-            style={{ ...this.props.style, width: '100%', height: '65vh', border: 0 }}
+            className={this.props.fitContainer ? 'message-html-body' : undefined}
+            style={{ ...this.props.style, width: '100%', height: this.props.fitContainer ? '100%' : '65vh', border: 0 }}
             srcDoc={this.parseMessageBody(this.props.body, this.props.attachments)} />;
     }
 
@@ -33,16 +37,27 @@ export default class ItemViewHtmlBody extends React.Component<ItemViewHtmlBodyPr
             var contentId = (image.getAttribute('src') || '').replace(/^cid:/i, '');
             var attachment = inlineAttachments && inlineAttachments[contentId];
             image.removeAttribute('srcset');
+            image.setAttribute('referrerpolicy', 'no-referrer');
+            let remoteUrl: URL;
+            try { remoteUrl = new URL(image.getAttribute('src') || ''); } catch { }
             if (attachment && /^image\/(png|jpeg|gif|webp)$/i.test(attachment.contentType)) {
                 image.src = 'data:' + attachment.contentType + ';base64,' + attachment.contentBytes;
+            } else if (this.props.showImages && remoteUrl?.protocol === 'https:' && !remoteUrl.username && !remoteUrl.password) {
+                image.src = remoteUrl.href;
             } else {
-                image.removeAttribute('src');
-                image.alt = image.alt || 'External or unavailable image blocked';
+                if (!image.alt?.trim()) { image.remove(); return; }
+                const placeholder = document.createElement('span');
+                placeholder.textContent = 'Image blocked';
+                placeholder.title = image.alt;
+                placeholder.setAttribute('role', 'img');
+                placeholder.setAttribute('aria-label', `Blocked image: ${image.alt}`);
+                placeholder.style.cssText = 'display:inline-block;max-width:100%;font:12px/1.5 sans-serif;color:#586068;background:#f2f4f5;border:1px solid #d8dde0;border-radius:3px;padding:2px 6px;overflow-wrap:anywhere;';
+                image.replaceWith(placeholder);
             }
         });
 
-        // The sandbox isolates content from tokens; CSP also blocks tracking and all active content.
-        return '<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src data:; style-src \'unsafe-inline\'; base-uri \'none\'; form-action \'none\'"></head><body>'
-            + template.innerHTML + '</body></html>';
+        const imageSources = this.props.showImages ? 'data: https:' : 'data:';
+        return '<!doctype html><html><head><meta name="referrer" content="no-referrer"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src ' + imageSources + '; style-src \'unsafe-inline\'; base-uri \'none\'; form-action \'none\'"></head><body>'
+            + template.innerHTML + '<style>html{overflow-wrap:anywhere}body{margin:0;padding:16px;box-sizing:border-box}img,table{max-width:100%!important}img{height:auto!important}table{box-sizing:border-box}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style></body></html>';
     }
 }

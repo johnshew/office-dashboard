@@ -1,5 +1,63 @@
 # Release Plan
 
+## Current status
+
+September 13, 2026, 08:52 PDT. This section supersedes the historical setup
+checkpoints below. PR #58 is the 0.3.0 candidate, not a published production release.
+
+- The saved SPA audience supports organizational and personal Microsoft accounts;
+  GitHub and local sign-in use `VITE_TENANT_ID=common`. Client ID and owning directory
+  are unchanged. Both SPA redirects and the three delegated read scopes are saved.
+  Implicit grants and public client flows are off; no secret or tenant-wide consent
+  was added. Local personal consent, profile, mail and calendar succeeded.
+- Mail now reads `/me/mailFolders/inbox/messages` with the existing attachment
+  expansion and 40-message limit. The service permits this exact collection, not
+  arbitrary folders. Inbox can still contain spam; no mailbox cleanup was performed.
+- Mail has readable dates, keyboard-selectable rows, a subject-led wrapping header,
+  independent list/body scrolling and mobile list/detail navigation. Calendar keeps
+  its scrolling setting. Blocked images no longer show broken-image icons; responsive
+  body styles preserve sandbox isolation and supported inline images. List body
+  previews are removed. Show Images explicitly enables HTTPS images only for the
+  current selection, resets on selection/refresh/reload, and is never persisted.
+  Referrers are suppressed, but IP/time and per-message URL tracking remain possible.
+  Scripts, forms, links, insecure images and embeds remain blocked after consent.
+- Latest local validation: 35 Node tests, 12 desktop/mobile Chromium tests, and the
+  TypeScript/Vite build pass. Synthetic screenshots were inspected. Tests cover wide
+  tables, long text, CID images, plain text, focus restoration, scroll boundaries,
+  hostile email, Inbox routing, per-message HTTPS image consent and its reset,
+  no-referrer image requests, preview removal and QR success/failure/cancellation. No private message
+  body or token was saved. These tests do not prove real device or production acceptance.
+- Pages uses Actions and permits `gh-pages` plus `v*` tags. A fresh API check still
+  reports no certificate and `https_enforced=false`. The QR-service URL is unset;
+  no service host or separate device registration has been provisioned.
+
+### Remaining publication steps
+
+1. Resolve Pages certificate provisioning with GitHub and enable HTTPS enforcement.
+   Keep the HTTPS SPA callback; never switch authentication to the reported HTTP URL.
+2. Complete real refresh, logout/session-renewal and target phone/vehicle acceptance.
+   Verify the newly scoped Inbox query against the real mailbox; the earlier live
+   HTTP 200 evidence used `/me/messages` before this change.
+3. Require `Validate` and PR review on `gh-pages`, restrict `v*` tags to maintainers,
+   review PR #58 and merge only after the latest CI passes. Do not self-approve or
+   bypass a required reviewer. No merge or tag has been created in this session.
+4. Tag the accepted default-branch commit `v0.3.0`. Verify Pages provenance, sign-in,
+   Inbox, calendar and logout on the deployed HTTPS site before announcing release.
+5. Dashboard-owned QR is a separate rollout: select/approve a trusted HTTPS Node
+   host, configure the matching public-client audience and exact allowed origin,
+   deploy/test the service, then set `VITE_DEVICE_LOGIN_URL` in a new version. Static
+   sign-in does not require that service. See [QR rollout](#qr-service-rollout).
+
+### Reproduce validation
+
+Use Node 24, `npm ci`, `npm test`, `npx playwright install chromium`, and
+`npm run test:browser`. Browser tests build with mocked identity settings on port 8002.
+Before previewing or publishing `dist/`, run `npm run build` again with real public
+configuration: the test build is deliberately not a production-authentication build.
+For real local sign-in, populate `.env` from `.env.example` and run `npm start` on
+`http://localhost:8000/`. Use the registered client ID and `VITE_TENANT_ID=common` for
+this candidate. Never put a secret or token in any `VITE_` variable.
+
 ## 0.3.0 scope
 
 Consolidate the September 12 modernization and its follow-up fixes in PR #58:
@@ -8,10 +66,12 @@ Consolidate the September 12 modernization and its follow-up fixes in PR #58:
 - Optional MSAL Node device-code service, local QR generation, bounded in-memory
   sessions, exact-origin CORS, and an allowlisted read-only Graph proxy.
 - Fix the frontend/backend attachment query contract and late authentication responses.
-- Isolate untrusted mail/event HTML in sandboxed, network-blocked frames.
+- Isolate untrusted mail/event HTML in sandboxed frames with default-blocked network
+  access and an explicit per-selection HTTPS image opt-in for Mail.
 - Replace unavailable React/Vite/type pins with published stable versions and refresh
   the lockfile. Retain the modern MSAL and TypeScript stack.
 - Add production configuration validation and desktop/mobile browser regression tests.
+- Scope Mail to Inbox and replace clipped legacy mail rows, dates and nested scrolling.
 
 This is a modernization release, not a claim of compatibility with old vehicle
 browsers. Authentication requires current Web Crypto and browser APIs.
@@ -38,7 +98,7 @@ of the default branch. PRs and ordinary branch pushes never deploy.
    `https://johnshew.github.io/office-dashboard/`. Grant delegated `User.Read`,
    `Mail.Read`, and `Calendars.Read` and arrange tenant consent. Do not create a secret.
 3. Set repository Actions variables `VITE_CLIENT_ID` and `VITE_TENANT_ID`. The client
-   ID must be real, not a placeholder. Prefer an approved tenant GUID. These are public
+  ID must be real, not a placeholder. Match the audience (`common` for this app). These are public
    build settings, not secrets. Leave `VITE_DEVICE_LOGIN_URL` unset for the first
    static-only release unless the separately hosted service has passed acceptance.
 4. Switch Settings > Pages > Source to GitHub Actions before merging; merging must
@@ -89,12 +149,13 @@ Verified during setup on September 13, 2026:
   documentation. Personal administrator/account details belong in the owner's
   private account notes, not this public repository.
 
-At the September 13 setup checkpoint, the Office Dashboard registration was verified
+At the early September 13 setup checkpoint, the Office Dashboard registration was verified
 in Entra. Both documented SPA redirects and all three delegated Graph permissions
 were saved and read back. Implicit grants and public client flows were disabled.
 GitHub's public client and tenant variables were configured and read back. The
-registration remains single-tenant; no tenant-wide consent was granted. Real-mailbox
-acceptance and production deployment remain unverified. The QR service URL is unset.
+registration was then single-tenant; no tenant-wide consent was granted. Real-mailbox
+acceptance was then unverified. Later personal-account setup and acceptance below
+supersede that state. Production deployment and QR hosting remain pending.
 
 Local validation passed: 34 Node tests, six mocked Chromium desktop/mobile tests,
 the TypeScript/Vite production build, and actionlint on both workflows. Dependency
@@ -134,17 +195,16 @@ HTTPS enforcement before production acceptance. Keep the registered HTTPS callba
 do not work around this by registering the HTTP Pages URL. If the API continues to
 report no certificate after provisioning, investigate with GitHub support.
 
-Remaining gates: confirm the intended mailbox audience, complete real sign-in and
-consent, verify mail/calendar access and logout, review/merge the PR, and run the
-first version-tag deployment. QR hosting and its separate registration are still
-unprovisioned; the static-only release can proceed independently once its gates pass.
+At that checkpoint, audience, personal consent and mailbox acceptance were still
+pending; they were subsequently verified below. The current remaining gates are
+listed at the top of this guide. QR hosting remains independent of static publication.
 
-Local acceptance reached Microsoft's Office Dashboard consent screen using the
+The initial local acceptance attempt reached Microsoft's Office Dashboard consent screen using the
 configured client, tenant, and `http://localhost:8000/` callback. It requested the
 three delegated read scopes plus standard identity/offline-access scopes. Consent
 was not accepted and the organization-wide consent checkbox was left unchecked.
 This verifies the authorization request, not token exchange or mailbox availability.
-The owner must complete personal consent directly and verify the intended mailbox;
+Personal consent and mailbox acceptance were completed later, as recorded below;
 do not grant consent for the entire organization as a shortcut.
 
 ### Personal mailbox sign-in
@@ -224,6 +284,8 @@ Pages cannot host the Node service. Before enabling `VITE_DEVICE_LOGIN_URL`:
 
 - Select a trusted HTTPS host and a separate approved Entra public-client registration;
   enable public client flows. Do not weaken Conditional Access to permit device flow.
+  Match the intended mailbox audience: personal mailboxes need personal-account support
+  and `common`/`consumers`, not the personal administrator's organizational guest tenant.
 - Deploy this release's `server.js`, `package.json`, and lockfile with Node 24 and
   `npm ci --omit=dev`; start with `npm run start-device-server`.
 - Inject `DEVICE_CLIENT_ID`, `DEVICE_TENANT_ID`, `DEVICE_ALLOWED_ORIGINS`, `HOST`, and
