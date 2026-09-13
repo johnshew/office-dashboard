@@ -113,6 +113,40 @@ account's GitHub-provided noreply identity and amend only your own unpublished
 commit's author and committer. Do not disable the protection or rewrite shared
 history to publish a checkpoint.
 
+## Verified rollout checkpoint
+
+September 13, 2026: commit `143325a` was pushed to PR #58, which is ready for review.
+[GitHub Actions run 34765484324](https://github.com/johnshew/office-dashboard/actions/runs/34765484324)
+passed clean Linux installation, all Node/browser tests, the dependency audit,
+production build, provenance stamping, and artifact packaging. Deployment and release
+jobs were correctly skipped for the branch push. The artifact is a testable candidate,
+not a production release.
+
+Pages Source is now GitHub Actions. The `github-pages` environment permits the
+`gh-pages` branch and `v*` tags. No PR merge, production tag, or new site deployment
+has been performed. Required branch review/status rules remain an initial-launch
+check; environment source restrictions are not a replacement for review.
+
+GitHub rejected enabling Enforce HTTPS with "The certificate does not exist yet".
+The source switch succeeded separately, but HTTPS enforcement remains off. Resolve
+the site's certificate provisioning in Settings > Pages, then enable and verify
+HTTPS enforcement before production acceptance. Keep the registered HTTPS callback;
+do not work around this by registering the HTTP Pages URL. If the API continues to
+report no certificate after provisioning, investigate with GitHub support.
+
+Remaining gates: confirm the intended mailbox audience, complete real sign-in and
+consent, verify mail/calendar access and logout, review/merge the PR, and run the
+first version-tag deployment. QR hosting and its separate registration are still
+unprovisioned; the static-only release can proceed independently once its gates pass.
+
+Local acceptance reached Microsoft's Office Dashboard consent screen using the
+configured client, tenant, and `http://localhost:8000/` callback. It requested the
+three delegated read scopes plus standard identity/offline-access scopes. Consent
+was not accepted and the organization-wide consent checkbox was left unchecked.
+This verifies the authorization request, not token exchange or mailbox availability.
+The owner must complete personal consent directly and verify the intended mailbox;
+do not grant consent for the entire organization as a shortcut.
+
 ## Subsequent updates
 
 Use a PR, update `package.json` and the lockfile together, and pass all CI gates.
