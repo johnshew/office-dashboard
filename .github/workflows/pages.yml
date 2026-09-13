@@ -158,7 +158,8 @@ jobs:
           sha256sum --check SHA256SUMS
           mkdir site
           tar -xzf office-dashboard.tar.gz -C site
-          curl --fail --silent --show-error --retry 5 --retry-all-errors "${PAGE_URL%/}/release.json?run=$GITHUB_RUN_ID" -o deployed.json
+          page_url="${PAGE_URL/#http:/https:}"
+          curl --proto '=https' --proto-redir '=https' --location --fail --silent --show-error --retry 5 --retry-all-errors "${page_url%/}/release.json?run=$GITHUB_RUN_ID" -o deployed.json
           cmp site/release.json deployed.json
           tag="${RELEASE_REF#refs/tags/}"
           if gh release view "$tag" >/dev/null 2>&1; then
