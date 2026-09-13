@@ -1,7 +1,7 @@
 {
   "name": "GraphDashboard",
-  "version": "0.0.0",
-  "description": "",
+  "version": "0.3.0",
+  "description": "Read-only Microsoft 365 dashboard with modern sign-in and optional device QR login",
   "private": true,
   "type": "module",
   "engines": {
@@ -18,7 +18,9 @@
     "build": "tsc --noEmit && vite build --base=./",
     "watch": "vite --host localhost --port 8000",
     "preview": "vite preview --host localhost --port 8000",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "validate-release-config": "node scripts/validate-release-config.js",
+    "test:browser": "playwright test"
   },
   "author": "JohnShew",
   "license": "MIT",
@@ -28,15 +30,16 @@
     "@popperjs/core": "2.11.8",
     "bootstrap": "5.3.8",
     "qrcode": "1.5.4",
-    "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
     "@microsoft/microsoft-graph-types": "2.43.1",
+    "@playwright/test": "1.63.0",
     "@types/qrcode": "1.5.6",
-    "@types/react": "19.3.0",
-    "@types/react-dom": "19.3.0",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7",
     "typescript": "7.0.2",
-    "vite": "8.3.0"
+    "vite": "8.2.2"
   }
 }

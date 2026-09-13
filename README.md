@@ -114,17 +114,25 @@ In GitHub:
 2. Under **Settings → Secrets and variables → Actions → Variables**, set
    `VITE_CLIENT_ID`, optionally `VITE_TENANT_ID`, and optionally
    `VITE_DEVICE_LOGIN_URL`. These are non-secret settings.
-3. Merge into the default branch (currently `gh-pages`) or dispatch the Pages
-   workflow from that branch. PRs build/test but **do not deploy**. Deployments
-   require a configured client ID.
+3. Merge into the default branch (currently `gh-pages`) after CI passes, then push
+   a version tag matching `package.json` (initial release: `v0.3.0`). PRs and ordinary
+   branch pushes build/test but **do not deploy**. Releases require valid production
+   identity configuration. Dispatch the workflow from the default branch with an
+   existing release tag to retry a failed deployment.
 4. Confirm the `github-pages` deployment URL and register that exact URL in Entra.
    Test sign-in, mail, calendar, refresh, logout, and iPhone sign-in with your tenant.
 
-The workflow uses pinned GitHub Actions, `npm ci`, tests, dependency auditing, and
-the official Pages artifact/deployment actions. Only `dist/` is uploaded; relative
+The workflow uses pinned GitHub Actions, `npm ci`, unit/security tests, desktop/mobile
+Chromium login smoke tests, dependency auditing, and the official Pages deployment
+actions. Only `dist/` is uploaded; relative
 asset paths support repository subpaths and custom domains. The optional Node
 service is **not deployed by this workflow**. Repository settings, app registration,
 consent, and a live authenticated deployment must be completed by the owner.
+
+See [the release plan](RELEASE.md) for launch gates, versioning, GitHub release assets,
+exact-artifact rollback, and the separate QR service rollout. Run browser tests locally
+with `npx playwright install chromium` followed by `npm run test:browser`; these use
+mocked Microsoft/service responses and do not require an account.
 
 ## Historical release notes (legacy implementation)
 
