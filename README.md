@@ -1,8 +1,16 @@
-# Office Dashboard for the Tesla
+---
+title: Office Dashboard
+description: Static React and TypeScript dashboard for read-only Microsoft Graph mail and calendar access with MSAL Browser sign-in.
+---
 
-A simple web application that shows your email and other information from Office 365.
+## Overview
 
-The application is optimized for the Tesla dashboard screen but it works well on desktop and larger mobile devices. 
+Office Dashboard is a static React and TypeScript application for reading Microsoft
+365 and personal Outlook mail and calendar data. It uses MSAL Browser for Microsoft
+sign-in, native `fetch` for Microsoft Graph v1.0, and Vite to build the site.
+
+The interface supports desktop and mobile layouts and is intended for compatible
+Tesla browsers. Actual vehicle compatibility requires testing on the target device.
 
 The static deployment uses GitHub Pages with a custom domain managed through
 Cloudflare. Version 0.3.0 is published and verified over HTTPS. GitHub's own
@@ -10,12 +18,18 @@ custom-domain certificate enforcement is still pending; Cloudflare retains
 Full (strict) TLS. See [current release status](RELEASE.md#current-status).
 
 Normal Microsoft sign-in uses `@azure/msal-browser` and calls Microsoft Graph
-directly. No Azure website, Kurve library or Node service is required. Microsoft
-may offer phone/passkey sign-in when the account and browsers support it; this
-is not a guaranteed QR option on every vehicle browser. The optional dashboard
+directly. The deployed SPA has no application backend. Node and npm are used for
+local development, builds and tests, not as a production web service. For the
+Tesla target, assume passkeys and cross-device passkey QR are unavailable. Use
+Microsoft redirect sign-in and account selection instead. The optional dashboard
 device-code service remains disabled for this deployment.
 
 ## Current release
+
+Version 0.3.1 is the next release candidate. Explicit Login requests Microsoft's
+account chooser; ordinary reload and session restoration remain unchanged. This
+does not force a phone/passkey option or enable a dashboard-owned device service.
+Publication and real account-choice acceptance are not yet verified.
 
 [Version 0.3.0](https://github.com/johnshew/office-dashboard/releases/tag/v0.3.0)
 was published on September 13, 2026 from the merged default-branch commit.
@@ -58,13 +72,13 @@ needed for such images; Pages alone cannot provide one. No proxy is currently us
 Sign-in uses the current Microsoft Authentication Library (`@azure/msal-browser`),
 authorization code with PKCE, and Microsoft Graph v1.0 over HTTPS. Only delegated
 `User.Read`, `Mail.Read`, and `Calendars.Read` are requested. There are no application
-permissions or client secrets. The retired Kurve library, implicit-flow callback,
+permissions or client secrets. The legacy authentication library, implicit-flow callback,
 custom token store, jQuery, browser debug evaluator, and CDN scripts have been removed.
 Microsoft Graph's maintained TypeScript definitions describe the data; native `fetch`
 handles the small set of read-only endpoints instead of another API wrapper.
 
 MSAL manages browser tokens in **session storage**, not persistent local storage.
-The old Kurve token entry is deleted at startup. Log out before leaving a shared
+The legacy token-cache entry is deleted at startup. Log out before leaving a shared
 display. Email and event HTML is rendered in a sandboxed frame so it cannot access
 the dashboard or its tokens. Network access is blocked by default. Mail's per-message
 Show Images control allows HTTPS image requests; it does not enable links, forms,
@@ -100,15 +114,15 @@ avoid reusing the previous tenant's session. See [the observed setup issue](RELE
 
 ### Sign in on an iPhone with a QR code
 
-**Pages-only, preferred:** choose Login with Microsoft → Sign-in options → Face,
+**Other compatible browsers only, not the Tesla target:** choose Login with Microsoft → Sign-in options → Face,
 fingerprint, PIN or security key → another device. Microsoft/the browser can display
 a cross-device passkey QR code. Scan with the iPhone Camera and authenticate there.
 This requires an enrolled, tenant-approved passkey, compatible browsers/devices,
-Bluetooth and internet; it is not available on every vehicle browser.
+Bluetooth and internet. This is not part of the supported Tesla sign-in design.
 [Microsoft's passkey instructions](https://learn.microsoft.com/en-us/entra/identity/authentication/how-to-sign-in-passkey-authenticator).
 
-**Device-code alternative for input-constrained displays:** configure the optional
-Node service below. Select **Login with iPhone / device QR code**, scan the QR, enter
+**Separate backend rollout, currently disabled:** after explicit architecture
+approval, configure the optional Node service below. Select **Login with iPhone / device QR code**, scan the QR, enter
 the displayed short code **on the phone**, and complete Microsoft's sign-in/consent.
 The dashboard polls and continues automatically without typing in the dashboard
 browser. Cancel, denial, expiry, and retry are supported. QR images are generated
@@ -120,8 +134,13 @@ required. See the [device authorization response](https://learn.microsoft.com/en
 
 #### Optional device-code service
 
+The repository retains optional device-service code, but it is not part of the
+static deployment. Keep `VITE_DEVICE_LOGIN_URL` unset for this app's no-backend
+rollout. Enabling the service would be a separate, explicitly approved architecture
+change, not a fix for Microsoft account selection.
+
 GitHub Pages is static hosting. **It cannot run MSAL Node or the polling service.**
-Device flow is not an MSAL Browser API. To enable the dashboard-owned QR:
+Device flow is not an MSAL Browser API. For a separately approved deployment:
 
 1. Deploy `server.js` and its production npm dependencies to a trusted Node 22.12+
    host (Node 24 LTS recommended), separately from Pages. Terminate HTTPS there;
@@ -217,17 +236,13 @@ There are still a number of significant limitations and issues in this release:
 
 Please use this link to report bugs or provide suggestions: https://github.com/johnshew/office-dashboard/issues
 
-The all-folder behavior above describes 0.2 only; the current 0.3.0 candidate opens Inbox.
+The all-folder behavior above describes 0.2 only; the published 0.3.0 release opens Inbox.
 
-## Original implementation background
+## Architecture
 
-This app was developed to: 
-* Demonstrate how to display information from http://graph.microsoft.io
-* Test http://github.com/MicrosoftDx/KurveJS
-* Learn more about React and how to use React with Typescript 
-* Make it easy to catch up on mail and other Office information using the browser in Tesla http://tesla.com. 
-
-The source is available at https://github.com/johnshew/office-dashboard/
+The project began as a 2016 Microsoft API and React prototype. The current
+implementation uses MSAL, Microsoft Graph and the npm-managed TypeScript/React
+toolchain. Historical experiments under `test/` are not application entry points.
 
 ### Implementation Notes
 
@@ -243,8 +258,6 @@ auto-sized by reading its document from the dashboard without weakening its sand
 The React display components in `src/` use Microsoft's Graph type definitions and
 do not acquire data themselves.
 
-These Office React components may potentially be useful to build other applications. If there is interest in this we will factor them out into a seperate Office React library that this application will use.
-
 Bootstrap 5 supplies the navbar, dialogs, and grid styling without jQuery.
 
 Bootstrap supplies shared controls. Mail-specific classes in `samples/tesla/dashboard.css`
@@ -252,11 +265,56 @@ provide the responsive reading layout without changing Calendar's legacy grid.
 
 ### Working with the Tesla browser
 
-The updated app requires a modern browser with Web Crypto, modules, and current
-web APIs. Obsolete vehicle browsers may no longer work; do not restore legacy
-implicit authentication or insecure polyfills to accommodate them.
+Use [TeslaTap's published MCU2 reference](https://teslatap.com/mcu/) as the
+development compatibility baseline: Intel Atom E8000-series hardware, Linux
+x86_64, and a recorded Chromium 88.0.4324.150 user agent. TeslaTap identifies its
+samples as collected in 2014, 2018 and 2022; this is a historical reference, not
+a claim that every Intel Tesla still runs that browser version. Its tester is
+primarily intended for Model S/X and may misidentify Model 3/Y hardware.
+
+The current application is not yet verified compatible with Chromium 88. The
+build does not explicitly target Chrome 88, and Graph requests currently use
+`AbortSignal.timeout()`, which Chromium 88 lacks. JavaScript build targeting and
+runtime API compatibility must both be addressed before claiming support. Retain
+MSAL authorization code with PKCE and HTTPS; do not restore legacy implicit
+authentication or weaken security to accommodate the baseline.
+
+Explicit Login uses a top-level redirect with `prompt: 'select_account'`, not a
+popup. Microsoft's [account selection request](https://learn.microsoft.com/en-us/entra/identity-platform/msal-js-prompt-behavior)
+asks for accounts already in the Microsoft browser session and an option to use
+another account. It cannot supply an account the browser has never remembered.
+The dashboard does not hard-code or persist an email address. MSAL uses session
+storage; ordinary reload restoration is distinct from remembering an account
+after closing the browser, a vehicle restart or clearing browser data.
+
+| Capability | Requirement or limitation |
+| --- | --- |
+| Microsoft sign-in | HTTPS, Web Crypto, working session storage and top-level redirects |
+| Graph requests | Native fetch and [AbortSignal.timeout](https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal/timeout_static); missing support can break data loading after login |
+| Account picker | Microsoft must retain its own account/session state to offer a previously used account |
+| Phone/passkey QR | Assumed unavailable on the Tesla target; not a supported sign-in path or release dependency |
+| Dashboard device-code QR | Disabled in the static deployment; no backend is enabled |
+
+Treat lack of Tesla passkey support as a project design assumption, not a measured
+claim about every firmware version. Do not infer support from Bluetooth pairing
+or a similar desktop engine. The TeslaTap reference does not establish
+saved-account persistence. Use it for
+development without requiring the car to be present; record the actual model,
+infotainment hardware and software version during later device acceptance.
 
 Test touch scrolling, text size, sign-in and logout on the actual target vehicle
 browser before release. Desktop/mobile Chromium automation is not vehicle acceptance.
+Perform the test while parked: sign in once, use Login again to check account
+selection, reload to check session restoration, then close/reopen the browser and
+check whether Microsoft still offers the account. Verify Inbox and Calendar load.
+Phone/passkey authentication is not required or promised for this target.
 
 Use browser developer tools for debugging; avoid logging tokens or mailbox content.
+
+## Agent-assisted development
+
+[AGENTS.md](AGENTS.md) is the shared instruction entry point for this repository.
+It routes development, authentication/security, testing and release work to focused
+guides under [.agents](.agents). [CLAUDE.md](CLAUDE.md) imports the same guide for
+Claude Code. Keep project rules in the shared guides rather than duplicating them
+across tools.

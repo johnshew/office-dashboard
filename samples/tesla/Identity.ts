@@ -65,7 +65,7 @@ export default class Identity {
     public async login() {
         if (!this.client) throw new Error('Browser sign-in requires VITE_CLIENT_ID.');
         await this.cancelDeviceLogin();
-        await this.client.loginRedirect({ scopes });
+        await this.client.loginRedirect({ scopes, prompt: 'select_account' });
     }
 
     public async logout() {

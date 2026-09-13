@@ -41,6 +41,30 @@ function browserIdentity() {
     return identity;
 }
 
+test('explicit browser login requests account selection after cancelling device login', async t => {
+    const identity = browserIdentity();
+    identity.sessionToken = 'test-device-session';
+    identity.deviceAuthenticated = true;
+    const fetch = t.mock.method(globalThis, 'fetch', async (url, options) => {
+        assert.equal(url, 'http://localhost:8001/api/device/logout');
+        assert.equal(options.method, 'POST');
+        assert.equal(options.headers.Authorization, 'Bearer test-device-session');
+        return Response.json({ status: 'ok' });
+    });
+    const requests = [];
+    identity.client.loginRedirect = async request => {
+        assert.equal(identity.sessionToken, undefined);
+        assert.equal(identity.deviceAuthenticated, false);
+        assert.equal(fetch.mock.callCount(), 1);
+        requests.push(request);
+    };
+    await identity.login();
+    assert.deepEqual(requests, [{
+        scopes: ['User.Read', 'Mail.Read', 'Calendars.Read'],
+        prompt: 'select_account'
+    }]);
+});
+
 test('device-only initialization removes the legacy token cache', async t => {
     const removed = [];
     t.mock.method(localStorage, 'removeItem', key => removed.push(key));
