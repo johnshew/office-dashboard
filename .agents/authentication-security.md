@@ -39,6 +39,13 @@ protected storage and a key-management/cleanup design. Never put Microsoft
 tokens, a Tesla session credential or a passkey private key in a QR, URL,
 clipboard or public frontend configuration.
 
+Phone Link may share the existing Office Dashboard Entra registration, as
+directed by the owner. Add an exact Web callback alongside the existing SPA
+platform; keep its SPA redirects, account audience, PKCE and read-only delegated
+scopes unchanged. The Web client credential is only used server-side. Sharing
+an application ID does not permit a browser secret, implicit grants or enabling
+public-client flows for the Web service.
+
 ## Graph and untrusted content
 
 Preserve delegated, read-only scopes and the service's endpoint/query allowlist.

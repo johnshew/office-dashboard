@@ -66,7 +66,11 @@ needed for such images; Pages alone cannot provide one. No proxy is currently us
 Sign-in uses the current Microsoft Authentication Library (`@azure/msal-browser`),
 authorization code with PKCE, and Microsoft Graph v1.0 over HTTPS. Only delegated
 `User.Read`, `Mail.Read`, and `Calendars.Read` are requested. There are no application
-permissions or client secrets. The retired Kurve library, implicit-flow callback,
+permissions or client secrets in the browser sign-in. The optional Phone Link
+backend uses a confidential Web platform and server-only secrets. The owner
+selected the existing Office Dashboard registration for both platforms; this
+does not make a secret part of the browser flow.
+The retired Kurve library, implicit-flow callback,
 custom token store, jQuery, browser debug evaluator, and CDN scripts have been removed.
 Microsoft Graph's maintained TypeScript definitions describe the data; native `fetch`
 handles the small set of read-only endpoints instead of another API wrapper.
@@ -186,16 +190,26 @@ That older relay is not the Node device-code service and is not itself an
 end-to-end Phone Link implementation. The 0.4.0 candidate adapts its bounded
 pairing design into `workers/pairing/`; it replaces the relay API with phone
 OAuth, explicit approval, encrypted server-side token storage and dashboard
-integration. Live Worker deployment has not been established here.
+integration. On October 2, 2026 the existing relay Worker was confirmed healthy
+at `https://office-dashboard-pairing.vanamonde.workers.dev`, using the
+`office-dashboard-relay` database and legacy `relay_slots` table. It was
+preserved unchanged. The new Phone Link Worker has not been deployed; a
+healthy legacy relay does not establish phone OAuth or account acceptance.
 
-The Worker-backed Phone Link service needs a separate Entra **web**
-registration and exact callback, protected server-side token storage, and
+The Worker-backed Phone Link service needs an Entra **Web** platform and exact
+callback, protected server-side token storage, and
 server-only application credentials managed as Worker secrets. Never put those
 credentials in `VITE_` variables, URLs or QR contents. The existing
 `VITE_DEVICE_LOGIN_URL` enables only the Node device-code path, not Phone Link.
 Set `VITE_PHONE_LINK_URL` to the exact HTTPS Worker origin only after its rollout
 is accepted. See [Worker setup](.agents/worker.md) and
 [the rollout requirements](RELEASE.md#qr-service-rollout) before deployment.
+
+The owner selected the existing Office Dashboard app registration for Phone Link.
+Add its Web callback without removing or changing the existing SPA callbacks.
+Both flows can share the application ID and accepted audience; only the Worker
+uses the new server credential. Browser sign-in remains authorization code with
+PKCE and never receives that credential.
 
 #### Optional device-code service
 
@@ -258,7 +272,8 @@ In GitHub:
 1. Set **Settings → Pages → Source → GitHub Actions** (not deploy from branch).
 2. Under **Settings → Secrets and variables → Actions → Variables**, set
    `VITE_CLIENT_ID`, optionally `VITE_TENANT_ID`, and optionally
-   `VITE_DEVICE_LOGIN_URL`. These are non-secret settings.
+   `VITE_DEVICE_LOGIN_URL` or `VITE_PHONE_LINK_URL` only after the selected
+   backend passes its separate rollout gates. These are non-secret settings.
 3. Merge into the default branch (currently `gh-pages`) after CI passes, then push
    a version tag matching `package.json` (initial release: `v0.3.0`). PRs and ordinary
    branch pushes build/test but **do not deploy**. Releases require valid production
@@ -274,6 +289,14 @@ deployment. Only `dist/` is uploaded; relative
 asset paths support repository subpaths and custom domains. The optional Node
 service is **not deployed by this workflow**. Repository settings, app registration,
 consent, and a live authenticated deployment must be completed by the owner.
+
+Cloudflare Phone Link has its own manual **Phone Link release** workflow,
+separate from Pages. It requires an accepted source revision, protected human
+approval, scoped Cloudflare CI credentials and configured Worker secrets.
+Normal deploys reuse the preserved bundle; schema initialization and an
+existing-version rollback are explicit choices. See
+[Worker CI/CD](.agents/worker.md#independent-worker-cicd). Adding this workflow
+does not enable phone login or change the existing legacy relay.
 
 See [the release plan](RELEASE.md) for launch gates, versioning, GitHub release assets,
 exact-artifact rollback, and the separate QR service rollout. Run browser tests locally

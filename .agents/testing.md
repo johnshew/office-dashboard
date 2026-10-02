@@ -9,6 +9,7 @@ Use the existing runners; do not add a parallel testing toolchain.
 | Phone Link service and identity | `node --test test\pairing-worker.test.js test\phone-identity.test.js` |
 | Worker bundle/runtime imports | `npm run build:worker` (dry-run, no deployment) |
 | Release configuration | `node --test test\release-config.test.js` |
+| Worker release configuration and safeguards | `node --test test\worker-release.test.js` |
 | TypeScript, React or build compatibility | `npm run build` |
 | Dashboard interaction and phone UI | `npm run test:browser` |
 | Documentation only | Review commands, relative links and status claims; `git diff --check` |

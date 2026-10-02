@@ -1,0 +1,160 @@
+name: Phone Link release
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Explicit independent Worker release or rollback
+        required: true
+        type: choice
+        options: [deploy, rollback]
+      source_ref:
+        description: Full accepted default-branch commit SHA or existing immutable vMAJOR.MINOR.PATCH tag
+        required: true
+        type: string
+      apply_schema:
+        description: Separately approve additive phone_slots initialization from this exact source
+        type: boolean
+        default: false
+      schema_confirmation:
+        description: If applying schema, enter apply-reviewed-phone-link-schema
+        type: string
+      rollback_version_id:
+        description: For rollback, existing compatible Phone Link Worker version UUID
+        type: string
+      rollback_confirmation:
+        description: For rollback, enter compatible-schema-and-secrets after reviewing compatibility
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      commit: ${{ steps.source.outputs.commit }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - id: source
+        name: Verify exact source and release workflow provenance
+        env:
+          SOURCE_REF: ${{ inputs.source_ref }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          WORKFLOW_COMMIT: ${{ github.workflow_sha }}
+        run: node scripts/worker-release.js source
+      - name: Require successful default-branch CI for the exact commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SOURCE_COMMIT: ${{ steps.source.outputs.commit }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          gh api --method GET "repos/$GH_REPO/actions/workflows/pages.yml/runs" \
+            -f head_sha="$SOURCE_COMMIT" -f branch="$DEFAULT_BRANCH" -f event=push -f status=success -f per_page=100 \
+            --jq '.workflow_runs | map(select(.conclusion == "success")) | length' > accepted-runs.txt
+          [[ "$(cat accepted-runs.txt)" -gt 0 ]] || { echo 'Exact source needs successful default-branch CI before Worker release.'; exit 1; }
+      - name: Require preconfigured production environment approvals
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          approved_environment="$(gh api "repos/$GH_REPO/environments/cloudflare-phone-link" \
+            --jq 'any(.protection_rules[]?; .type == "required_reviewers" and (.reviewers | length) > 0)')"
+          [[ "$approved_environment" == true ]] || { echo 'Configure required reviewers on cloudflare-phone-link before release.'; exit 1; }
+
+  validate:
+    needs: source
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ needs.source.outputs.commit }}
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: node --test test/pairing-worker.test.js test/phone-identity.test.js test/worker-release.test.js
+      - run: npm run build:worker
+
+  production:
+    needs: [source, validate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: production-cloudflare-phone-link
+      cancel-in-progress: false
+    environment:
+      name: cloudflare-phone-link
+      url: ${{ vars.PHONE_SERVICE_ORIGIN }}
+    env:
+      SOURCE_COMMIT: ${{ needs.source.outputs.commit }}
+      PHONE_WORKER_NAME: ${{ vars.PHONE_WORKER_NAME }}
+      APP_ORIGIN: ${{ vars.APP_ORIGIN }}
+      PHONE_SERVICE_ORIGIN: ${{ vars.PHONE_SERVICE_ORIGIN }}
+      PHONE_CLIENT_ID: ${{ vars.PHONE_CLIENT_ID }}
+      PHONE_TENANT_ID: ${{ vars.PHONE_TENANT_ID }}
+      PHONE_ACCOUNT_AUDIENCE: ${{ vars.PHONE_ACCOUNT_AUDIENCE }}
+      D1_DATABASE_ID: ${{ vars.D1_DATABASE_ID }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ needs.source.outputs.commit }}
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Generate fail-closed public deployment configuration
+        run: node scripts/worker-release.js prepare
+      - name: Bundle exact reviewed Worker without cloud credentials
+        if: inputs.operation == 'deploy'
+        run: |
+          node scripts/worker-release.js bundle
+          node scripts/worker-release.js verify
+      - name: Preserve immutable bundle, config, schema and digests before deployment
+        if: inputs.operation == 'deploy'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phone-link-${{ needs.source.outputs.commit }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: dist-worker/phone-link-release/
+          if-no-files-found: error
+          retention-days: 90
+      - name: Deploy preserved bundle or explicit existing version and verify readiness
+        env:
+          OPERATION: ${{ inputs.operation }}
+          APPLY_SCHEMA: ${{ inputs.apply_schema }}
+          SCHEMA_CONFIRMATION: ${{ inputs.schema_confirmation }}
+          ROLLBACK_VERSION_ID: ${{ inputs.rollback_version_id }}
+          ROLLBACK_CONFIRMATION: ${{ inputs.rollback_confirmation }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          [[ "$OPERATION" == deploy || "$OPERATION" == rollback ]] || exit 1
+          if [[ "$OPERATION" == rollback && "$APPLY_SCHEMA" != false ]]; then
+            echo 'Rollback never applies or reverses schema.'
+            exit 1
+          fi
+          node scripts/worker-release.js "$OPERATION"
+      - name: Preserve sanitized deployment receipt
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phone-link-receipt-${{ github.run_id }}-${{ github.run_attempt }}
+          path: dist-worker/phone-link-release/deployment.json
+          if-no-files-found: ignore
+          retention-days: 90

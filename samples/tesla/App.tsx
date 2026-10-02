@@ -43,6 +43,7 @@ interface AppState {
     deviceCode?: DeviceCode;
     phoneLink?: PhoneLink;
     qrCode?: string;
+    loginChooser?: boolean;
 }
 
 class App extends React.Component<AppProps, AppState> {
@@ -80,7 +81,10 @@ class App extends React.Component<AppProps, AppState> {
 
         this.me = null;
 
-        document.getElementById("DoLogin").onclick = (e) => this.Login();
+        document.getElementById("DoLogin").onclick = (e) => {
+            e.preventDefault();
+            this.ShowLoginChoices();
+        };
         document.getElementById("DoLogout").onclick = (e) => this.Logout();
         document.getElementById("ShowMail").onclick = (e) => this.ShowMail();
         document.getElementById("ShowCalendar").onclick = (e) => this.ShowCalendar();
@@ -101,47 +105,67 @@ class App extends React.Component<AppProps, AppState> {
     }
 
     public render() {
-        var welcome = (this.state.show == ShowState.Welcome) ? <div className="p-4">
-            <h2>Welcome</h2>
-            <p>Please log in to access your information.</p>
-            {this.identity.browserEnabled && <button className="btn btn-primary me-2" disabled={!this.state.ready || this.state.busy} onClick={() => this.Login()}>Login with Microsoft</button>}
-            {this.identity.phoneEnabled && <button id="PhoneLinkLogin" className="btn btn-primary me-2" disabled={!this.state.ready || this.state.busy} onClick={() => this.PhoneLinkLogin()}>Phone Link</button>}
-            {this.identity.deviceEnabled
-                ? <button className="btn btn-secondary" disabled={!this.state.ready || this.state.busy} onClick={() => this.DeviceLogin()}>Login with iPhone / device QR code</button>
-                : null}
-        </div> : null;
-        var mail = (this.state.show == ShowState.Mail) ? this.renderMail() : null;
-        var calendar = (this.state.show == ShowState.Calendar) ? <Calendar events={ this.state.events } scroll={ this.state.settings.scroll } /> : null;
+        const choosingLogin = this.state.show === ShowState.Welcome || this.state.loginChooser;
+        var welcome = choosingLogin ? <section className="login-chooser" aria-labelledby="login-choice-title">
+            <h2 id="login-choice-title" tabIndex={-1}>{this.IsLoggedIn() ? 'Switch account' : 'Welcome to Office Dashboard'}</h2>
+            <p className="login-intro">Choose how to sign in to Microsoft to view your mail and calendar.</p>
+            {this.IsLoggedIn() && <p>Your current account stays signed in until you choose another sign-in method.</p>}
+            <div className="login-options">
+                {this.identity.phoneEnabled && <div className="login-option login-option-recommended">
+                    <p className="login-recommendation">Recommended for Tesla</p>
+                    <button id="PhoneLinkLogin" className="btn btn-primary" aria-describedby="phone-login-description" disabled={!this.state.ready || this.state.busy} onClick={() => this.PhoneLinkLogin()}>Sign in with your phone</button>
+                    <p id="phone-login-description">Scan a QR code, sign in on your phone, then approve this screen. No code typing or Bluetooth needed.</p>
+                </div>}
+                {this.identity.browserEnabled && <div className="login-option">
+                    <button className="btn btn-outline-primary" aria-describedby="screen-login-description" disabled={!this.state.ready || this.state.busy} onClick={() => this.Login()}>Sign in on this screen</button>
+                    <p id="screen-login-description">Open Microsoft sign-in here and enter your credentials on this screen.</p>
+                </div>}
+            </div>
+            {this.identity.deviceEnabled && <div className="login-device-option">
+                <button id="DeviceCodeLogin" className="btn btn-outline-secondary" aria-describedby="device-login-description" disabled={!this.state.ready || this.state.busy} onClick={() => this.DeviceLogin()}>Use a device code</button>
+                <p id="device-login-description">Scan a QR code, then type Microsoft's short code on your phone.</p>
+            </div>}
+            {!this.identity.browserEnabled && !this.identity.phoneEnabled && !this.identity.deviceEnabled && <p>Sign-in is not available on this dashboard yet.</p>}
+            {this.state.busy && !this.state.phoneLink && !this.state.deviceCode && <p role="status">Opening sign-in…</p>}
+            {this.IsLoggedIn() && <button className="btn btn-outline-secondary" disabled={!!this.state.busy} onClick={() => this.setState({ loginChooser: false })}>Back to dashboard</button>}
+        </section> : null;
+        var mail = (!choosingLogin && this.state.show == ShowState.Mail) ? this.renderMail() : null;
+        var calendar = (!choosingLogin && this.state.show == ShowState.Calendar) ? <Calendar events={ this.state.events } scroll={ this.state.settings.scroll } /> : null;
         var loadingMessage = (this.state.fetchingMail || this.state.fetchingCalendar) ? <div style={ loadingMessageStyle }>Loading...</div> : null;
 
         return (
-            <div className={this.state.show === ShowState.Mail ? 'app-shell mail-active' : 'app-shell'}>
+            <div className={!choosingLogin && this.state.show === ShowState.Mail ? 'app-shell mail-active' : 'app-shell'}>
                 { loadingMessage }
                 {this.state.error && <div className="alert alert-danger" role="alert">{this.state.error}</div>}
                 { welcome }
                 {this.state.phoneLink && <>
                     <div className="modal-backdrop show"></div>
-                    <section className="modal d-block" role="dialog" aria-modal="true" aria-labelledby="phone-link-title"
+                    <section className="modal d-block phone-login-dialog" role="dialog" aria-modal="true" aria-labelledby="phone-link-title" aria-describedby="phone-link-steps"
                         onKeyDown={event => {
                             if (event.key === 'Escape') void this.CancelDeviceLogin();
                             // Cancel is this waiting dialog's only focusable control.
                             if (event.key === 'Tab') event.preventDefault();
                         }}>
                         <div className="modal-dialog modal-dialog-centered"><div className="modal-content">
-                            <div className="modal-header"><h2 className="modal-title fs-4" id="phone-link-title">Phone Link</h2></div>
+                            <div className="modal-header"><h2 className="modal-title fs-4" id="phone-link-title">Sign in with your phone</h2></div>
                             <div className="modal-body" aria-live="polite">
                                 {this.state.qrCode && <img className="img-fluid" src={this.state.qrCode} width="256" height="256" alt="Scan to sign in with Microsoft on your phone" />}
-                                <p>Scan with your phone camera. Sign in with Microsoft on your phone, then explicitly approve this dashboard.</p>
-                                <p>Match this pairing label before approving: <strong>{this.state.phoneLink.label}</strong>.</p>
-                                <p>No code entry or car Bluetooth is needed. Microsoft may offer a phone-local passkey.</p>
-                                <p>Waiting for your approval. Pairing expires at {new Date(this.state.phoneLink.expiresAt).toLocaleTimeString()}.</p>
+                                <ol id="phone-link-steps">
+                                    <li>Scan this QR code with your phone camera.</li>
+                                    <li>Sign in to Microsoft on your phone.</li>
+                                    <li>Match the label below on your phone, then tap Approve.</li>
+                                </ol>
+                                <p className="phone-pairing-label"><strong>{this.state.phoneLink.label}</strong></p>
+                                <p>Approve only if you started this sign-in and both labels match.</p>
+                                <p>No code typing or Bluetooth needed.</p>
+                                <p className="phone-login-status">Waiting for your approval. This QR code expires at {new Date(this.state.phoneLink.expiresAt).toLocaleTimeString()}. If it expires, start again from this screen.</p>
                             </div>
-                            <div className="modal-footer"><button className="btn btn-secondary" autoFocus onClick={() => this.CancelDeviceLogin()}>Cancel Phone Link</button></div>
+                            <div className="modal-footer"><button className="btn btn-secondary" autoFocus onClick={() => this.CancelDeviceLogin()}>Cancel sign-in</button></div>
                         </div></div>
                     </section>
                 </>}
-                {this.state.deviceCode && <section className="p-4" aria-live="polite">
-                    <h2>Continue on your iPhone</h2>
+                {this.state.deviceCode && <section className="device-login p-4" aria-live="polite">
+                    <h2>Enter the device code on your phone</h2>
                     {this.state.qrCode && <img src={this.state.qrCode} width="256" height="256" alt="Scan to open Microsoft's device sign-in page" />}
                     <p>Scan with the Camera app, then enter <strong>{this.state.deviceCode.userCode}</strong> on your phone.</p>
                     <p>Or open <a href={this.state.deviceCode.verificationUri} target="_blank" rel="noopener noreferrer">{this.state.deviceCode.verificationUri}</a> on your phone.</p>
@@ -255,6 +279,7 @@ class App extends React.Component<AppProps, AppState> {
     }
 
     public UpdateLoginState() {
+        document.getElementById("DoLogin").textContent = this.identity.isLoggedIn() ? 'Switch account' : 'Login';
         if (this.identity.isLoggedIn()) {
             document.getElementById("DoLogin").style.display = "inherit";
             document.getElementById("DoLogout").style.display = "inherit";
@@ -270,7 +295,7 @@ class App extends React.Component<AppProps, AppState> {
         console.log('Successful login.');
         this.UpdateLoginState();
         if (this.mounted) {
-            this.setState({ show: ShowState.Mail });
+            this.setState({ show: ShowState.Mail, loginChooser: false });
         }
         const generation = this.generation;
         try {
@@ -288,6 +313,31 @@ class App extends React.Component<AppProps, AppState> {
         return this.identity.isLoggedIn();
     }
 
+    private ShowLoginChoices() {
+        if (this.state.busy) return;
+        const focusChooser = () => {
+            const title = document.getElementById('login-choice-title');
+            title?.focus();
+            title?.scrollIntoView({ block: 'start' });
+        };
+        const toggler = document.querySelector<HTMLButtonElement>('#top-nav .navbar-toggler');
+        const closingNavigation = toggler?.getAttribute('aria-expanded') === 'true';
+        if (closingNavigation) {
+            const navigation = document.getElementById('NavBarActions');
+            const closeNavigation = () => {
+                navigation.addEventListener('hidden.bs.collapse', focusChooser, { once: true });
+                toggler.click();
+            };
+            // Bootstrap ignores toggle requests while the mobile menu is opening.
+            if (navigation.classList.contains('collapsing')) {
+                navigation.addEventListener('shown.bs.collapse', closeNavigation, { once: true });
+            } else closeNavigation();
+        }
+        this.setState({ loginChooser: true }, () => {
+            if (!closingNavigation) focusChooser();
+        });
+    }
+
     public async Login() {
         if (!this.state.ready || this.state.busy) return;
         this.setState({ busy: true, error: undefined });
@@ -301,7 +351,7 @@ class App extends React.Component<AppProps, AppState> {
         clearTimeout(this.deviceTimer);
         this.me = null;
         this.setState({ show: ShowState.Welcome, messages: [], events: [], messageAttachments: undefined,
-            fetchingMail: false, fetchingCalendar: false, busy: false, deviceCode: undefined, phoneLink: undefined, qrCode: undefined, error: undefined });
+            fetchingMail: false, fetchingCalendar: false, busy: false, deviceCode: undefined, phoneLink: undefined, qrCode: undefined, error: undefined, loginChooser: false });
         document.getElementById("UsernameText").textContent = '';
         try { await this.identity.logout(); } catch (error) { this.showError(error); }
         this.UpdateLoginState();
@@ -335,10 +385,10 @@ class App extends React.Component<AppProps, AppState> {
                         this.setState({ deviceCode: undefined, phoneLink: undefined, qrCode: undefined, busy: false });
                         this.LoggedIn();
                     } else if (status === 'pending') {
-                        if (Date.now() >= pairing.expiresAt) throw new Error(mode === 'phone' ? 'Phone Link expired. Start a new pairing.' : 'Device code expired. Start a new device login.');
+                        if (Date.now() >= pairing.expiresAt) throw new Error(mode === 'phone' ? 'Your QR code expired. Choose “Sign in with your phone” to try again.' : 'Device code expired. Start a new device login.');
                         this.deviceTimer = setTimeout(poll, pairing.interval * 1000);
                     } else {
-                        throw new Error(mode === 'phone' ? 'Phone Link was denied or could not be completed. Start a new pairing.' : 'Device login was declined or expired. Please try again.');
+                        throw new Error(mode === 'phone' ? 'Sign-in was not approved. Choose “Sign in with your phone” to try again.' : 'Device login was declined or expired. Please try again.');
                     }
                 } catch (error) {
                     if (generation !== this.generation) return;
@@ -355,12 +405,13 @@ class App extends React.Component<AppProps, AppState> {
     }
 
     public async CancelDeviceLogin() {
+        const loginButton = this.state.deviceCode ? 'DeviceCodeLogin' : 'PhoneLinkLogin';
         this.generation++;
         clearTimeout(this.deviceTimer);
         this.setState({ deviceCode: undefined, phoneLink: undefined, qrCode: undefined });
         await this.identity.cancelDeviceLogin();
         await this.identity.cancelPhoneLink();
-        this.setState({ busy: false }, () => document.getElementById('PhoneLinkLogin')?.focus());
+        this.setState({ busy: false }, () => document.getElementById(loginButton)?.focus());
     }
 
     private handleMultiChange = (e) => {
@@ -368,11 +419,11 @@ class App extends React.Component<AppProps, AppState> {
     }
 
     private ShowMail() {
-        if (this.IsLoggedIn()) this.setState({ show: ShowState.Mail });
+        if (this.IsLoggedIn()) this.setState({ show: ShowState.Mail, loginChooser: false });
     }
 
     private ShowCalendar() {
-        if (this.IsLoggedIn()) this.setState({ show: ShowState.Calendar });
+        if (this.IsLoggedIn()) this.setState({ show: ShowState.Calendar, loginChooser: false });
     }
 
     private ShowContacts() {
