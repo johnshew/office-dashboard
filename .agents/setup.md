@@ -226,6 +226,14 @@ not a display-name guess. An exact Graph alternate-key lookup is
 `GET /v1.0/applications(appId='<client-id>')`; use Azure CLI `az rest` in the
 correct tenant. Preserve existing SPA redirects, audience, delegated permissions
 and Web settings when adding the authorized Web callback, then read them back.
+Do not identify the owning directory by the order of an ARM tenant list or by
+the current subscription. If the exact application is absent there, an exact
+`servicePrincipals(appId='<client-id>')` read can identify its
+`appOwnerOrganizationId`; use that directory for the application lookup.
+Service-principal presence/audience is not a substitute for registration
+readback or proof that the current Azure profile can administer the owning
+directory. Bound token-acquisition attempts and coordinate owner authentication
+when the profile no longer has usable access.
 Graph generates `web.redirectUriSettings` metadata for a new redirect; validate
 that metadata against the registered URI rather than ignoring a whole-object
 readback mismatch. Server credentials must be bounded and transferred directly

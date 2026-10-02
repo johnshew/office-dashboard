@@ -230,6 +230,16 @@ Dispatch **Phone Link release** from `gh-pages`:
    active-deployment readback must identify the intended 100% Worker version.
    These checks do not establish Microsoft consent or actual phone acceptance.
 
+If phone authentication returns **Sign-in not completed**, the callback emits
+one bounded `Phone Link callback failed` diagnostic: a fixed failure-stage name,
+HTTP status and, for provider errors, numeric Microsoft error codes only.
+Inspect only those classified fields when investigating token exchange, identity
+validation, profile verification or confirmation storage. Never copy raw Worker
+tail events: request URLs/headers can contain OAuth codes, cookies and pairing
+capabilities. Do not log exception messages, tokens, provider descriptions,
+claims, account identifiers or mailbox data. A diagnostic identifies a failed
+boundary; it does not prove account acceptance or authorize secret rotation.
+
 Deploy and rollback share `production-cloudflare-phone-link` concurrency with
 initialization and no cancellation of an in-flight operation. Artifacts record
 application SHA, dispatch tooling SHA, package version and file digests.

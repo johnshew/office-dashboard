@@ -78,7 +78,7 @@ function fixture(t) {
             const form = new URLSearchParams(request.body);
             assert.equal(form.get('client_secret'), env.PHONE_CLIENT_SECRET);
             if (options.onToken) await options.onToken(form);
-            if (options.error) return Response.json({ error: 'private-provider-detail' }, { status: 400 });
+            if (options.error) return Response.json(options.errorBody || { error: 'private-provider-detail' }, { status: 400 });
             if (form.get('grant_type') === 'authorization_code') {
                 assert.equal(form.get('redirect_uri'), serviceOrigin + '/oauth/callback');
                 assert.equal(form.get('code_verifier'), (await open(env, phone.sessionId, row({ sessionId: phone.sessionId }).vault)).verifier);
@@ -227,6 +227,58 @@ test('invalid JWT audience, issuer, tenant, nonce, times, signature and provider
         await f.call(`/sessions/${session.sessionId}/cancel`, { method: 'POST', token: session.teslaToken, body: {} });
         t.mock.restoreAll();
     }
+});
+
+test('callback diagnostics identify token failures without logging provider details or pairing credentials', async t => {
+    const f = fixture(t), session = await f.start();
+    const warnings = [];
+    t.mock.method(console, 'warn', (...args) => warnings.push(args));
+    const p = await f.authenticate(session, { error: true, errorBody: {
+        error: 'invalid_client', error_description: 'private-provider-description',
+        error_codes: [7000215, 7000222, 'private-provider-code', -1, null, 1000000000],
+        access_token: 'private-provider-access', trace_id: 'private-provider-trace',
+    } });
+    assert.equal(p.response.headers.get('Location'), '/phone/result');
+    assert.equal(f.row(session).status, 'failed');
+    assert.equal(f.row(session).vault, null);
+    assert.deepEqual(warnings, [['Phone Link callback failed', {
+        stage: 'token-exchange', status: 401, providerStatus: 400, providerCodes: [7000215, 7000222],
+    }]]);
+    const logged = JSON.stringify(warnings);
+    for (const value of ['private-provider-description', 'private-provider-code', 'private-provider-access',
+        'private-provider-trace', 'synthetic-server-secret', 'synthetic-code', session.sessionId,
+        session.teslaToken, session.phoneUrl, p.cookie, p.state, p.nonce]) assert.ok(!logged.includes(value));
+});
+
+test('callback identity diagnostics do not log the token, claims or rejected identity', async t => {
+    const f = fixture(t), session = await f.start();
+    const warnings = [];
+    t.mock.method(console, 'warn', (...args) => warnings.push(args));
+    const p = await f.authenticate(session, { claims: { nonce: 'private-invalid-nonce' } });
+    assert.equal(p.response.headers.get('Location'), '/phone/result');
+    assert.equal(f.row(session).vault, null);
+    assert.deepEqual(warnings, [['Phone Link callback failed', {
+        stage: 'identity-validation', status: 500, providerStatus: undefined, providerCodes: undefined,
+    }]]);
+    const logged = JSON.stringify(warnings);
+    for (const value of ['private-invalid-nonce', 'synthetic-subject', accountId, clientId,
+        'synthetic-graph-access', 'synthetic-refresh-secret', p.nonce]) assert.ok(!logged.includes(value));
+});
+
+test('malformed provider error JSON retains the rejection status without leaking its body', async t => {
+    const f = fixture(t), session = await f.start(), p = await f.phone(session);
+    const warnings = [];
+    t.mock.method(console, 'warn', (...args) => warnings.push(args));
+    t.mock.method(globalThis, 'fetch', async () => new Response('private-invalid-provider-json', {
+        status: 400, headers: { 'Content-Type': 'application/json' },
+    }));
+    const response = await f.call(`/oauth/callback?state=${p.state}&code=synthetic-code`, { cookie: p.cookie, origin: null });
+    assert.equal(response.headers.get('Location'), '/phone/result');
+    assert.equal(f.row(session).vault, null);
+    assert.deepEqual(warnings, [['Phone Link callback failed', {
+        stage: 'token-exchange', status: 401, providerStatus: 400, providerCodes: [],
+    }]]);
+    assert.ok(!JSON.stringify(warnings).includes('private-invalid-provider-json'));
 });
 
 test('expiry or cancellation after phone authentication prevents approval and clears stored tokens', async t => {
