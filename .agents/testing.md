@@ -8,6 +8,7 @@ Use the existing runners; do not add a parallel testing toolchain.
 | Optional Node service | `node --test test\device-server.test.js` |
 | Phone Link service and identity | `node --test test\pairing-worker.test.js test\phone-identity.test.js` |
 | Worker bundle/runtime imports | `npm run build:worker` (dry-run, no deployment) |
+| Worker outbound-fetch/runtime behavior | `node --test test\pairing-runtime.test.js` (installed Wrangler's Miniflare/workerd; synthetic D1/provider) |
 | Release configuration | `node --test test\release-config.test.js` |
 | Worker release configuration and safeguards | `node --test test\worker-release.test.js` |
 | TypeScript, React or build compatibility | `npm run build` |
@@ -17,6 +18,9 @@ Use the existing runners; do not add a parallel testing toolchain.
 `npm test` runs all existing Node tests. New tests for a Worker or shared helper
 should use the same Node runner and synthetic fixtures. Select related test files
 in a single invocation; run the full suite when a shared boundary warrants it.
+The Worker runtime regression uses the Miniflare/workerd already installed by
+locked Wrangler, not a second toolchain or a real Microsoft account. Keep the
+runtime/API compatibility check when changing that pinned dependency.
 Install dependencies only after an intentional manifest change or a missing-tool
 failure, following [setup](setup.md).
 

@@ -76,15 +76,32 @@ function page(title, body, script = '') {
         },
     });
 }
-const landing = () => page('Sign in on your phone',
-    '<p id="status" role="status">Connecting to your waiting dashboard…</p><p>Authenticate with Microsoft on this phone, then match the pairing label and explicitly approve the dashboard. A passkey may be offered by Microsoft; no Bluetooth connection to the car is needed.</p>',
+const landing = tenant => page('Sign in on your phone',
+    `<p id="status" role="status">${tenant === 'common' ? 'Choose your Microsoft account type.' : 'Connecting to your waiting dashboard…'}</p>
+${tenant === 'common' ? '<div id="account-types"><button id="personal-account" type="button">Personal Microsoft account</button> <button id="work-account" type="button">Work or school account</button></div>' : ''}
+<p>Authenticate with Microsoft on this phone, then match the pairing label and explicitly approve the dashboard. A passkey may be offered by Microsoft; no Bluetooth connection to the car is needed.</p>`,
     `const params = new URLSearchParams(location.hash.slice(1));
 const sessionId = params.get('session'), phoneToken = params.get('phone');
 history.replaceState(null, '', '/phone');
-if (!sessionId || !phoneToken) document.getElementById('status').textContent = 'Scan a new Phone Link QR code from your dashboard.';
-else fetch('/phone/start', {method:'POST', credentials:'same-origin', cache:'no-store', redirect:'error', headers:{'Content-Type':'application/json'}, body:JSON.stringify({sessionId,phoneToken})})
+let starting = false;
+function start(accountType) {
+if (starting) return;
+starting = true;
+document.getElementById('status').textContent = 'Opening Microsoft sign-in…';
+const choices = document.getElementById('account-types');
+if (choices) choices.hidden = true;
+fetch('/phone/start', {method:'POST', credentials:'same-origin', cache:'no-store', redirect:'error', headers:{'Content-Type':'application/json'}, body:JSON.stringify({sessionId,phoneToken,...(accountType ? {accountType} : {})})})
 .then(async response => {if (!response.ok) throw new Error(); const body = await response.json(); location.replace(body.authorizationUrl);})
-.catch(() => {document.getElementById('status').textContent = 'This pairing is unavailable. Start a new Phone Link on the dashboard.';});`);
+.catch(() => {document.getElementById('status').textContent = 'This pairing is unavailable. Start a new Phone Link on the dashboard.';});
+}
+if (!sessionId || !phoneToken) {
+document.getElementById('status').textContent = 'Scan a new Phone Link QR code from your dashboard.';
+const choices = document.getElementById('account-types');
+if (choices) choices.hidden = true;
+} else if (${JSON.stringify(tenant === 'common')}) {
+document.getElementById('personal-account').onclick = () => start('personal');
+document.getElementById('work-account').onclick = () => start('work');
+} else start();`);
 
 function service(env) {
     const db = env.PAIRING_DB;
@@ -96,7 +113,7 @@ function service(env) {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), 15000);
         try {
-            const response = await fetch(target.href, { ...options, signal: controller.signal, redirect: 'error' });
+            const response = await fetch(target.href, { ...options, signal: controller.signal, redirect: 'manual' });
             if (!response.ok) {
                 let providerCodes = [];
                 if (/^application\/json(?:;|$)/i.test(response.headers.get('Content-Type') || '')) {
@@ -170,6 +187,9 @@ function service(env) {
     }
     async function phoneStart(request) {
         const body = await readJson(request);
+        if (body.accountType !== undefined && !['personal', 'work'].includes(body.accountType)) fail(400, 'Invalid account type');
+        if ((body.accountType === 'personal' && !['common', 'consumers'].includes(env.PHONE_TENANT_ID)) ||
+            (body.accountType === 'work' && env.PHONE_TENANT_ID === 'consumers')) fail(400, 'Account type is not configured');
         if (!capabilityPattern.test(body.sessionId || '') || !capabilityPattern.test(body.phoneToken || '')) fail(400, 'Invalid pairing');
         const row = await live('session_id', body.sessionId);
         if (!row || row.status !== 'pending' || row.phone_hash !== await hash(body.phoneToken)) fail(401, 'Pairing unavailable');
@@ -180,7 +200,9 @@ function service(env) {
             WHERE session_id=? AND phone_hash=? AND status='pending' AND expires_at>? RETURNING slot`,
         await hash(browser), await hash(state), vault, row.session_id, row.phone_hash, Date.now());
         if (!changed) fail(409, 'Pairing already claimed');
-        const url = new URL(`https://login.microsoftonline.com/${env.PHONE_TENANT_ID}/oauth2/v2.0/authorize`);
+        const authority = body.accountType === 'personal' ? 'consumers'
+            : body.accountType === 'work' && env.PHONE_TENANT_ID === 'common' ? 'organizations' : env.PHONE_TENANT_ID;
+        const url = new URL(`https://login.microsoftonline.com/${authority}/oauth2/v2.0/authorize`);
         url.search = new URLSearchParams({
             client_id: env.PHONE_CLIENT_ID, response_type: 'code', response_mode: 'query',
             redirect_uri: `${env.PHONE_SERVICE_ORIGIN}/oauth/callback`, scope: scopes,
@@ -314,7 +336,7 @@ function service(env) {
             return json({ service: 'office-dashboard-phone-link', version: 1, storage: 'd1', capacity: 10, status: 'ok' });
         }
         if (pathname === '/sessions' && request.method === 'POST') return start(request);
-        if (pathname === '/phone' && request.method === 'GET') return landing();
+        if (pathname === '/phone' && request.method === 'GET') return landing(env.PHONE_TENANT_ID);
         if (pathname === '/phone/start' && request.method === 'POST') return phoneStart(request);
         if (pathname === '/oauth/callback' && request.method === 'GET') return callback(request, url);
         if (pathname === '/phone/confirm' && request.method === 'GET') return confirm(request);

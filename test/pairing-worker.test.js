@@ -59,10 +59,10 @@ function fixture(t) {
         return response.json();
     };
     const row = session => database.prepare('SELECT * FROM phone_slots WHERE session_id=?').get(session.sessionId);
-    const phone = async session => {
+    const phone = async (session, accountType) => {
         const fragment = new URLSearchParams(new URL(session.phoneUrl).hash.slice(1));
         const response = await call('/phone/start', { method: 'POST', origin: serviceOrigin,
-            body: { sessionId: session.sessionId, phoneToken: fragment.get('phone') } });
+            body: { sessionId: session.sessionId, phoneToken: fragment.get('phone'), ...(accountType ? { accountType } : {}) } });
         assert.equal(response.status, 200);
         const cookie = response.headers.get('Set-Cookie').split(';')[0];
         assert.match(response.headers.get('Set-Cookie'), /Secure; HttpOnly; SameSite=Lax/);
@@ -72,7 +72,7 @@ function fixture(t) {
     const provider = (phone, options = {}) => t.mock.method(globalThis, 'fetch', async (url, request = {}) => {
         const target = new URL(url);
         assert.ok(['https://login.microsoftonline.com', 'https://graph.microsoft.com'].includes(target.origin));
-        assert.equal(request.redirect, 'error');
+        assert.equal(request.redirect, 'manual');
         if (target.pathname.endsWith('/keys')) return Response.json({ keys: [options.jwk || jwk] });
         if (target.pathname.endsWith('/token')) {
             const form = new URLSearchParams(request.body);
@@ -140,6 +140,37 @@ test('Phone Link authenticates, then explicitly approves; tokens remain encrypte
     await f.call(`/sessions/${session.sessionId}/cancel`, { method: 'POST', token: session.teslaToken, body: {} });
     assert.equal(f.row(session), undefined);
     assert.equal((await pending()).status, 401);
+});
+
+test('common phone sign-in offers explicit personal and work account routes without changing scopes', async t => {
+    const f = fixture(t);
+    f.env.PHONE_TENANT_ID = 'common';
+    const landing = await f.call('/phone', { origin: null });
+    const html = await landing.text();
+    assert.ok(html.includes('Personal Microsoft account'));
+    assert.ok(html.includes('Work or school account'));
+    assert.ok(html.includes("history.replaceState(null, '', '/phone')"));
+    for (const [type, authority] of [['personal', 'consumers'], ['work', 'organizations']]) {
+        const session = await f.start(), p = await f.phone(session, type);
+        assert.equal(p.authorization.pathname, `/${authority}/oauth2/v2.0/authorize`);
+        assert.equal(p.authorization.searchParams.get('scope'), 'openid profile offline_access User.Read Mail.Read Calendars.Read');
+        assert.equal(p.authorization.searchParams.get('code_challenge_method'), 'S256');
+    }
+});
+
+test('phone account type cannot widen the configured audience or consume a pairing on invalid input', async t => {
+    const f = fixture(t), session = await f.start();
+    const phoneToken = new URLSearchParams(new URL(session.phoneUrl).hash.slice(1)).get('phone');
+    for (const accountType of ['personal', 'invalid', 'consumers/other']) {
+        const response = await f.call('/phone/start', { method: 'POST', origin: serviceOrigin,
+            body: { sessionId: session.sessionId, phoneToken, accountType } });
+        assert.equal(response.status, 400);
+        assert.equal(f.row(session).status, 'pending');
+    }
+    f.env.PHONE_TENANT_ID = 'consumers';
+    assert.equal((await f.call('/phone/start', { method: 'POST', origin: serviceOrigin,
+        body: { sessionId: session.sessionId, phoneToken, accountType: 'work' } })).status, 400);
+    assert.equal(f.row(session).status, 'pending');
 });
 
 test('wrong capabilities, cookies, state, replay and cross-pairing substitution are rejected', async t => {
