@@ -409,7 +409,10 @@ test('Graph allowlist, exact CORS and phone page security do not expose credenti
     const f = fixture(t), session = await f.start(), p = await f.authenticate(session);
     await f.approve(session, p);
     for (const path of ['/users', '/me/sendMail', '/me/messages?$expand=anything', '/me/messages?$count=true',
-        '//attacker.example', '/me/messages/%2e%2e/attachments/id']) {
+        '//attacker.example', '/me/messages/%2e%2e/attachments/id',
+        "/me/mailFolders('junkemail')/messages", "/me/mailFolders('arbitrary-folder')/messages",
+        "/users('other-user')/mailFolders('inbox')/messages", "/me/mailFolders(%27inbox%27)/messages",
+        "/me/mailFolders('inbox')/messages?$expand=manager"]) {
         assert.equal((await f.call(`/sessions/${session.sessionId}/graph?path=${encodeURIComponent(path)}`, { token: session.teslaToken })).status, 400);
     }
     for (const origin of [null, 'https://attacker.example', appOrigin + '.attacker.example']) {

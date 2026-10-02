@@ -52,6 +52,10 @@ Preserve delegated, read-only scopes and the service's endpoint/query allowlist.
 Validate pagination origins, prevent arbitrary proxy requests, suppress
 credentials/referrers where appropriate and do not follow untrusted redirects
 with an authorization header. Inbox retains its bounded collection behavior.
+Microsoft's Inbox pagination can use `/me/mailFolders('inbox')/messages`
+instead of `/me/mailFolders/inbox/messages`. Both exact Inbox paths share the
+same read-only query and attachment-expansion rules. Preserve opaque continuation
+parameters; do not admit arbitrary folder or user aliases to accommodate pagination.
 
 Keep email/event HTML in the sandbox with restrictive CSP. Scripts, forms,
 links and embeds must remain blocked. Image consent is per-message HTTPS-only,

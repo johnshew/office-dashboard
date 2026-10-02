@@ -178,7 +178,7 @@ test('allows only the frontend inline-attachment expansion on the messages colle
   const f = await fixture(t);
   const token = (await f.start()).body.sessionToken;
   await f.complete();
-  for (const collection of ['/me/messages', '/me/mailFolders/inbox/messages']) {
+  for (const collection of ['/me/messages', '/me/mailFolders/inbox/messages', "/me/mailFolders('inbox')/messages"]) {
     const path = `${collection}?$orderby=receivedDateTime%20desc&$expand=attachments($select=id,isInline)`;
     assert.equal((await f.call(`/api/graph?path=${encodeURIComponent(path)}`, { token })).response.status, 200);
     const forwarded = new URL(f.calls.at(-1).url);
@@ -188,6 +188,11 @@ test('allows only the frontend inline-attachment expansion on the messages colle
   }
   for (const rejected of [
     '/me/mailFolders/junkemail/messages',
+    "/me/mailFolders('junkemail')/messages",
+    "/me/mailFolders('arbitrary-folder')/messages",
+    "/users('other-user')/mailFolders('inbox')/messages",
+    "/me/mailFolders(%27inbox%27)/messages",
+    "/me/mailFolders('inbox')/messages?$expand=manager",
     '/me/mailFolders/inbox/messages?$expand=attachments',
     '/me/mailFolders/inbox/messages?$expand=attachments($select=id,isInline)&$expand=manager',
     '/me?$expand=attachments($select=id,isInline)',
@@ -202,7 +207,7 @@ test('allows only the frontend inline-attachment expansion on the messages colle
   ]) {
     assert.equal((await f.call(`/api/graph?path=${encodeURIComponent(rejected)}`, { token })).response.status, 400, rejected);
   }
-  assert.equal(f.calls.length, 2);
+  assert.equal(f.calls.length, 3);
 });
 
 test('malformed requests, routes, verbs and bearer credentials fail safely', async t => {

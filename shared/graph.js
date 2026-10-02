@@ -8,7 +8,7 @@ export function graphUrl(path, createError = message => {
     if (!path || path.length > 8192 || /[#\\\s]/.test(path)) invalid('Invalid Graph path');
     const [pathname, ...query] = path.split('?');
     const attachment = /^\/me\/messages\/([^/]+)\/attachments\/([^/]+)$/.exec(pathname);
-    const messageCollection = ['/me/messages', '/me/mailFolders/inbox/messages'].includes(pathname);
+    const messageCollection = ['/me/messages', '/me/mailFolders/inbox/messages', "/me/mailFolders('inbox')/messages"].includes(pathname);
     if (!['/me', '/me/calendarView'].includes(pathname) && !messageCollection && !attachment) invalid('Invalid Graph path');
     if (attachment) {
         for (const segment of attachment.slice(1)) {
