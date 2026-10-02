@@ -53,6 +53,13 @@ claim that resources or credentials exist. The public frontend must never
 contain Worker secrets. `VITE_DEVICE_LOGIN_URL` remains the independently hosted
 Node device-code alternative; it is not interchangeable with Phone Link.
 
+With the accepted `common` audience, the phone page offers **Personal Microsoft
+account** and **Work or school account**. Those choices route authorization
+through `consumers` and `organizations` respectively; token redemption and
+identity validation retain the configured mixed audience. A single-audience
+deployment does not offer the other type, and the API rejects attempts to widen
+it. Account type is a routing choice, never proof of identity or approval.
+
 ## Database and session lifecycle
 
 Apply `workers\pairing\schema.sql` to the chosen D1 database before enabling.
@@ -239,6 +246,14 @@ tail events: request URLs/headers can contain OAuth codes, cookies and pairing
 capabilities. Do not log exception messages, tokens, provider descriptions,
 claims, account identifiers or mailbox data. A diagnostic identifies a failed
 boundary; it does not prove account acceptance or authorize secret rotation.
+
+Use `redirect: 'manual'` for Worker upstream requests and reject every non-OK
+response, including redirects, before releasing data. This workerd runtime
+rejects `redirect: 'error'` before sending the request even though Node accepts
+it. Never switch to `follow`: an authorization header must not reach a redirect
+target. The real-runtime regression exercises the actual Worker, synthetic D1
+and provider, including successful token/identity/profile handling and blocked
+upstream redirection; mocked Node fetch alone does not cover this boundary.
 
 Deploy and rollback share `production-cloudflare-phone-link` concurrency with
 initialization and no cancellation of an in-flight operation. Artifacts record
