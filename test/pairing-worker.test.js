@@ -197,10 +197,17 @@ test('wrong capabilities, cookies, state, replay and cross-pairing substitution 
 test('approval needs phone origin, CSRF and authenticated confirmation; denial clears vault', async t => {
     const f = fixture(t), session = await f.start();
     const p = await f.authenticate(session);
+    assert.equal(p.response.headers.get('Referrer-Policy'), 'no-referrer');
+    const confirmation = await f.call('/phone/confirm', { cookie: p.cookie, origin: null });
+    assert.equal(confirmation.headers.get('Referrer-Policy'), 'same-origin');
     const options = { method: 'POST', origin: serviceOrigin, cookie: p.cookie, form: { csrf: randomToken(), decision: 'approve' } };
     assert.equal((await f.call('/phone/approve', options)).status, 403);
     const body = await open(f.env, session.sessionId, f.row(session).vault);
     options.form.csrf = body.csrf;
+    for (const origin of [null, 'null', 'https://attacker.example']) {
+        assert.equal((await f.call('/phone/approve', { ...options, origin })).status, 403);
+        assert.equal(f.row(session).status, 'confirm');
+    }
     assert.equal((await f.call('/phone/approve', { ...options, origin: appOrigin })).status, 403);
     assert.equal((await f.call('/phone/approve', { ...options, cookie: '__Host-phone-link=' + randomToken() })).status, 401);
     assert.equal((await f.approve(session, p, 'deny')).status, 200);
