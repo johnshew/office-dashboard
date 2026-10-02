@@ -2,6 +2,7 @@ import { createServer } from 'node:http';
 import { randomBytes } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { PublicClientApplication } from '@azure/msal-node';
+import { graphUrl } from './shared/graph.js';
 
 const SCOPES = ['User.Read', 'Mail.Read', 'Calendars.Read'];
 const VERIFICATION_URIS = ['https://microsoft.com/devicelogin', 'https://www.microsoft.com/devicelogin'];
@@ -33,36 +34,6 @@ async function timed(promise, ms) {
       timer = setTimeout(() => reject(error(504, 'Upstream timeout')), ms);
     })]);
   } finally { clearTimeout(timer); }
-}
-
-function graphUrl(path) {
-  if (!path || path.length > 8192 || /[#\\\s]/.test(path)) throw error(400, 'Invalid Graph path');
-  const [pathname, ...query] = path.split('?');
-  const attachment = /^\/me\/messages\/([^/]+)\/attachments\/([^/]+)$/.exec(pathname);
-  const messageCollection = ['/me/messages', '/me/mailFolders/inbox/messages'].includes(pathname);
-  if (!['/me', '/me/calendarView'].includes(pathname) && !messageCollection && !attachment) {
-    throw error(400, 'Invalid Graph path');
-  }
-  if (attachment) {
-    for (const segment of attachment.slice(1)) {
-      let decoded;
-      try { decoded = decodeURIComponent(segment); } catch { throw error(400, 'Invalid Graph path'); }
-      if (!/^(?:[A-Za-z0-9_~.!*'()-]|%[a-f0-9]{2})+$/i.test(segment) ||
-          decoded === '.' || decoded === '..' || /[/\\%?#\s\x00-\x1f\x7f]/.test(decoded)) {
-        throw error(400, 'Invalid Graph path');
-      }
-    }
-  }
-  const params = new URLSearchParams(query.join('?'));
-  const allowed = new Set(['$select', '$top', '$filter', '$orderby', '$skip', '$skiptoken', 'startDateTime', 'endDateTime']);
-  const expansions = params.getAll('$expand');
-  if (expansions.length) {
-    if (!messageCollection || expansions.length !== 1 ||
-        expansions[0] !== 'attachments($select=id,isInline)') throw error(400, 'Invalid Graph query');
-    allowed.add('$expand');
-  }
-  for (const key of params.keys()) if (!allowed.has(key)) throw error(400, 'Invalid Graph query');
-  return `https://graph.microsoft.com/v1.0${pathname}${params.size ? `?${params}` : ''}`;
 }
 
 // Host behind HTTPS in production. Configure exact frontend origins; never enable credentials/cookies.
@@ -246,7 +217,7 @@ export function createDeviceServer({
       }
       if (!session || session.status !== 'complete') throw error(401, 'Authentication required');
       if ([...url.searchParams.keys()].join() !== 'path') throw error(400, 'Invalid query');
-      const target = graphUrl(url.searchParams.get('path'));
+      const target = graphUrl(url.searchParams.get('path'), message => error(400, message));
       let auth;
       try {
         auth = await timed(session.pca.acquireTokenSilent({ account: session.account, scopes: [...SCOPES] }), timeoutMs);

@@ -64,6 +64,7 @@ jobs:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
           EXPECTED: ${{ needs.artifact.outputs.provenance }}
         run: |
-          curl --fail --silent --show-error --retry 5 --retry-all-errors "${PAGE_URL%/}/release.json?run=$GITHUB_RUN_ID" -o deployed.json
+          page_url="${PAGE_URL/#http:/https:}"
+          curl --proto '=https' --proto-redir '=https' --location --fail --silent --show-error --retry 5 --retry-all-errors "${page_url%/}/release.json?run=$GITHUB_RUN_ID" -o deployed.json
           printf '%s\n' "$EXPECTED" > expected.json
           cmp expected.json deployed.json

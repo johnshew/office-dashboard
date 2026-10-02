@@ -45,3 +45,7 @@ test-results/
 typings/react/react-dom.d.ts
 
 typings/react/react.d.ts
+dist-worker/
+.wrangler/
+.dev.vars
+.dev.vars.*

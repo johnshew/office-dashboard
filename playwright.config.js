@@ -22,7 +22,8 @@ export default defineConfig({
         env: {
             VITE_CLIENT_ID: '',
             VITE_TENANT_ID: 'organizations',
-            VITE_DEVICE_LOGIN_URL: 'https://device.example.test'
+            VITE_DEVICE_LOGIN_URL: 'https://device.example.test',
+            VITE_PHONE_LINK_URL: 'https://phone.example.test'
         }
     }
 });

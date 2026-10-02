@@ -6,7 +6,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import './dashboard.css';
 import * as Utilities from './Utilities';
-import Identity, { DeviceCode } from './Identity';
+import Identity, { DeviceCode, PhoneLink } from './Identity';
 import About from './About';
 import { Settings, SettingsValues } from './Settings';
 import Mail from '../../src/Mail';
@@ -41,6 +41,7 @@ interface AppState {
     ready?: boolean;
     busy?: boolean;
     deviceCode?: DeviceCode;
+    phoneLink?: PhoneLink;
     qrCode?: string;
 }
 
@@ -103,7 +104,8 @@ class App extends React.Component<AppProps, AppState> {
         var welcome = (this.state.show == ShowState.Welcome) ? <div className="p-4">
             <h2>Welcome</h2>
             <p>Please log in to access your information.</p>
-            <button className="btn btn-primary me-2" disabled={!this.state.ready || this.state.busy} onClick={() => this.Login()}>Login with Microsoft</button>
+            {this.identity.browserEnabled && <button className="btn btn-primary me-2" disabled={!this.state.ready || this.state.busy} onClick={() => this.Login()}>Login with Microsoft</button>}
+            {this.identity.phoneEnabled && <button id="PhoneLinkLogin" className="btn btn-primary me-2" disabled={!this.state.ready || this.state.busy} onClick={() => this.PhoneLinkLogin()}>Phone Link</button>}
             {this.identity.deviceEnabled
                 ? <button className="btn btn-secondary" disabled={!this.state.ready || this.state.busy} onClick={() => this.DeviceLogin()}>Login with iPhone / device QR code</button>
                 : null}
@@ -117,6 +119,27 @@ class App extends React.Component<AppProps, AppState> {
                 { loadingMessage }
                 {this.state.error && <div className="alert alert-danger" role="alert">{this.state.error}</div>}
                 { welcome }
+                {this.state.phoneLink && <>
+                    <div className="modal-backdrop show"></div>
+                    <section className="modal d-block" role="dialog" aria-modal="true" aria-labelledby="phone-link-title"
+                        onKeyDown={event => {
+                            if (event.key === 'Escape') void this.CancelDeviceLogin();
+                            // Cancel is this waiting dialog's only focusable control.
+                            if (event.key === 'Tab') event.preventDefault();
+                        }}>
+                        <div className="modal-dialog modal-dialog-centered"><div className="modal-content">
+                            <div className="modal-header"><h2 className="modal-title fs-4" id="phone-link-title">Phone Link</h2></div>
+                            <div className="modal-body" aria-live="polite">
+                                {this.state.qrCode && <img className="img-fluid" src={this.state.qrCode} width="256" height="256" alt="Scan to sign in with Microsoft on your phone" />}
+                                <p>Scan with your phone camera. Sign in with Microsoft on your phone, then explicitly approve this dashboard.</p>
+                                <p>Match this pairing label before approving: <strong>{this.state.phoneLink.label}</strong>.</p>
+                                <p>No code entry or car Bluetooth is needed. Microsoft may offer a phone-local passkey.</p>
+                                <p>Waiting for your approval. Pairing expires at {new Date(this.state.phoneLink.expiresAt).toLocaleTimeString()}.</p>
+                            </div>
+                            <div className="modal-footer"><button className="btn btn-secondary" autoFocus onClick={() => this.CancelDeviceLogin()}>Cancel Phone Link</button></div>
+                        </div></div>
+                    </section>
+                </>}
                 {this.state.deviceCode && <section className="p-4" aria-live="polite">
                     <h2>Continue on your iPhone</h2>
                     {this.state.qrCode && <img src={this.state.qrCode} width="256" height="256" alt="Scan to open Microsoft's device sign-in page" />}
@@ -154,6 +177,7 @@ class App extends React.Component<AppProps, AppState> {
         clearTimeout(this.deviceTimer);
         this.StopRefreshFromCloud();
         void this.identity.cancelDeviceLogin();
+        void this.identity.cancelPhoneLink();
     }
 
     handleSettingsChange = (updated: SettingsValues) => {
@@ -277,36 +301,44 @@ class App extends React.Component<AppProps, AppState> {
         clearTimeout(this.deviceTimer);
         this.me = null;
         this.setState({ show: ShowState.Welcome, messages: [], events: [], messageAttachments: undefined,
-            fetchingMail: false, fetchingCalendar: false, busy: false, deviceCode: undefined, qrCode: undefined, error: undefined });
+            fetchingMail: false, fetchingCalendar: false, busy: false, deviceCode: undefined, phoneLink: undefined, qrCode: undefined, error: undefined });
         document.getElementById("UsernameText").textContent = '';
         try { await this.identity.logout(); } catch (error) { this.showError(error); }
         this.UpdateLoginState();
     };
 
     public async DeviceLogin() {
+        return this.QrLogin('device');
+    }
+
+    public async PhoneLinkLogin() {
+        return this.QrLogin('phone');
+    }
+
+    private async QrLogin(mode: 'device' | 'phone') {
         if (!this.state.ready || this.state.busy) return;
         const generation = ++this.generation;
         this.setState({ busy: true, error: undefined });
         try {
-            const deviceCode = await this.identity.startDeviceLogin();
+            const pairing = mode === 'phone' ? await this.identity.startPhoneLink() : await this.identity.startDeviceLogin();
             if (generation !== this.generation) return;
-            this.setState({ deviceCode });
-            const qrCode = await QRCode.toDataURL(deviceCode.verificationUri, { width: 256, margin: 2 });
+            this.setState(mode === 'phone' ? { phoneLink: pairing as PhoneLink } : { deviceCode: pairing as DeviceCode });
+            const qrCode = await QRCode.toDataURL(mode === 'phone' ? (pairing as PhoneLink).phoneUrl : (pairing as DeviceCode).verificationUri, { width: 256, margin: 2 });
             if (generation !== this.generation) return;
             this.setState({ qrCode });
             const poll = async () => {
                 if (generation !== this.generation) return;
                 try {
-                    if (Date.now() >= deviceCode.expiresAt) throw new Error('Device code expired. Start a new device login.');
-                    const status = await this.identity.checkDeviceLogin();
+                    const status = mode === 'phone' ? await this.identity.checkPhoneLink() : await this.identity.checkDeviceLogin();
                     if (generation !== this.generation) return;
                     if (status === 'complete') {
-                        this.setState({ deviceCode: undefined, qrCode: undefined, busy: false });
+                        this.setState({ deviceCode: undefined, phoneLink: undefined, qrCode: undefined, busy: false });
                         this.LoggedIn();
                     } else if (status === 'pending') {
-                        this.deviceTimer = setTimeout(poll, deviceCode.interval * 1000);
+                        if (Date.now() >= pairing.expiresAt) throw new Error(mode === 'phone' ? 'Phone Link expired. Start a new pairing.' : 'Device code expired. Start a new device login.');
+                        this.deviceTimer = setTimeout(poll, pairing.interval * 1000);
                     } else {
-                        throw new Error('Device login was declined or expired. Please try again.');
+                        throw new Error(mode === 'phone' ? 'Phone Link was denied or could not be completed. Start a new pairing.' : 'Device login was declined or expired. Please try again.');
                     }
                 } catch (error) {
                     if (generation !== this.generation) return;
@@ -314,7 +346,7 @@ class App extends React.Component<AppProps, AppState> {
                     this.showError(error);
                 }
             };
-            this.deviceTimer = setTimeout(poll, deviceCode.interval * 1000);
+            this.deviceTimer = setTimeout(poll, pairing.interval * 1000);
         } catch (error) {
             if (generation !== this.generation) return;
             await this.CancelDeviceLogin();
@@ -325,9 +357,10 @@ class App extends React.Component<AppProps, AppState> {
     public async CancelDeviceLogin() {
         this.generation++;
         clearTimeout(this.deviceTimer);
-        this.setState({ deviceCode: undefined, qrCode: undefined });
+        this.setState({ deviceCode: undefined, phoneLink: undefined, qrCode: undefined });
         await this.identity.cancelDeviceLogin();
-        this.setState({ busy: false });
+        await this.identity.cancelPhoneLink();
+        this.setState({ busy: false }, () => document.getElementById('PhoneLinkLogin')?.focus());
     }
 
     private handleMultiChange = (e) => {

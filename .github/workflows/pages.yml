@@ -55,6 +55,7 @@ jobs:
       VITE_CLIENT_ID: ${{ vars.VITE_CLIENT_ID }}
       VITE_TENANT_ID: ${{ vars.VITE_TENANT_ID }}
       VITE_DEVICE_LOGIN_URL: ${{ vars.VITE_DEVICE_LOGIN_URL }}
+      VITE_PHONE_LINK_URL: ${{ vars.VITE_PHONE_LINK_URL }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -91,6 +92,7 @@ jobs:
       - run: npm run validate-release-config
         if: needs.source.outputs.release == 'true'
       - run: npm run build
+      - run: npm run build:worker
       - name: Stamp build provenance
         run: |
           node --input-type=module -e "
