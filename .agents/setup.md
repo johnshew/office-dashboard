@@ -103,6 +103,56 @@ when a process-local PATH update is needed.
 
 ## Optional tooling and hosting
 
+### GitHub CLI for repository and protected release operations
+
+Discover the executable and its installation owner before installing:
+
+```powershell
+Get-Command gh.exe -All -ErrorAction SilentlyContinue
+winget list --id GitHub.cli --exact --disable-interactivity
+winget show --id GitHub.cli --exact --source winget --disable-interactivity
+```
+
+The agent runtime can have an app-managed private `gh.exe` while an ordinary
+terminal has no GitHub CLI installation. Do not add that private app directory
+to persistent PATH or assume the runtime's command/authentication exists in
+the user's terminal.
+
+On October 2, 2026 the official WinGet MSI installed and verified standalone
+GitHub CLI **2.102.0** on this Windows host:
+
+```powershell
+winget install --id GitHub.cli --exact --source winget --version 2.102.0 --installer-type wix --accept-package-agreements --accept-source-agreements --disable-interactivity
+if ($LASTEXITCODE -ne 0) { throw 'GitHub CLI installation failed.' }
+$gh = Join-Path $env:ProgramFiles 'GitHub CLI\gh.exe'
+if (-not (Test-Path $gh)) { throw 'Rediscover the installed GitHub CLI command.' }
+& $gh --version
+if ($LASTEXITCODE -ne 0) { throw 'GitHub CLI verification failed.' }
+```
+
+WinGet verifies the official installer hash. The MSI may require UAC and
+registers the machine PATH; existing apps/terminal processes can retain their
+old environment. Use the verified absolute command until restarting the app,
+or prepend its directory only to the current process PATH.
+
+Verify the standalone profile before login. Installation and an agent's
+app-provided authentication do not sign the ordinary terminal in:
+
+```powershell
+& $gh auth status --hostname github.com
+if ($LASTEXITCODE -ne 0) {
+    & $gh auth login --hostname github.com --git-protocol https --web
+    if ($LASTEXITCODE -ne 0) { throw 'GitHub browser authorization did not finish.' }
+}
+```
+
+The user authorizes GitHub CLI directly in GitHub's browser UI. Preserve any
+existing authenticated account; do not copy app-injected tokens into the
+standalone credential cache. Use interactive `gh secret set` for protected
+repository/environment secrets: values belong only in its hidden prompt, never
+a shell command argument or conversation. See [Worker setup](worker.md) for
+the actual CI credential scope and required human release approval.
+
 ### Azure CLI for the existing Entra registration
 
 Azure CLI is needed only for authorized Entra administration, not to host this
