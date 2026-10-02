@@ -11,17 +11,25 @@ Full (strict) TLS. See [current release status](RELEASE.md#current-status).
 
 Normal Microsoft sign-in uses `@azure/msal-browser` and calls Microsoft Graph
 directly. No Azure website, Kurve library or Node service is required. Microsoft
-may offer phone/passkey sign-in when the account and browsers support it; this
-is not a guaranteed QR option on every vehicle browser. The optional dashboard
-device-code service remains disabled for this deployment.
+may offer cross-device passkey sign-in on compatible browsers, but this is not
+the selected Tesla phone-login path: the owner reports that the target Tesla
+browser lacks Bluetooth support for passkeys. The optional dashboard device-code
+service remains disabled for this deployment. The optional **Phone Link** flow
+authenticates on the phone without manual device-code entry. It is implemented
+in the 0.4.0 development candidate but is not enabled in the published site.
+See [phone sign-in alternatives](#sign-in-on-an-iphone-with-a-qr-code).
 
 ## Current release
 
 [Version 0.3.0](https://github.com/johnshew/office-dashboard/releases/tag/v0.3.0)
 was published on September 13, 2026 from the merged default-branch commit.
 Production Microsoft sign-in, Inbox and calendar requests, refresh, session
-restoration after reload, and logout have been verified. Phone/vehicle passkey
-acceptance remains untested. See [current release status](RELEASE.md#current-status).
+restoration after reload, and logout have been verified. Target phone/vehicle
+acceptance remains incomplete. See [current release status](RELEASE.md#current-status).
+
+The **0.4.0 development candidate** adds Phone Link, optional URL email hints,
+explicit Microsoft account selection and Settings Apply/Cancel. Merging source
+does not publish a release or deploy the optional backends.
 
 Mail now opens **Inbox**, newest first, instead of combining every mailbox folder.
 Junk, Deleted Items and Sent Items are excluded from this view. This does not filter
@@ -100,23 +108,94 @@ avoid reusing the previous tenant's session. See [the observed setup issue](RELE
 
 ### Sign in on an iPhone with a QR code
 
-**Pages-only, preferred:** choose Login with Microsoft → Sign-in options → Face,
-fingerprint, PIN or security key → another device. Microsoft/the browser can display
-a cross-device passkey QR code. Scan with the iPhone Camera and authenticate there.
-This requires an enrolled, tenant-approved passkey, compatible browsers/devices,
-Bluetooth and internet; it is not available on every vehicle browser.
-[Microsoft's passkey instructions](https://learn.microsoft.com/en-us/entra/identity/authentication/how-to-sign-in-passkey-authenticator).
+**Tesla constraint, recorded October 2, 2026:** the owner reports that the target
+Tesla browser lacks Bluetooth support for cross-device passkeys. Do not pursue
+Microsoft's browser-provided passkey QR as the solution for this target. No exact
+version for the actual target car has been recorded; the historical Intel MCU2
+reference is Chromium **88.0.4324.150** on Linux x86_64. See
+[the browser baseline](#working-with-the-tesla-browser). The Bluetooth limitation
+is an owner-reported constraint, not a compatibility claim about every Tesla version.
 
-**Device-code alternative for input-constrained displays:** configure the optional
+The business requirement is phone-based authentication with no Tesla text entry
+beyond an optional email address, optionally supplied in the app URL. Neither
+alternative below needs email entry on the Tesla; account selection can happen
+on the phone. The 0.4.0 candidate supports an optional hint URL:
+`https://office-dashboard.shew.net/#email=you%40example.com`. The app reads and
+removes the hint before authentication, keeps the registered callback unchanged,
+and passes it as Microsoft's `login_hint` where supported. A fragment avoids
+including the email in the initial Pages/Cloudflare HTTP request, but it still
+appears in bookmarks/history and is not proof of account ownership.
+
+| Alternative | Phone interaction | Tesla interaction | Status |
+| --- | --- | --- | --- |
+| Node device-code QR | Scan, enter the short code, sign in and consent | Select phone login and wait | Implemented in `server.js`; disabled in production |
+| Device-code copy-and-continue helper | Scan, tap to copy, paste the short code at Microsoft, sign in | Select phone login and wait | Proposed enhancement; not implemented |
+| Phone Link | Scan, sign in at Microsoft, explicitly approve the waiting Tesla session | Select Phone Link and wait | Implemented in 0.4.0 candidate; requires separate Worker deployment |
+
+#### Node device-code QR
+
+**Existing path for Tesla phone login:** configure the optional
 Node service below. Select **Login with iPhone / device QR code**, scan the QR, enter
 the displayed short code **on the phone**, and complete Microsoft's sign-in/consent.
 The dashboard polls and continues automatically without typing in the dashboard
 browser. Cancel, denial, expiry, and retry are supported. QR images are generated
 locally, not sent to an external QR provider.
 
+The phone can use a passkey stored on that phone when Microsoft's verification
+page offers it for the account and policy. This does not require Tesla Bluetooth:
+the phone authenticates directly to Microsoft, and the service polls over HTTPS.
+Phone-side passkey acceptance for this flow still needs a live account test.
+
 Microsoft does **not** support `verification_uri_complete`; the QR opens its
 verification page, not an undocumented auto-submit URL. Phone code entry is still
 required. See the [device authorization response](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-device-code#device-authorization-response).
+
+**Proposed copy-and-continue helper:** the QR could open a service-hosted phone
+page that displays the short user code. A user tap on **Copy code and continue**
+would copy that code and open Microsoft's verification page; the user would
+still paste it there. Our page cannot fill Microsoft's cross-origin form or
+force clipboard access. If clipboard access fails, the page must show the code
+and instructions rather than claim it was copied. Do not include the server-only
+`device_code`, Microsoft tokens or a passkey private key in the QR.
+
+#### Phone Link (optional)
+
+Phone Link uses Microsoft's normal **authorization-code flow**, not the
+device authorization grant and not a cross-device passkey connection:
+
+1. The Tesla requests a short-lived pairing session and displays its phone QR.
+2. The phone opens the service page and starts Microsoft sign-in with state and PKCE.
+3. Microsoft authenticates on the phone, using a phone-local passkey if available,
+   and returns to the service's registered HTTPS callback.
+4. The service verifies the callback and asks the phone user to explicitly approve
+   the waiting Tesla session, showing a matching pairing label on both screens.
+5. The Tesla polls with its separate session credential and becomes signed in
+   only after approval. Microsoft tokens stay server-side; only allowlisted
+   read-only Graph requests are proxied.
+
+No short code is manually entered or pasted in this flow. Microsoft can still
+require account selection, consent or additional authentication on the phone;
+Phone Link does not bypass those prompts or guarantee passkey availability.
+It needs no passkey Bluetooth support in the Tesla browser.
+
+**Cloudflare starting point:** [PR #62](https://github.com/johnshew/office-dashboard/pull/62)
+on `copilot/account-chooser-031` contains `workers/pairing/index.js`,
+`schema.sql`, `wrangler.jsonc` and pairing tests. That Worker is a ten-slot D1
+code relay with capability checks, expiry, rate limiting and one-time delivery.
+That older relay is not the Node device-code service and is not itself an
+end-to-end Phone Link implementation. The 0.4.0 candidate adapts its bounded
+pairing design into `workers/pairing/`; it replaces the relay API with phone
+OAuth, explicit approval, encrypted server-side token storage and dashboard
+integration. Live Worker deployment has not been established here.
+
+The Worker-backed Phone Link service needs a separate Entra **web**
+registration and exact callback, protected server-side token storage, and
+server-only application credentials managed as Worker secrets. Never put those
+credentials in `VITE_` variables, URLs or QR contents. The existing
+`VITE_DEVICE_LOGIN_URL` enables only the Node device-code path, not Phone Link.
+Set `VITE_PHONE_LINK_URL` to the exact HTTPS Worker origin only after its rollout
+is accepted. See [Worker setup](.agents/worker.md) and
+[the rollout requirements](RELEASE.md#qr-service-rollout) before deployment.
 
 #### Optional device-code service
 
@@ -161,6 +240,13 @@ Users must only approve codes they initiated on their own dashboard.
 
 ## Development and GitHub Pages deployment
 
+Start with [the development tool setup guide](.agents/setup.md) for Windows Node
+installation, existing-tool discovery, PowerShell/PATH troubleshooting and
+project-local Wrangler. [AGENTS.md](AGENTS.md) routes shared development, security,
+testing and release instructions; [CLAUDE.md](CLAUDE.md) is a thin adapter.
+[Repository workflow](.agents/workflow.md) adapts CDL/GLP-style freshness and
+learning-consolidation practices without introducing undocumented command aliases.
+
 Use Node 24 LTS (minimum 22.12). Run `npm ci`, copy `.env.example` to `.env` and
 configure it, then `npm start` at `http://localhost:8000/`.
 `npm run build` type-checks and writes the static site to `dist/`;
@@ -183,7 +269,8 @@ In GitHub:
 
 The workflow uses pinned GitHub Actions, `npm ci`, unit/security tests, desktop/mobile
 Chromium login smoke tests, dependency auditing, and the official Pages deployment
-actions. Only `dist/` is uploaded; relative
+actions. It also dry-run bundles the optional Worker; this is not a Worker
+deployment. Only `dist/` is uploaded; relative
 asset paths support repository subpaths and custom domains. The optional Node
 service is **not deployed by this workflow**. Repository settings, app registration,
 consent, and a live authenticated deployment must be completed by the owner.
@@ -223,11 +310,11 @@ The all-folder behavior above describes 0.2 only; the current 0.3.0 candidate op
 
 This app was developed to: 
 * Demonstrate how to display information from http://graph.microsoft.io
-* Test http://github.com/MicrosoftDx/KurveJS
+* Test https://github.com/MicrosoftDx/KurveJS
 * Learn more about React and how to use React with Typescript 
 * Make it easy to catch up on mail and other Office information using the browser in Tesla http://tesla.com. 
 
-The source is available at https://github.com/johnshew/office-dashboard/
+The source is available at https://github.com/johnshew/office-dashboard
 
 ### Implementation Notes
 
@@ -252,11 +339,28 @@ provide the responsive reading layout without changing Calendar's legacy grid.
 
 ### Working with the Tesla browser
 
-The updated app requires a modern browser with Web Crypto, modules, and current
-web APIs. Obsolete vehicle browsers may no longer work; do not restore legacy
-implicit authentication or insecure polyfills to accommodate them.
+Use [TeslaTap's MCU2 reference](https://teslatap.com/mcu/) as the historical
+development baseline: **Intel Atom E8000-series, Linux x86_64, Chromium
+88.0.4324.150**. This reference was already recorded on the unmerged
+`copilot/account-chooser-031` branch. It is not the verified current version of
+the owner's car or every Intel Tesla; the actual model, infotainment hardware,
+firmware version and full browser user agent still need recording during acceptance.
+
+The 0.4.0 build targets Chrome 88 and uses a shared request timeout helper instead
+of `AbortSignal.timeout()`, which that version lacks. This addresses known build
+and request API gaps, not every possible runtime difference; actual Tesla
+acceptance is still required. Retain HTTPS,
+Web Crypto, modules, working session storage and secure authentication.
+Do not restore legacy implicit authentication or weaken isolation.
+
+For this target, treat browser-provided cross-device passkey QR as unavailable
+because of the owner-reported lack of browser Bluetooth support. Car audio
+pairing and desktop Chromium tests do not prove browser passkey support.
+Phone-local passkeys in the optional phone flows are a separate capability.
 
 Test touch scrolling, text size, sign-in and logout on the actual target vehicle
-browser before release. Desktop/mobile Chromium automation is not vehicle acceptance.
+browser while parked before release. Include Inbox/Calendar loading, pairing
+approval, cancellation, expiry, reload and session renewal for any enabled phone
+flow. Desktop/mobile Chromium automation is not vehicle acceptance.
 
 Use browser developer tools for debugging; avoid logging tokens or mailbox content.

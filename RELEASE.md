@@ -49,12 +49,24 @@ The release retains `office-dashboard.tar.gz` and `SHA256SUMS` for rollback.
   reports that its custom-domain certificate does not exist, so its own
   `https_enforced` setting remains false. Exact account and DNS records are private.
 - The chosen deployment is static-only with `@azure/msal-browser`. Microsoft may
-  offer phone/passkey QR depending on the account and browser; the dashboard does
-  not promise that option. `VITE_DEVICE_LOGIN_URL` remains unset. No Node host or
+  offer phone/passkey QR on compatible browsers, but it is not the selected Tesla
+  path; see the October 2 constraint in [QR rollout](#qr-service-rollout).
+  `VITE_DEVICE_LOGIN_URL` remains unset. No Node host or
   separate device registration is needed for this rollout. Optional device-service
   code remains available but is not deployed, and its setup warning is hidden.
 
 ### Remaining acceptance and hardening
+
+Development update, October 2, 2026: the **0.4.0 candidate** implements Phone Link,
+optional URL email hints, explicit Microsoft account selection, Settings
+Apply/Cancel and known Chromium 88 compatibility fixes. Production remains
+the published 0.3.0 release. Neither merging this candidate nor installing
+Wrangler deploys a Worker or changes the live Pages site.
+Local candidate validation passed: 59 Node tests, 30 desktop/mobile Chromium
+tests, the TypeScript/Vite build, Worker dry-run bundle and dependency audit.
+An independent code review's configuration-forwarding and near-expiry approval
+findings were fixed with regression coverage. This is not live Microsoft,
+phone-passkey, Worker deployment or Tesla acceptance.
 
 1. Verify Pages certificate provisioning and HTTPS enforcement for the configured
   custom domain. DNS was changed before publication at the user's request.
@@ -355,6 +367,55 @@ forward fix. The first modern release has no modern rollback target.
 
 ## QR service rollout
 
+### Tesla phone-login constraint, October 2, 2026
+
+The owner reports that the target Tesla browser has no Bluetooth support for
+cross-device passkeys. Do not revisit Microsoft's browser-provided passkey QR
+as the solution for this target. The historical development baseline already
+recorded on `copilot/account-chooser-031` is Intel MCU2 (Intel Atom E8000-series),
+Linux x86_64, Chromium **88.0.4324.150**, from
+[TeslaTap's MCU2 reference](https://teslatap.com/mcu/). This is not a measured
+version for the current car. Record the actual model, infotainment hardware,
+firmware version and browser user agent during vehicle acceptance.
+
+The 0.4.0 candidate targets Chrome 88 and replaces direct `AbortSignal.timeout()`
+usage with a compatible request helper. Build/runtime changes address those
+known gaps, but do not establish real vehicle acceptance.
+Do not infer compatibility from desktop Chromium tests or the car's audio Bluetooth.
+
+The requirement is phone-based authentication with no Tesla text entry beyond
+an optional email address, optionally supplied in the app URL. The 0.4.0 candidate
+supports an optional `#email=...` hint and removes it before authentication.
+The existing device-code service requires no email
+on the Tesla: the phone enters the displayed short code and authenticates to
+Microsoft. A passkey stored on the phone can be used if Microsoft offers it for
+that account and policy, without Tesla Bluetooth. This phone-side passkey flow
+has not been accepted with a live account. Microsoft does not support
+`verification_uri_complete`, so device flow still requires phone code entry;
+it does not meet a stricter scan-and-approve-only requirement.
+
+### Phone sign-in alternatives
+
+| Flow | Implementation and publication status | Phone code entry |
+| --- | --- | --- |
+| Node device-code QR | `server.js` and dashboard integration exist; service is not enabled in production | Required |
+| Device-code copy-and-continue helper | Proposed phone landing page; no implementation | Paste still required |
+| Phone Link | Implemented in 0.4.0 candidate with Cloudflare Worker/D1; not deployed or accepted with a live account/vehicle | No manual device-code entry |
+
+For all flows, phone-local passkey availability depends on the Microsoft account,
+phone/passkey provider and policy. Work/school accounts need tenant acceptance;
+personal accounts need an appropriately configured account audience. Authentication
+and consent happen in Microsoft's UI, not on a service page that collects credentials.
+
+The optional email hint uses a fragment such as `#email=you%40example.com`, not a
+query parameter, to keep it out of the initial hosting request. It is removed
+from the current URL before authentication but a saved bookmark or prior browser
+history can still contain it. Preserve the exact registered callback, and treat
+it only as an optional `login_hint`, never an identity assertion
+or authorization constraint. Account confirmation must use the authenticated identity.
+
+### Node device-code QR rollout
+
 Pages cannot host the Node service. Before enabling `VITE_DEVICE_LOGIN_URL`:
 
 - Select a trusted HTTPS host and a separate approved Entra public-client registration;
@@ -384,4 +445,113 @@ short code on their phone. Microsoft tokens stay in service memory; the dashboar
 holds only a random service-session credential in memory. Pending codes expire within
 15 minutes; active service sessions expire after at most eight hours. Browser reload,
 logout, or service restart requires a new device login. Browser PKCE sign-in remains
-available independently and may offer Microsoft's own cross-device passkey QR.
+available independently; its cross-device passkey QR is not the Tesla solution.
+
+The proposed copy-and-continue enhancement would encode a service-hosted phone
+landing URL in the QR. That page would show the short `user_code` and offer a
+user-initiated clipboard copy followed by navigation to Microsoft's verification
+page. It cannot automatically fill or submit a cross-origin Microsoft form.
+Handle clipboard denial explicitly with manual-copy instructions. Keep the
+server-only `device_code`, tokens and passkey private keys out of the QR, URLs,
+clipboard and logs; only the short user code is copied. Any landing capability
+must expire and disclose no server credential.
+
+### Phone Link rollout
+
+**Existing Cloudflare source:** [PR #62](https://github.com/johnshew/office-dashboard/pull/62),
+branch `copilot/account-chooser-031`, contains `workers/pairing/index.js`,
+`workers/pairing/schema.sql`, `workers/pairing/wrangler.jsonc` and
+`test/pairing-worker.test.js`. The Worker has ten D1 relay slots, separate hashed
+phone/Tesla capabilities, ten-minute pending expiry, a one-minute completion
+window, single-use code delivery, scheduled cleanup and an IP rate limiter.
+Its origin allowlist is configured for `https://office-dashboard.shew.net`.
+The original relay source was not merged as-is; the 0.4.0 candidate adapts it.
+A live Worker deployment has not been established in this review. Do not describe the relay
+as a deployed device-code service or completed Phone Link authentication flow.
+
+The 0.4.0 implementation replaces that relay API with the following sequence:
+
+1. The Tesla starts a bounded pairing session and retains its polling credential
+   only in memory. The QR contains a separate, short-lived phone pairing capability,
+   not a Tesla polling credential or Microsoft token.
+2. The phone opens the service and starts Microsoft authorization-code sign-in
+   using PKCE and a callback-bound, one-time state value. Authentication may use
+   a passkey local to the phone; the Tesla needs neither passkeys nor Bluetooth.
+3. Microsoft redirects to an exact, registered service HTTPS callback. The service
+   validates state and redeems the code server-side, verifying the signed-in identity.
+4. Before attaching that identity to the car, the phone user explicitly approves
+   the waiting Tesla session. Display the account and matching pairing label;
+   scanning or authenticating alone must not grant the car access.
+5. The service atomically consumes the pairing approval. The Tesla detects completion
+   through authenticated polling and reads allowlisted Graph endpoints through the
+   service, with Microsoft access/refresh tokens kept server-side.
+
+Implementation and operational gates:
+
+- The candidate includes the Microsoft callback, phone pages, explicit approval,
+  server-side token/session lifecycle and dashboard integration. The original
+  relay API is not preserved. Follow [Worker setup](.agents/worker.md) for the
+  D1 schema and separate service configuration. `VITE_PHONE_LINK_URL` enables
+  Phone Link; `VITE_DEVICE_LOGIN_URL` remains the Node alternative.
+- Use a separate Entra web registration with the intended audience and only delegated
+  `User.Read`, `Mail.Read` and `Calendars.Read`. Store application credentials as
+  Worker secrets, never in source or public build variables. The Node device-code
+  public-client registration and its configuration are a different alternative.
+- The Worker encrypts persisted tokens with AES-GCM using a server-only key.
+  Its `phone_slots` table bounds pending/active sessions to ten slots; pairing
+  expires after ten minutes, approved sessions after at most eight hours.
+  Approval transitions and refresh leases use D1. Keep the encryption key stable
+  across Worker instances; clear affected sessions before a controlled rotation.
+  The dashboard credential stays in memory, so reload requires a new Phone Link
+  sign-in. Logout removes the server session; a restart is not an in-memory reset.
+- Bind OAuth state, PKCE and approval to the correct pairing and phone session.
+  Expire and consume capabilities atomically; reject replay, cross-session substitution,
+  duplicate callback/approval, cancellation and late completion. Protect approval
+  against CSRF and clickjacking. Redact callback codes and pairing URLs from telemetry;
+  use restrictive caching and referrer policies.
+- Show which account and Tesla session will be linked. Warn users to initiate and
+  approve only their own parked-car session: a QR login can still be used for phishing.
+  Do not weaken Conditional Access or promise that passkeys bypass tenant restrictions.
+- Preserve the read-only Graph allowlist, exact dashboard CORS origin, token renewal,
+  logout and revocation behavior. Define reload/restart behavior explicitly; do not
+  inherit the Node service's in-memory session assumptions without a decision.
+- Local coverage includes phone/desktop browsers and negative pairing tests:
+  replay, wrong state/credential, expiry, cancellation, denial, double approval,
+  full capacity, storage/network failure, account mismatch and token renewal.
+  Complete real phone and parked-Tesla acceptance on the recorded browser version
+  before enabling production.
+- Use Node 24 and Cloudflare Wrangler for local Worker/D1 development and deployment.
+  Follow [the setup guide](.agents/setup.md) for the verified user-local Windows
+  Node installation and project-local Wrangler approach. Installing tooling is
+  separate from Cloudflare authentication, provisioning resources or deploying.
+  Document service configuration, secret setup and a rollback path before publishing
+  a new dashboard version. The Pages workflow does not deploy the Worker.
+
+## Branch consolidation decisions, October 2, 2026
+
+The repository's default branch is `gh-pages`, not `main`. Reviewed branch
+snapshots are recorded below so retiring a branch does not erase the rationale.
+Consolidation means adapting useful ideas to the current MSAL/Graph/Vite app,
+not merging obsolete APIs and generated bundles back into production.
+
+| Reviewed source | Decision |
+| --- | --- |
+| [PR #62 / account-chooser-031](https://github.com/johnshew/office-dashboard/pull/62) | Retain explicit Microsoft account selection, shared routed guides, the Intel MCU2 browser baseline and Cloudflare D1 relay foundation. Omit generated PR-review tracking artifacts. |
+| [newgraph](https://github.com/johnshew/office-dashboard/commit/d8bd0a00d648d14f2ead1f487882d4a91ab299d2) | Retired Kurve attachment/query experiments are superseded by native Graph requests and safe inline attachment handling. Do not import permissive attachment checks or legacy generated bundles. |
+| [profilePhoto](https://github.com/johnshew/office-dashboard/commit/4854bf8e007fee50886191189b427f0547208401) | Do not import the incomplete Kurve sender-photo experiment, sender-address logging or additional user-photo requests without a modern permission/privacy design. |
+| [react-modal](https://github.com/johnshew/office-dashboard/commit/1145c72ba98ac78503fc7facfe6508b961eea757) | Adapt draft Settings with Apply/Cancel to the existing Bootstrap 5 modal. Do not add the obsolete ReactModal dependency or generated bundle. |
+| [requestbuilder](https://github.com/johnshew/office-dashboard/commit/a8b7a261981814f4ffae162d4624aaaafefa3b64) | The useful exclusion of Sent/Junk/Deleted folders is already achieved by the modern Inbox endpoint. Do not restore localized folder-name filtering or retired request-builder code. |
+| [vNext](https://github.com/johnshew/office-dashboard/commit/5334092d614d267589797028699033e0c6faa845) | Dependency-managed bundling, Inbox filtering and removal of user telemetry are already covered by the modern app. Do not restore Kurve, custom token storage or historical release claims. |
+| [PR #56 / southworks:testable](https://github.com/johnshew/office-dashboard/pull/56) | Legacy Kurve npm/type-import modernization is superseded by the current locked MSAL/Vite/Graph type dependencies. Its external fork is not an origin branch owned by this repository. |
+
+Already-merged rollout/release branches can be retired without re-merging their
+changes. Unmerged branches are retired only after retained ideas are included
+and rejected ideas have an explicit rationale. Preserve active worktrees and
+unrelated dirty work; an active app-managed session is not stale merely because
+its PR has merged. Cleanup does not authorize a new Pages release, a Worker
+deployment, deletion of another owner's fork, or edits to the main checkout.
+
+Settings edits now remain drafts until **Apply**. **Cancel**, closing the modal
+and Escape discard unapplied edits. Applied values retain the existing storage
+and refresh behavior. Rollback provenance verification uses the same HTTPS-only
+normalization and redirect restrictions as the release verifier.

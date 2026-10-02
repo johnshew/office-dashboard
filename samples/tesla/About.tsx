@@ -1,5 +1,7 @@
 import * as React from 'react';
 
+declare const __APP_VERSION__: string;
+
 interface AboutProps {
 }
 
@@ -22,7 +24,7 @@ export default class About extends React.Component<AboutProps, AboutState> {
                             <h4 className="modal-title">About</h4>
                         </div>
                         <div className="modal-body">
-                            <h4>Office Dashboard, Alpha 2</h4>
+                            <h4>Office Dashboard {__APP_VERSION__}</h4>
                             <p>To report bugs or provide feedback go to <br/>
                             <a href="https://github.com/johnshew/office-dashboard/issues">https://github.com/johnshew/office-dashboard/issues</a></p>
                             <p>This is an open source application.  For more information please see the <a href="https://github.com/johnshew/office-dashboard/blob/gh-pages/LICENSE">license</a>.</p>
