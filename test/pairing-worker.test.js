@@ -196,11 +196,12 @@ test('expiry, scheduled cleanup and ten-slot reuse survive Worker restarts', asy
     const sessions = await Promise.all(Array.from({ length: 10 }, () => f.start()));
     assert.equal((await f.call('/sessions', { method: 'POST', body: {} })).status, 503);
     const expired = sessions[0];
+    const expiredSlot = f.row(expired).slot;
     f.database.prepare('UPDATE phone_slots SET expires_at=? WHERE session_id=?').run(Date.now() - 1, expired.sessionId);
     assert.equal((await f.call(`/sessions/${expired.sessionId}/poll`, { token: expired.teslaToken })).status, 401);
     const replacement = await f.start();
     assert.equal(f.row(expired), undefined);
-    assert.equal(f.row(replacement).slot, 0);
+    assert.equal(f.row(replacement).slot, expiredSlot);
     f.database.prepare('UPDATE phone_slots SET expires_at=?').run(Date.now() - 1);
     await worker.scheduled({}, f.env);
     assert.equal(f.database.prepare('SELECT COUNT(*) AS count FROM phone_slots').get().count, 0);
