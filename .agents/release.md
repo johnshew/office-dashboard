@@ -28,8 +28,12 @@ creating D1 resources and deploying are distinct actions.
 The independent, manual **Phone Link release** workflow uses an accepted
 default-branch SHA/tag, locked tooling, required human environment reviewers,
 an immutable Worker artifact and a sanitized deployment receipt. Deploy and
-explicit-version rollback share their own serialized concurrency group.
-Schema initialization is opt-in; runtime secrets are never rotated by a release.
+explicit-version rollback share their own serialized concurrency group with
+separate, confirmed additive D1 initialization. Normal deploy and rollback never
+apply SQL; initialization never deploys code. The dispatch tooling can release
+an older accepted source without requiring identical historical helpers, and
+records both source and tooling provenance. Runtime secrets are never rotated
+by a release.
 See [Worker CI/CD](worker.md#independent-worker-cicd) for onboarding, scoped API
 credentials, environment variables and rollback compatibility. The environment
 and credentials must be configured before that workflow can release; adding

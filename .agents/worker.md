@@ -167,7 +167,7 @@ This draft is a bootstrap side effect, not a deployed/accepted Phone Link
 runtime. It does not create/bind D1 or apply the schema. Once both secrets and
 the dedicated database exist, the reviewed release workflow supplies the full
 configuration and accepted Worker artifact. If bootstrap initialized the schema
-already, leave the workflow's `apply_schema` false.
+already, do not dispatch the separate `initialize` operation again.
 
 | Environment configuration | Value or requirement |
 | --- | --- |
@@ -194,32 +194,55 @@ Dispatch **Phone Link release** from `gh-pages`:
 
 1. Choose `deploy` and supply a full accepted default-branch commit SHA or existing
    stable version tag. The selected source must have a successful default-branch
-   CI run, and its release workflow/helpers must match the executing workflow.
-2. Leave `apply_schema` false for normal updates. Only for separately reviewed
-   additive initialization, select it and enter
-   `apply-reviewed-phone-link-schema`. The helper rejects destructive changes;
-   future schema migrations need their own reviewed implementation.
+   CI run. The dispatch's default-branch helper runs against that exact source;
+   historical sources need not have byte-identical workflow/helper files.
+   Application dependencies come from the selected source's lockfile.
+2. Normal `deploy` never applies SQL. For separately reviewed additive
+   initialization, dispatch `initialize` with the accepted source and
+   `schema_confirmation=apply-reviewed-phone-link-schema`. Review the exact
+   `workers\pairing\schema.sql` first: this is only the idempotent creation of
+   `phone_slots` and `phone_expiry`, not a general migration mechanism. Existing
+   relay tables/data must remain untouched. Initialization does not build or
+   deploy Worker code; future migrations require a separate reviewed change.
 3. Review source/configuration and approve the protected environment. The workflow
-   builds without cloud credentials, preserves the exact bundle/config/schema
+   builds without cloud credentials, preserves the exact bundle/configuration
    with SHA-256 provenance, then deploys those bytes with `--no-bundle`.
+   The schema artifact exists only for `initialize`, not normal deployment.
 4. Verify the deployment receipt's Worker version, exact source and readiness.
    Health checks require valid Worker configuration and a functioning D1 schema;
    active-deployment readback must identify the intended 100% Worker version.
    These checks do not establish Microsoft consent or actual phone acceptance.
 
 Deploy and rollback share `production-cloudflare-phone-link` concurrency with
-no cancellation of an in-flight operation. Artifacts and sanitized receipts are
-retained for 90 days; retain accepted release evidence independently if needed
+initialization and no cancellation of an in-flight operation. Artifacts record
+application SHA, dispatch tooling SHA, package version and file digests.
+Artifacts and sanitized receipts are retained for 90 days; retain accepted
+release evidence independently if needed
 longer. Failed readiness is reported, not hidden by an automatic schema/secret
-rollback. A pending receipt means cloud code changed but acceptance did not pass.
+rollback. A preflight receipt does not confirm a cloud change. A pending
+post-operation receipt means cloud state changed but acceptance did not pass.
 
 For rollback, dispatch the same workflow with `operation=rollback`, an accepted
-source for the release tooling, the exact existing `rollback_version_id`, and
-`rollback_confirmation=compatible-schema-and-secrets`. Schema application must
-remain false. The workflow validates public bindings, secret binding names and
+source for the public configuration contract, the exact existing
+`rollback_version_id`, and
+`rollback_confirmation=compatible-schema-and-secrets`. No SQL is applied as part
+of rollback. The workflow validates public bindings, secret binding names and
 the dedicated database before switching to that existing version without a
 rebuild. Confirm actual secret/key and data compatibility operationally: matching
 names alone cannot prove old encrypted sessions remain readable.
+
+The release workflow installs dependencies once and relies on the selected
+commit's successful full CI instead of rerunning a parallel validation job.
+It builds the accepted source once, using locked Wrangler to parse the existing
+JSONC configuration and emit a public JSON deployment configuration. Wrangler
+owns its configuration syntax/validation; there is no custom JSONC parser,
+configuration-key allowlist or SQL parser. Changing the pinned Wrangler version
+must include checking its `experimental_readRawConfig` API and the dry-run
+bundle path. Cloud operations are direct Wrangler deploy/D1/rollback commands;
+the small helper retains source, artifact, target and readiness checks.
+Neither build nor dependency installation receives Cloudflare credentials.
+Provider diagnostic output stays private; failure is explicit and may require
+operator investigation, since cloud state can change before a check fails.
 
 ## Rollback boundary
 
