@@ -255,6 +255,15 @@ target. The real-runtime regression exercises the actual Worker, synthetic D1
 and provider, including successful token/identity/profile handling and blocked
 upstream redirection; mocked Node fetch alone does not cover this boundary.
 
+The authenticated confirmation page uses `Referrer-Policy: same-origin` so
+native Approve/Deny form POSTs retain the exact service `Origin`. Using
+`no-referrer` there makes Chromium send `Origin: null`, which the service rightly
+rejects. Keep `no-referrer` on the OAuth callback and all other responses;
+the confirmation policy suppresses cross-origin referrers and its URL contains
+no pairing capability or OAuth code. Do not allow null/missing origins or replace
+the exact-origin, phone-cookie and CSRF checks. Browser regression coverage must
+submit the actual rendered approval and denial forms, not inject an Origin header.
+
 Deploy and rollback share `production-cloudflare-phone-link` concurrency with
 initialization and no cancellation of an in-flight operation. Artifacts record
 application SHA, dispatch tooling SHA, package version and file digests.

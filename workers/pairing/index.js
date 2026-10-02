@@ -261,11 +261,14 @@ function service(env) {
         const row = await phoneSession(request);
         if (row.status !== 'confirm') fail(409, 'Sign in first or start a new pairing');
         const body = await open(env, row.session_id, row.vault);
-        return page('Approve your dashboard',
+        const response = page('Approve your dashboard',
             `<p>Signed in as <strong>${escape(body.profile.displayName)}</strong> (${escape(body.profile.username)}).</p>
 <p>Match this label on the waiting dashboard: <strong>${escape(row.label)}</strong>.</p>
 <p>Approve only if you started this pairing and the label matches. The dashboard will be able to read your profile, mail and calendar until you log out or the session expires.</p>
 <form method="post" action="/phone/approve"><input type="hidden" name="csrf" value="${escape(body.csrf)}"><button name="decision" value="approve">Approve dashboard</button> <button name="decision" value="deny">Deny</button></form>`);
+        // no-referrer makes native POST navigation send Origin: null.
+        response.headers.set('Referrer-Policy', 'same-origin');
+        return response;
     }
     async function approve(request) {
         if (!/^application\/x-www-form-urlencoded(?:;|$)/i.test(request.headers.get('Content-Type') || '')) fail(415, 'Form required');
@@ -400,7 +403,7 @@ export default {
         }
         const headers = new Headers(response.headers);
         headers.set('Cache-Control', 'no-store');
-        headers.set('Referrer-Policy', 'no-referrer');
+        if (!headers.has('Referrer-Policy')) headers.set('Referrer-Policy', 'no-referrer');
         headers.set('X-Content-Type-Options', 'nosniff');
         headers.set('X-Frame-Options', 'DENY');
         headers.set('Strict-Transport-Security', 'max-age=31536000');
