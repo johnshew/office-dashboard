@@ -6,9 +6,14 @@ const activeLifetime = 8 * 60 * 60_000;
 const scopes = 'openid profile offline_access User.Read Mail.Read Calendars.Read';
 const cookieName = '__Host-phone-link';
 class HttpError extends Error {
-    constructor(status, message) { super(message); this.status = status; }
+    constructor(status, message, details = {}) {
+        super(message);
+        this.status = status;
+        this.providerStatus = details.providerStatus;
+        this.providerCodes = details.providerCodes;
+    }
 }
-const fail = (status, message) => { throw new HttpError(status, message); };
+const fail = (status, message, details) => { throw new HttpError(status, message, details); };
 const json = (body, status = 200) => Response.json(body, { status });
 const redirect = path => new Response(null, { status: 303, headers: { Location: path } });
 const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
@@ -92,7 +97,20 @@ function service(env) {
         const timer = setTimeout(() => controller.abort(), 15000);
         try {
             const response = await fetch(target.href, { ...options, signal: controller.signal, redirect: 'error' });
-            if (!response.ok) { await response.body?.cancel(); fail(response.status === 400 || response.status === 401 ? 401 : 502, 'Microsoft request failed'); }
+            if (!response.ok) {
+                let providerCodes = [];
+                if (/^application\/json(?:;|$)/i.test(response.headers.get('Content-Type') || '')) {
+                    const text = await readBody(response, 65536);
+                    let body;
+                    try { body = JSON.parse(text); }
+                    catch (error) { if (!(error instanceof SyntaxError)) throw error; }
+                    if (body && Array.isArray(body.error_codes)) {
+                        providerCodes = body.error_codes.filter(code => Number.isSafeInteger(code) && code > 0 && code < 1000000000).slice(0, 8);
+                    }
+                } else await response.body?.cancel();
+                fail(response.status === 400 || response.status === 401 ? 401 : 502, 'Microsoft request failed',
+                    { providerStatus: response.status, providerCodes });
+            }
             if (!/^application\/json(?:;|$)/i.test(response.headers.get('Content-Type') || '')) fail(502, 'Invalid Microsoft response');
             return JSON.parse(await readBody(response, 8 * 1024 * 1024));
         } finally { clearTimeout(timer); }
@@ -180,18 +198,23 @@ function service(env) {
             WHERE session_id=? AND cookie_hash=? AND state_hash=? AND status='oauth' AND expires_at>? RETURNING slot`,
         row.session_id, row.cookie_hash, row.state_hash, Date.now());
         if (!claimed) fail(409, 'OAuth response already used');
+        let stage = 'authorization-response';
         try {
             const code = url.searchParams.get('code');
             if (url.searchParams.has('error') || !code || code.length > 8192) fail(401, 'Microsoft sign-in was declined');
+            stage = 'token-exchange';
             const oauth = await open(env, row.session_id, row.vault);
             const result = await token({ grant_type: 'authorization_code', code, code_verifier: oauth.verifier,
                 redirect_uri: `${env.PHONE_SERVICE_ORIGIN}/oauth/callback` });
+            stage = 'identity-validation';
             const claims = await verifyIdToken(env, result.id_token, oauth.nonce, upstream);
             if (typeof result.refresh_token !== 'string' || !result.refresh_token) fail(401, 'Session cannot be renewed');
+            stage = 'profile-verification';
             const profile = await upstream(graphUrl('/me'), { headers: { Authorization: 'Bearer ' + result.access_token } });
             // Personal Graph IDs need not use the organizational oid representation.
             if (typeof profile.id !== 'string' || !profile.id ||
                 (claims.tid !== consumerTenant && claims.oid && profile.id.toLowerCase() !== claims.oid.toLowerCase())) fail(401, 'Account verification failed');
+            stage = 'confirmation-storage';
             const vault = await seal(env, row.session_id, { accessToken: result.access_token, refreshToken: result.refresh_token,
                 tokenExpiresAt: Date.now() + result.expires_in * 1000, csrf: randomToken(),
                 profile: { displayName: profile.displayName || '', username: profile.mail || profile.userPrincipalName || profile.id } });
@@ -199,7 +222,13 @@ function service(env) {
                 AND status='exchanging' AND expires_at>? RETURNING slot`, vault, row.session_id, row.cookie_hash, Date.now());
             if (!changed) fail(409, 'Pairing cancelled or expired');
             return redirect('/phone/confirm');
-        } catch {
+        } catch (error) {
+            console.warn('Phone Link callback failed', {
+                stage,
+                status: error instanceof HttpError ? error.status : 500,
+                providerStatus: error instanceof HttpError ? error.providerStatus : undefined,
+                providerCodes: error instanceof HttpError ? error.providerCodes : undefined,
+            });
             // Fail closed and clear all sensitive state, including on nonce/signature/Graph failures.
             await first(`UPDATE phone_slots SET status='failed',vault=NULL,cookie_hash=NULL,state_hash=NULL
                 WHERE session_id=? AND status='exchanging' RETURNING slot`, row.session_id);
