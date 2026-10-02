@@ -103,6 +103,88 @@ when a process-local PATH update is needed.
 
 ## Optional tooling and hosting
 
+### Azure CLI for the existing Entra registration
+
+Azure CLI is needed only for authorized Entra administration, not to host this
+static application. Discover `az`, `az.cmd` and the installed WinGet package
+before installing another copy:
+
+```powershell
+Get-Command az,az.cmd -All -ErrorAction SilentlyContinue
+winget list --id Microsoft.AzureCLI --exact --disable-interactivity
+winget show --id Microsoft.AzureCLI --exact --source winget --disable-interactivity
+```
+
+On October 2, 2026 the verified official x64 WinGet MSI installed Azure CLI
+**2.90.0** on this Windows host. Windows may require UAC approval:
+
+```powershell
+winget install --id Microsoft.AzureCLI --exact --source winget --version 2.90.0 --accept-package-agreements --accept-source-agreements --disable-interactivity
+if ($LASTEXITCODE -ne 0) { throw 'Azure CLI installation failed.' }
+$az = Join-Path $env:ProgramFiles 'Microsoft SDKs\Azure\CLI2\wbin\az.cmd'
+if (-not (Test-Path $az)) { throw 'Rediscover the installed Azure CLI command.' }
+& $az version --output json
+if ($LASTEXITCODE -ne 0) { throw 'Azure CLI verification failed.' }
+```
+
+Use the absolute verified command until the app/terminal restarts with its
+updated PATH. Do not assume the x64 MSI path applies to another architecture
+or replace an existing installation owner without need.
+[Microsoft's Windows installation guide](https://learn.microsoft.com/cli/azure/install-azure-cli-windows)
+documents WinGet/MSI and alternative distributions.
+
+Check the selected profile before starting another login. This check reports
+only the cloud name, not personal account or subscription details:
+
+```powershell
+& $az account show --query environmentName --output tsv --only-show-errors
+```
+
+Reuse an authenticated profile when the owner authorizes its use. Do not log out,
+create another profile or open a redundant browser login merely because the
+application registration is not immediately found. Cached ARM authentication
+does not establish Microsoft Graph access to the intended directory.
+
+If another session owns the default profile, choose a private, task-specific
+profile outside the repository and set `AZURE_CONFIG_DIR` consistently in each
+fresh command process. Never read/export its token cache. Configure browser-based
+login and disable the subscription chooser only in that selected task profile:
+
+```powershell
+# Set $taskAzureProfile to the private profile selected for this task.
+if ([string]::IsNullOrWhiteSpace($taskAzureProfile)) { throw 'Select the task Azure profile first.' }
+$env:AZURE_CONFIG_DIR = $taskAzureProfile
+& $az config set core.enable_broker_on_windows=false core.login_experience_v2=off core.collect_telemetry=false extension.use_dynamic_install=no --only-show-errors --output none
+if ($LASTEXITCODE -ne 0) { throw 'Task profile configuration failed.' }
+# Set $targetTenantId to the authorized owning directory, not a subscription ID.
+if ([string]::IsNullOrWhiteSpace($targetTenantId)) { throw 'Identify the intended directory first.' }
+& $az login --tenant $targetTenantId --allow-no-subscriptions --output none
+if ($LASTEXITCODE -ne 0) { throw 'Azure browser authentication failed.' }
+```
+
+The user completes password/MFA/consent directly in Microsoft's UI. Keep
+account details, authorization URLs and credentials out of captured diagnostics.
+An application registration belongs to a tenant, not an Azure subscription;
+its directory may have no selectable subscription. Use the authorized owning
+tenant for Graph operations, reusing its cached authentication where available.
+Do not preserve an unrelated context unnecessarily when the owner explicitly
+authorizes changing it, or infer an absent registration from a denied broad
+application-list request.
+
+Locate the registration by the dashboard's configured Application (client) ID,
+not a display-name guess. An exact Graph alternate-key lookup is
+`GET /v1.0/applications(appId='<client-id>')`; use Azure CLI `az rest` in the
+correct tenant. Preserve existing SPA redirects, audience, delegated permissions
+and Web settings when adding the authorized Web callback, then read them back.
+Graph generates `web.redirectUriSettings` metadata for a new redirect; validate
+that metadata against the registered URI rather than ignoring a whole-object
+readback mismatch. Server credentials must be bounded and transferred directly
+to protected Worker secret input, never command-line values or captured output.
+Installation/login does not authorize Azure resource deployment or unrelated
+directory/subscription changes.
+
+### Cloudflare and browser tools
+
 The static app needs Node/npm for development, not a production Node server.
 The optional device-code backend separately needs Node on its trusted host.
 Cloudflare Worker development needs Wrangler only when working on Worker code.
