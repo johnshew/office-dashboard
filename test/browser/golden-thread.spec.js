@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test('mainstream Phone Link sign-in, Inbox, calendar, refresh and logout', async ({ page }) => {
     const session = 'a'.repeat(43);
-    let mailReads = 0, calendarReads = 0, cancelled = false;
+    let mailReads = 0, continuationReads = 0, calendarReads = 0, cancelled = false;
     await page.route('https://phone.example.test/**', async route => {
         const url = new URL(route.request().url());
         let body;
@@ -18,11 +18,21 @@ test('mainstream Phone Link sign-in, Inbox, calendar, refresh and logout', async
         } else if (url.pathname.endsWith('/graph')) {
             const path = url.searchParams.get('path');
             if (path === '/me') body = { displayName: 'Golden Driver' };
-            else if (path.startsWith('/me/mailFolders/inbox/messages')) body = { value: [{
+            else if (path.startsWith('/me/mailFolders/inbox/messages')) body = {
+                '@odata.nextLink': "https://graph.microsoft.com/v1.0/me/mailFolders('inbox')/messages?$skiptoken=synthetic-continuation",
+                value: [{
                 id: 'golden-message', subject: `Golden message ${++mailReads}`, bodyPreview: 'Mainstream Inbox message',
                 receivedDateTime: '2026-10-02T08:00:00Z', sender: { emailAddress: { name: 'Synthetic Sender' } },
                 body: { contentType: 'html', content: '<p>Golden message body</p>' },
             }] };
+            else if (path === "/me/mailFolders('inbox')/messages?$skiptoken=synthetic-continuation") {
+                continuationReads++;
+                body = { value: [{
+                    id: 'golden-continuation', subject: 'Golden continuation', bodyPreview: 'Second Inbox page',
+                    receivedDateTime: '2026-10-02T07:00:00Z', sender: { emailAddress: { name: 'Synthetic Sender' } },
+                    body: { contentType: 'text', content: 'Second-page message body' },
+                }] };
+            }
             else if (path.startsWith('/me/calendarView')) body = { value: [{
                 id: 'golden-event', subject: `Golden meeting ${++calendarReads}`,
                 start: { dateTime: '2026-10-02T09:00:00', timeZone: 'UTC' },
@@ -46,10 +56,12 @@ test('mainstream Phone Link sign-in, Inbox, calendar, refresh and logout', async
     await expect(dialog).toContainText('Phone Link ABCDEF12');
     await expect(page.locator('#UsernameText')).toHaveText('Golden Driver');
     await expect(dialog).toHaveCount(0);
+    await expect(page.getByText('Golden continuation', { exact: true })).toBeVisible();
     await page.getByText('Golden message 1', { exact: true }).click();
     await expect(page.frameLocator('iframe[title="Message or event body"]').getByText('Golden message body')).toBeVisible();
     await navigate('#RefreshCurrentView');
-    await expect(page.locator('.mail-summary-subject')).toHaveText('Golden message 2');
+    await expect(page.locator('.mail-summary-subject')).toHaveText(['Golden message 2', 'Golden continuation']);
+    expect(continuationReads).toBe(2);
     await navigate('#ShowCalendar');
     await expect(page.getByText('Golden meeting 1', { exact: true })).toBeVisible();
     await navigate('#RefreshCurrentView');

@@ -26,7 +26,7 @@ async function signedIdentity(nonce, identityTenant) {
     return `${header}.${claims}.${encode(new Uint8Array(signature))}`;
 }
 
-async function runtime(t, redirect = false, accountType) {
+async function runtime(t, redirect = false, accountType, graphResponse) {
     let nonce;
     const upstreams = [];
     const mf = new Miniflare(convertV4MiniflareOptions({
@@ -51,6 +51,10 @@ async function runtime(t, redirect = false, accountType) {
             }
             if (url.pathname.endsWith('/keys')) return Response.json({ keys: [jwk] });
             assert.equal(url.origin, 'https://graph.microsoft.com');
+            if (graphResponse && url.pathname !== '/v1.0/me') {
+                assert.ok(request.headers.has('Authorization'));
+                return graphResponse(url);
+            }
             assert.equal(url.pathname, '/v1.0/me');
             assert.equal(request.headers.get('Authorization'), 'Bearer synthetic-runtime-access');
             return Response.json({ id: accountType === 'personal' ? '0123456789ABCDEF' : account,
@@ -64,10 +68,11 @@ async function runtime(t, redirect = false, accountType) {
         schema.exec(readFileSync(new URL('../workers/pairing/schema.sql', import.meta.url), 'utf8'));
         await db.batch(schema.prepare('SELECT sql FROM sqlite_master WHERE sql IS NOT NULL').all().map(row => db.prepare(row.sql)));
     } finally { schema.close(); }
-    const call = (path, { method = 'GET', body, cookie, requestOrigin = app } = {}) => mf.dispatchFetch(origin + path, {
-        method, headers: { 'CF-Connecting-IP': '192.0.2.1', ...(requestOrigin ? { Origin: requestOrigin } : {}),
-            ...(body ? { 'Content-Type': 'application/json' } : {}), ...(cookie ? { Cookie: cookie } : {}) },
-        ...(body ? { body: JSON.stringify(body) } : {}), redirect: 'manual',
+    const call = (path, { method = 'GET', body, form, cookie, token, requestOrigin = app, address = '192.0.2.1' } = {}) => mf.dispatchFetch(origin + path, {
+        method, headers: { 'CF-Connecting-IP': address, ...(requestOrigin ? { Origin: requestOrigin } : {}),
+            ...(body ? { 'Content-Type': 'application/json' } : form ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}),
+            ...(cookie ? { Cookie: cookie } : {}), ...(token ? { Authorization: 'Bearer ' + token } : {}) },
+        ...(body ? { body: JSON.stringify(body) } : form ? { body: new URLSearchParams(form).toString() } : {}), redirect: 'manual',
     });
     const start = await call('/sessions', { method: 'POST', body: {} });
     assert.equal(start.status, 201);
@@ -83,7 +88,7 @@ async function runtime(t, redirect = false, accountType) {
     const response = await call('/oauth/callback?' + new URLSearchParams({
         state: authorization.searchParams.get('state'), code: 'synthetic-runtime-code',
     }), { cookie, requestOrigin: null });
-    return { response, upstreams, call, cookie };
+    return { response, upstreams, call, cookie, pairing };
 }
 
 test('actual workerd completes token exchange and identity verification before explicit approval', async t => {
@@ -109,4 +114,38 @@ test('actual workerd accepts a verified personal-account identity from explicit 
     const { response, call, cookie } = await runtime(t, false, 'personal');
     assert.equal(response.headers.get('Location'), '/phone/confirm');
     assert.equal((await call('/phone/confirm', { cookie, requestOrigin: null })).status, 200);
+});
+
+test('actual workerd serves approved dashboard across IP changes and canonical Inbox pagination', async t => {
+    const next = new URL("https://graph.microsoft.com/v1.0/me/mailFolders('inbox')/messages");
+    next.searchParams.set('$skiptoken', 'synthetic+continuation/=');
+    next.searchParams.set('$expand', 'attachments($select=id,isInline)');
+    const { call, cookie, pairing } = await runtime(t, false, 'personal', url => {
+        if (url.pathname === '/v1.0/me/mailFolders/inbox/messages') {
+            return Response.json({ value: [{ id: 'first-message' }], '@odata.nextLink': next.href });
+        }
+        assert.equal(url.pathname, next.pathname);
+        assert.equal(url.searchParams.get('$skiptoken'), next.searchParams.get('$skiptoken'));
+        assert.equal(url.searchParams.get('$expand'), next.searchParams.get('$expand'));
+        return Response.json({ value: [{ id: 'second-message' }] });
+    });
+    const confirmation = await call('/phone/confirm', { cookie, requestOrigin: null });
+    const csrf = /name="csrf" value="([^"]+)"/.exec(await confirmation.text())[1];
+    const approved = await call('/phone/approve', { method: 'POST', requestOrigin: origin, cookie,
+        form: { csrf, decision: 'approve' }, address: '198.51.100.2' });
+    assert.equal(approved.status, 200);
+    const poll = await call(`/sessions/${pairing.sessionId}/poll`, { token: pairing.teslaToken, address: '203.0.113.3' });
+    assert.equal((await poll.json()).status, 'complete');
+    const profile = await call(`/sessions/${pairing.sessionId}/graph?path=%2Fme`, { token: pairing.teslaToken });
+    assert.equal(profile.status, 200, await profile.text());
+    const graph = path => call(`/sessions/${pairing.sessionId}/graph?path=${encodeURIComponent(path)}`,
+        { token: pairing.teslaToken, address: '203.0.113.4' });
+    const firstPage = await graph('/me/mailFolders/inbox/messages');
+    assert.equal(firstPage.status, 200);
+    const firstBody = await firstPage.json();
+    const continuation = new URL(firstBody['@odata.nextLink']);
+    const secondPage = await graph(continuation.pathname.slice('/v1.0'.length) + continuation.search);
+    assert.equal(secondPage.status, 200);
+    assert.deepEqual([...firstBody.value, ...(await secondPage.json()).value],
+        [{ id: 'first-message' }, { id: 'second-message' }]);
 });
