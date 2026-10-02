@@ -24,7 +24,8 @@
     "preview": "vite preview --host localhost --port 8000",
     "test": "node --test test/*.test.js",
     "validate-release-config": "node scripts/validate-release-config.js",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test",
+    "test:browser:golden": "playwright test test/browser/golden-thread.spec.js test/browser/phone-page.spec.js --grep \"mainstream|explicit personal|for approve\""
   },
   "author": "JohnShew",
   "license": "MIT",

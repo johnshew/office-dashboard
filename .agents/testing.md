@@ -9,10 +9,11 @@ Use the existing runners; do not add a parallel testing toolchain.
 | Phone Link service and identity | `node --test test\pairing-worker.test.js test\phone-identity.test.js` |
 | Worker bundle/runtime imports | `npm run build:worker` (dry-run, no deployment) |
 | Worker outbound-fetch/runtime behavior | `node --test test\pairing-runtime.test.js` (installed Wrangler's Miniflare/workerd; synthetic D1/provider) |
-| Release configuration | `node --test test\release-config.test.js` |
+| Release configuration and artifact promotion | `node --test test\release-config.test.js test\site-release.test.js` |
 | Worker release configuration and safeguards | `node --test test\worker-release.test.js` |
 | TypeScript, React or build compatibility | `npm run build` |
 | Dashboard interaction and phone UI | `npm run test:browser` |
+| Mainstream browser golden thread used by CI | `npm run test:browser:golden` |
 | Documentation only | Review commands, relative links and status claims; `git diff --check` |
 
 `npm test` runs all existing Node tests. New tests for a Worker or shared helper
@@ -29,6 +30,16 @@ Chromium projects (desktop and mobile). Install the browser with
 `npx playwright install chromium` only when needed. CI installs its Linux system
 dependencies too. The Playwright configuration builds and starts its own preview
 server; do not reuse an unrelated service or terminate processes by name.
+
+CI's Playwright scope is the mainstream golden thread only: personal-account
+routing, the actual native phone approval form, then dashboard sign-in, Inbox
+message reading, mail/calendar refresh, navigation and logout on desktop/mobile.
+It uses `PLAYWRIGHT_LOGIN_OPTIONS=browser,phone`; set that environment variable
+before the golden command to reproduce CI locally. No elapsed-time thresholds,
+virtual-clock expiry scenarios or separate login-option build matrix run in
+browser CI. Broader existing UI tests remain available through `test:browser`;
+expiry, replay, capability, renewal and other security boundaries stay covered
+by Node/workerd checks rather than timing-sensitive browser tests.
 
 Pairing coverage must include wrong state/capability, replay, cancellation,
 expiry, denial, duplicate approval, capacity, backend failures and account/session

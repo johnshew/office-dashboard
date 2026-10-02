@@ -4,14 +4,34 @@ Use [RELEASE.md](../RELEASE.md) for dated deployment evidence, remaining gates
 and backend alternatives. Do not replace historical observations with assumptions.
 
 The default branch is `gh-pages`, but GitHub Pages publishes through Actions,
-not by serving that branch directly. Ordinary pushes and PRs validate only.
+not by serving that branch directly. PRs and default-branch pushes validate only;
+feature-branch pushes do not duplicate PR checks.
 Production releases require a stable `vMAJOR.MINOR.PATCH` tag matching
 `package.json`, whose commit belongs to the default branch.
 
-The CI workflow installs the locked dependencies, validates, builds `dist/`,
-dry-run bundles the Worker without deploying it, stamps version/commit provenance
-and publishes the site through the `github-pages`
-environment. It verifies live HTTPS provenance before creating release assets.
+Default-branch CI installs locked dependencies, runs Node checks and the
+mainstream Playwright golden thread, builds `dist/`, and dry-run bundles the
+Worker without deploying it. It stamps version/commit provenance and seals
+`office-dashboard.tar.gz`, `SHA256SUMS` and `site-manifest.json` in the immutable
+`release-site` artifact, retained for 30 days.
+
+Stable tags and release dispatches **promote that tested artifact**; they do not
+install application dependencies, rebuild or rerun browser tests. Promotion
+requires the exact tagged commit on the default branch, matching package and
+lockfile versions, a successful default-branch push run of `pages.yml`, and its
+single unexpired artifact. It verifies GitHub's ZIP SHA-256, the sealed site
+archive SHA-256, the run/attempt, and a deterministic digest of all four public
+`VITE_` identity/service settings. Archive paths, file types and contained
+`release.json` must also pass before Pages receives the original site bytes.
+Missing/expired artifacts, mismatched configuration or failed validation stop
+the release; there is no rebuild fallback. If public configuration changes,
+create a new version/source commit and validate it on the default branch before
+tagging. Old releases without a sealed manifest remain available through the
+original-archive rollback workflow, not this promotion path.
+
+The site publishes through the protected `github-pages` environment with the
+existing serialized deployment group and HTTPS provenance verification before
+creating release assets.
 Version tags are immutable; update the package and lockfile together for a new
 version. Build/public configuration changes are not deployed merely by editing
 repository files or merging a PR.
