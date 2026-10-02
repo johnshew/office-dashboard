@@ -281,6 +281,8 @@ test('workflow keeps Worker/manual approvals, no OAuth secret injection, and imm
     assert.match(workflow, /options: \[deploy, initialize, rollback\]/);
     assert.doesNotMatch(workflow, /apply_schema|npm run build:worker|worker-release\.js bundle/);
     assert.match(workflow, /git show "\$WORKFLOW_COMMIT:scripts\/worker-release\.js"/);
+    assert.match(workflow, /RELEASE_HELPER=\$RUNNER_TEMP\/worker-release\.mjs/);
+    assert.doesNotMatch(workflow, /RELEASE_HELPER:.*runner\.temp/);
     assert.match(workflow, /if: inputs.operation == 'deploy'/);
     assert.match(helper, /experimental_readRawConfig/);
     assert.doesNotMatch(helper, /parseJSONC|safeSchema|function wrangler|Release workflow\/helpers differ/);

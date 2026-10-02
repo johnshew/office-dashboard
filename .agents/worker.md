@@ -103,27 +103,44 @@ After a separate backend rollout approval:
 
 ### Entra registration and credential handoff
 
-Use Entra **App registrations > Office Dashboard > Authentication > Add a
-platform > Web** on the existing registration, as directed by the owner on
-October 2, 2026. Keep its existing Single-page application platform and all SPA
-callbacks unchanged. Its organizational-and-personal-account audience already
-matches the dashboard's `common` authority; use that same accepted audience for
-Phone Link rather than widening it or changing the browser flow.
-Register the **Web** platform with the exact planned service callback. For the
+The owner selected **Azure CLI** for the actual registration work on October 2,
+2026; portal editing is an optional alternative, not a prerequisite. Follow
+[setup](setup.md) for discovery and the separately authorized tenant context.
+Identify the existing application by its exact Application (client) ID in the
+correct tenant, using Microsoft Graph's alternate-key
+`applications(appId='<client-id>')` lookup rather than a display-name match.
+Read its current Web/SPA callbacks, account audience, delegated permissions,
+API settings and public-client settings before applying a narrow Web-platform
+update. Preserve existing settings and all SPA callbacks. Its organizational-
+and-personal-account audience already matches the dashboard's `common`
+authority; do not widen it or change the browser flow.
+
+Add the exact **Web** callback, preserving any existing Web callbacks. For the
 currently inspected Cloudflare account, the proposed new callback is
 `https://office-dashboard-phone-link.vanamonde.workers.dev/oauth/callback`.
 This is a planned origin, not evidence that the new Worker has been deployed.
 Do not add this callback to the SPA platform or enable implicit/public-client
-flows as a shortcut.
+flows as a shortcut. Read back the callback and preserved settings, including
+disabled implicit grants. Graph may generate `web.redirectUriSettings` when
+adding a callback; verify that generated metadata and the intended fields
+explicitly rather than treating whole-Web-object equality as the only proof.
+The owner's CLI update preserved the three existing SPA callbacks, audience,
+delegated/API/public-client settings and disabled implicit grants.
 
 Reuse the existing Application (client) ID as `PHONE_CLIENT_ID`, not the Object ID.
 Add only the three delegated Microsoft Graph permissions in the configuration
-contract above and obtain any policy-required consent in Microsoft's UI.
-Create a server credential under **Certificates & secrets** with a bounded
-expiration and a documented owner/renewal date. Enter its **value**, not its
+contract above and obtain any policy-required consent. Create a bounded,
+Worker-only server credential on that exact application through the approved
+CLI/Graph operation, without replacing unrelated credentials. Record its
+expiration and owner/renewal date, not its value. Credential request/response
+handling must use protected input/output: no secret-bearing command arguments,
+console output or logs. Enter its **value**, not its
 secret ID, directly into the new Worker's protected `PHONE_CLIENT_SECRET`
 configuration or an interactive Wrangler secret prompt. Never paste it into
 chat, a GitHub variable, a shell command argument or this guide.
+If the operator separately chooses the portal alternative, the corresponding
+locations are **Authentication > Add a platform > Web** and
+**Certificates & secrets** on the same exact registration.
 
 Generate a separate cryptographically random 32-byte base64url encryption key
 and write it directly to `PHONE_ENCRYPTION_KEY` through protected secret input.

@@ -91,7 +91,6 @@ jobs:
       SCHEMA_CONFIRMATION: ${{ inputs.schema_confirmation }}
       ROLLBACK_VERSION_ID: ${{ inputs.rollback_version_id }}
       ROLLBACK_CONFIRMATION: ${{ inputs.rollback_confirmation }}
-      RELEASE_HELPER: ${{ runner.temp }}/worker-release.mjs
       WRANGLER_SEND_METRICS: 'false'
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -105,7 +104,9 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Use dispatch tooling with the exact accepted application source
-        run: git show "$WORKFLOW_COMMIT:scripts/worker-release.js" > "$RELEASE_HELPER"
+        run: |
+          git show "$WORKFLOW_COMMIT:scripts/worker-release.js" > "$RUNNER_TEMP/worker-release.mjs"
+          echo "RELEASE_HELPER=$RUNNER_TEMP/worker-release.mjs" >> "$GITHUB_ENV"
       - name: Generate fail-closed public deployment configuration
         run: node "$RELEASE_HELPER" prepare
       - name: Bundle exact reviewed Worker without cloud credentials
