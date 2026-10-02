@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const loginOptions = (process.env.PLAYWRIGHT_LOGIN_OPTIONS || 'phone,device').split(',');
+
 export default defineConfig({
     testDir: './test/browser',
     fullyParallel: true,
@@ -20,10 +22,10 @@ export default defineConfig({
         url: 'http://localhost:8002/office-dashboard/',
         reuseExistingServer: false,
         env: {
-            VITE_CLIENT_ID: '',
+            VITE_CLIENT_ID: loginOptions.includes('browser') ? '11111111-2222-3333-4444-555555555555' : '',
             VITE_TENANT_ID: 'organizations',
-            VITE_DEVICE_LOGIN_URL: 'https://device.example.test',
-            VITE_PHONE_LINK_URL: 'https://phone.example.test'
+            VITE_DEVICE_LOGIN_URL: loginOptions.includes('device') ? 'https://device.example.test' : '',
+            VITE_PHONE_LINK_URL: loginOptions.includes('phone') ? 'https://phone.example.test' : ''
         }
     }
 });

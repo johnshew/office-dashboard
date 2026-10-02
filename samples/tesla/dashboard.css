@@ -17,6 +17,30 @@ body:has(.mail-active) #App { height: 100%; }
 .mail-active { height: 100%; min-height: 0; display: flex; flex-direction: column; }
 .mail-active > .alert { flex: none; margin: 0; }
 #top-nav { flex: none; }
+.login-chooser { width: 100%; max-width: 880px; margin: 0 auto; padding: 32px 24px; }
+.login-chooser h2 { font-size: 28px; margin-bottom: 12px; }
+.login-intro { color: #525b64; margin-bottom: 24px; }
+.login-options { display: flex; flex-wrap: wrap; gap: 16px; }
+.login-option { flex: 1 1 280px; min-width: 0; padding: 20px; border: 1px solid #dce1e3; border-radius: 12px; display: flex; flex-direction: column; justify-content: center; }
+.login-option-recommended { background: #f2f7ff; border-color: #9dc2ff; }
+.login-recommendation { color: #2459a6; font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+.login-option .btn { width: 100%; }
+.login-option p:last-child, .login-device-option p { margin: 12px 0 0; color: #525b64; }
+.login-device-option { margin: 24px 0; padding-top: 20px; border-top: 1px solid #dce1e3; }
+.login-chooser .btn, .phone-login-dialog .btn, .device-login .btn, #DoLogin { min-height: 44px; }
+.phone-login-dialog .modal-body > img { display: block; margin: 0 auto 20px; }
+.phone-login-dialog ol { padding-left: 24px; }
+.phone-login-dialog li { padding-left: 4px; margin-bottom: 10px; }
+.phone-pairing-label { padding: 12px; background: #f2f7ff; border: 1px solid #9dc2ff; border-radius: 8px; text-align: center; overflow-wrap: anywhere; }
+.phone-login-status { color: #525b64; font-size: 14px; margin-bottom: 0; }
+@media (max-width: 575px) {
+    /* Animated clipping can move a navigation target between touch press and release. */
+    #top-nav .collapsing { transition: none; }
+    .login-chooser { padding: 24px 16px; }
+    .login-chooser h2 { font-size: 24px; }
+    .login-option { padding: 16px; }
+    .phone-login-dialog .modal-dialog { margin: 12px; }
+}
 .mail-workspace { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(260px, 30%) minmax(0, 1fr); color: #262d31; background: #fff; }
 .mail-list-pane { min-width: 0; min-height: 0; overflow: auto; border-right: 1px solid #dce1e3; }
 .mail-list-heading { font-size: 16px; font-weight: 600; margin: 0; padding: 16px; border-bottom: 1px solid #dce1e3; }

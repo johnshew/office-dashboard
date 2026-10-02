@@ -25,6 +25,16 @@ configuration, secrets, tests, deployment and rollback. The Pages workflow does
 not deploy either backend. Installing Node or Wrangler, logging in to Cloudflare,
 creating D1 resources and deploying are distinct actions.
 
+The independent, manual **Phone Link release** workflow uses an accepted
+default-branch SHA/tag, locked tooling, required human environment reviewers,
+an immutable Worker artifact and a sanitized deployment receipt. Deploy and
+explicit-version rollback share their own serialized concurrency group.
+Schema initialization is opt-in; runtime secrets are never rotated by a release.
+See [Worker CI/CD](worker.md#independent-worker-cicd) for onboarding, scoped API
+credentials, environment variables and rollback compatibility. The environment
+and credentials must be configured before that workflow can release; adding
+the workflow does not prove they exist or that a live release has run.
+
 Rollback restores the original release archive/checksum rather than rebuilding
 with current configuration. Verify restored provenance over HTTPS and coordinate
 queued deployments. Do not roll back to the legacy implicit-authentication app

@@ -80,6 +80,12 @@ jobs:
       - run: npm audit --audit-level=high
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
+      - name: Verify configured browser and phone sign-in choices
+        run: |
+          for options in browser,phone browser phone; do
+            PLAYWRIGHT_LOGIN_OPTIONS="$options" npm exec --no -- playwright test test/browser/login-choice.spec.js \
+              --output="test-results/login-choice-$options"
+          done
       - name: Upload browser diagnostics
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

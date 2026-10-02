@@ -26,7 +26,7 @@ async function deviceService(page, status = 'pending', messages = [], attachment
 test('QR sign-in renders locally, fits the viewport and cancels without leaking credentials', async ({ page }) => {
     const calls = await deviceService(page);
     await page.goto('./');
-    await page.getByRole('button', { name: 'Login with iPhone / device QR code' }).click();
+    await page.getByRole('button', { name: 'Use a device code' }).click();
     await expect(page.getByText('ABCD-EFGH', { exact: true })).toBeVisible();
     const image = page.getByRole('img', { name: "Scan to open Microsoft's device sign-in page" });
     await expect(image).toBeVisible();
@@ -36,7 +36,7 @@ test('QR sign-in renders locally, fits the viewport and cancels without leaking 
     expect(await page.locator('body').innerHTML()).not.toContain('test-session-credential');
     await page.getByRole('button', { name: 'Cancel device login' }).click();
     await expect(image).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Login with iPhone / device QR code' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Use a device code' })).toBeEnabled();
     expect(calls.some(call => call.url.pathname.endsWith('/logout')
         && call.headers.authorization === 'Bearer test-session-credential')).toBe(true);
     expect(calls.every(call => !call.url.href.includes('test-session-credential'))).toBe(true);
@@ -45,7 +45,7 @@ test('QR sign-in renders locally, fits the viewport and cancels without leaking 
 test('phone approval opens the dashboard and logout clears the user', async ({ page }) => {
     await deviceService(page, 'complete');
     await page.goto('./');
-    await page.getByRole('button', { name: 'Login with iPhone / device QR code' }).click();
+    await page.getByRole('button', { name: 'Use a device code' }).click();
     await expect(page.locator('#UsernameText')).toHaveText('Test User', { timeout: 15000 });
     await expect(page.getByText('ABCD-EFGH', { exact: true })).toHaveCount(0);
     if (await page.getByRole('button', { name: 'Toggle navigation' }).isVisible()) {
@@ -54,16 +54,16 @@ test('phone approval opens the dashboard and logout clears the user', async ({ p
     await page.getByRole('button', { name: 'Test User Account' }).click();
     await page.getByText('Logout', { exact: true }).click();
     await expect(page.locator('#UsernameText')).toHaveText('');
-    await expect(page.getByRole('button', { name: 'Login with iPhone / device QR code' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Use a device code' })).toBeEnabled();
 });
 
 test('denied device sign-in clears the QR and allows retry', async ({ page }) => {
     await deviceService(page, 'failed');
     await page.goto('./');
-    await page.getByRole('button', { name: 'Login with iPhone / device QR code' }).click();
+    await page.getByRole('button', { name: 'Use a device code' }).click();
     await expect(page.getByRole('alert')).toContainText('declined or expired', { timeout: 15000 });
     await expect(page.getByRole('img')).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Login with iPhone / device QR code' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Use a device code' })).toBeEnabled();
 });
 
 test('Mail opens Inbox and isolates hostile email content', async ({ page }) => {
@@ -86,7 +86,7 @@ test('Mail opens Inbox and isolates hostile email content', async ({ page }) => 
             <form action="https://mail-content.example.test/form"><input></form>` }
     }]);
     await page.goto('./');
-    await page.getByRole('button', { name: 'Login with iPhone / device QR code' }).click();
+    await page.getByRole('button', { name: 'Use a device code' }).click();
     await page.getByText('Inbox safety check', { exact: true }).click({ timeout: 15000 });
     const preview = page.locator('iframe[title="Message or event body"]');
     await expect(preview).toHaveAttribute('sandbox', '');
@@ -140,7 +140,7 @@ test('Mail reader contains long content and preserves inline images and keyboard
         }
     });
     await page.goto('./');
-    await page.getByRole('button', { name: 'Login with iPhone / device QR code' }).click();
+    await page.getByRole('button', { name: 'Use a device code' }).click();
     const firstRow = page.locator('.mail-summary').first();
     await expect(firstRow).toBeVisible({ timeout: 15000 });
     expect(await page.locator('.mail-list-pane').evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
@@ -196,7 +196,7 @@ test('Show Images enables HTTPS images only for the selected message', async ({ 
     }));
     await deviceService(page, 'complete', messages);
     await page.goto('./');
-    await page.getByRole('button', { name: 'Login with iPhone / device QR code' }).click();
+    await page.getByRole('button', { name: 'Use a device code' }).click();
     await page.getByText('First image consent', { exact: true }).click({ timeout: 15000 });
     await expect(page.getByText('Preview must not appear in the list', { exact: true })).toHaveCount(0);
     const frame = page.frameLocator('iframe');

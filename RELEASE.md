@@ -68,6 +68,55 @@ An independent code review's configuration-forwarding and near-expiry approval
 findings were fixed with regression coverage. This is not live Microsoft,
 phone-passkey, Worker deployment or Tesla acceptance.
 
+Cloudflare inventory, October 2, 2026: the existing
+`office-dashboard-pairing` Worker at
+`https://office-dashboard-pairing.vanamonde.workers.dev` is live and its HTTPS
+health endpoint reports version 2, D1 storage and ten slots. Its database,
+`office-dashboard-relay`, contains the legacy `relay_slots` schema. Inspecting
+the deployed source confirmed the relay API, not the new phone OAuth service.
+Its bindings are origins, D1 and rate limiting, with no Worker secrets.
+The legacy allowed-origin list includes the dashboard HTTPS origin and
+`http://localhost:8000`. No session rows, pairing capabilities or account data
+were read, and that service/configuration was not changed.
+
+The proposed `office-dashboard-phone-link` service needs its own D1 database,
+an Entra Web callback and protected server credentials. These prerequisites
+were not established at the inventory checkpoint. GitHub then had the browser client/tenant
+variables but no Phone Link URL or Cloudflare deployment secrets. Wrangler
+OAuth authenticates this development host; it is not an unattended CI credential.
+The existing `cloudflare-production` GitHub environment has no approval rules;
+its existence is not evidence of protected backend deployment. Real phone sign-in
+remains blocked on registration, deployment and user-operated Microsoft consent.
+Do not publish the candidate with a placeholder Phone Link URL to bypass those gates.
+
+The owner subsequently directed reuse of the existing Office Dashboard app
+registration. Add a Web-platform callback and Worker-only client secret while
+preserving the SPA platform, its redirects, PKCE and `common` account audience.
+No new registration or frontend secret is required. The registration choice is
+settled; saving/verifying that Web callback and securely entering the credential
+still require the owner's authenticated Entra session.
+
+The source now includes an independent manual **Phone Link release** workflow:
+accepted default-branch source/CI, required human environment review, locked
+Wrangler, immutable no-bundle deployment, explicit additive schema initialization,
+sanitized version/readiness receipts and compatible existing-version rollback.
+Its protected environment, scoped Cloudflare API credential and dedicated
+Worker/D1 onboarding are not configured merely by committing the workflow. Existing
+QR resources and production Pages remain unchanged. Follow
+[Worker CI/CD](.agents/worker.md#independent-worker-cicd) before enabling it.
+
+Subsequent authorized bootstrap, October 2, 2026: the dedicated
+`office-dashboard-phone-link` D1 database was created and its `phone_slots`
+table and `phone_expiry` index were initialized and read back. The legacy relay
+database was not changed. The new GitHub `cloudflare-phone-link` environment
+now requires explicit owner approval and restricts deployments to `gh-pages`;
+its seven public Worker configuration variables were saved and read back.
+The application ID is reused from the existing dashboard configuration, with
+the accepted `common` audience. No Worker runtime, server secrets, Cloudflare
+CI API token, frontend Phone Link URL, version tag or workflow dispatch has been
+published/configured. Web callback/credential setup and actual phone acceptance
+remain outstanding.
+
 1. Verify Pages certificate provisioning and HTTPS enforcement for the configured
   custom domain. DNS was changed before publication at the user's request.
   Preserve strict origin TLS at Cloudflare; never use HTTP authentication.
@@ -493,8 +542,9 @@ Implementation and operational gates:
   relay API is not preserved. Follow [Worker setup](.agents/worker.md) for the
   D1 schema and separate service configuration. `VITE_PHONE_LINK_URL` enables
   Phone Link; `VITE_DEVICE_LOGIN_URL` remains the Node alternative.
-- Use a separate Entra web registration with the intended audience and only delegated
-  `User.Read`, `Mail.Read` and `Calendars.Read`. Store application credentials as
+- Configure the existing Office Dashboard registration's Web platform, as selected
+  by the owner, preserving SPA callbacks and the accepted audience. Request only
+  delegated `User.Read`, `Mail.Read` and `Calendars.Read`. Store application credentials as
   Worker secrets, never in source or public build variables. The Node device-code
   public-client registration and its configuration are a different alternative.
 - The Worker encrypts persisted tokens with AES-GCM using a server-only key.
