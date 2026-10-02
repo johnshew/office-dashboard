@@ -117,6 +117,30 @@ CI API token, frontend Phone Link URL, version tag or workflow dispatch has been
 published/configured. Web callback/credential setup and actual phone acceptance
 remain outstanding.
 
+Registration and delivery checkpoint, October 2, 2026, 18:40 UTC:
+tenant-scoped exact lookup through Azure CLI found the existing registration.
+Its Phone Link **Web** callback is now saved and read back; the three SPA
+callbacks, account audience, delegated/API/public-client settings and disabled
+implicit grants were preserved. A bounded Worker-only client credential
+expires March 31, 2027. Its value and a stable, separately generated encryption
+key were transferred directly to the new draft Worker's protected secrets;
+both binding names were verified without publishing any values.
+
+Release tooling was simplified and merged in PR #65; Azure setup guidance
+was merged in PR #66. Accepted source
+`cb12c894e603ce83c26cd2891251aacd765fd7dc` passed exact default-branch
+[CI 37048531888](https://github.com/johnshew/office-dashboard/actions/runs/37048531888).
+The exact Worker bundle and public configuration were prepared and sealed
+without a live deployment or SQL execution. Normal deploy and additive D1
+initialization are separate operations; this database is already initialized.
+[Phone Link release 37048930018](https://github.com/johnshew/office-dashboard/actions/runs/37048930018)
+passed source/CI/reviewer preflight and is waiting for required human approval.
+Configure the scoped `CLOUDFLARE_API_TOKEN` environment secret before approving
+that run. Developer Wrangler OAuth is not a CI credential and lacks account
+API-token creation permission. No runtime or Pages release has bypassed the
+approval gate. The frontend Phone Link URL remains unset; actual phone/Tesla
+acceptance and the overall live goal remain open.
+
 1. Verify Pages certificate provisioning and HTTPS enforcement for the configured
   custom domain. DNS was changed before publication at the user's request.
   Preserve strict origin TLS at Cloudflare; never use HTTP authentication.

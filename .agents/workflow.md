@@ -67,6 +67,29 @@ The placeholder must be replaced before execution. Default-branch pull, deployed
 outcomes. Remove only task-owned resources, through the app's lifecycle when
 app-managed. Stop task-owned servers by their exact PID, never by process name.
 
+## Keep goals and workstreams open until their own acceptance
+
+Keep one parent-owned goal record with separately tracked workstreams,
+prerequisites, evidence and blockers. Carry it across reviews, side questions and
+child handoffs. A completed review, passing CI, merged source or finished child
+does not complete a goal that still requires deployment or real phone acceptance.
+These continuity and delegation requirements follow the owner's request and
+the app's session contracts, not an unverified CDL/GLP command contract.
+
+Continue independent, authorized work while another workstream is blocked.
+Give a delegated child its exact scope, source/base, constraints, required
+validation and delivery boundary; keep credentials and live acceptance with
+their designated owner. Read back its tested source, results and limitations
+before accepting only that workstream's completion.
+
+Record human-only credential, consent and approval gates as blocked, not done.
+Coordinate protected input without copying credentials into conversation or
+bypassing required review. Do not claim overall completion while unblocked work
+remains; when only genuine human gates remain, report those precise gates and
+keep the overall goal open. Store requested CDL-style progress privately, with
+observed UTC events and explicitly retrospective earlier history, rather than
+publishing raw transcripts or inventing executable aliases.
+
 ## Consolidate learnings without duplicating policy
 
 For a meaningful behavior or process discovery:
