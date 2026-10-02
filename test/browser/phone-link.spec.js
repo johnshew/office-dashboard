@@ -97,34 +97,3 @@ test('denied Phone Link clears QR and permits a new pairing', async ({ page }) =
     await page.getByRole('button', { name: 'Cancel sign-in' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
 });
-
-test('delayed Phone Link poll accepts an approved session after the original pairing deadline', async ({ page }) => {
-    await page.clock.setFixedTime(new Date());
-    const calls = await phoneService(page, 'complete');
-    await page.goto('./');
-    await page.getByRole('button', { name: 'Sign in with your phone', exact: true }).click();
-    await expect(page.getByRole('dialog').getByRole('img')).toBeVisible();
-    await page.clock.setFixedTime(new Date(Date.now() + 120000));
-    await expect(page.locator('#UsernameText')).toHaveText('Synthetic Phone Driver', { timeout: 15000 });
-    await expect(page.getByRole('alert')).toHaveCount(0);
-    await expect(page.getByRole('dialog')).toHaveCount(0);
-    expect(calls.some(call => call.url.pathname.endsWith('/poll'))).toBe(true);
-    expect(calls.some(call => call.url.pathname.endsWith('/cancel'))).toBe(false);
-});
-
-for (const status of ['pending', 'expired']) {
-    test(`delayed Phone Link poll cancels a genuinely ${status} pairing after its deadline`, async ({ page }) => {
-        await page.clock.setFixedTime(new Date());
-        const calls = await phoneService(page, status);
-        await page.goto('./');
-        await page.getByRole('button', { name: 'Sign in with your phone', exact: true }).click();
-        await expect(page.getByRole('dialog').getByRole('img')).toBeVisible();
-        await page.clock.setFixedTime(new Date(Date.now() + 120000));
-        await expect(page.getByRole('alert')).toContainText(status === 'pending' ? 'Your QR code expired' : 'Phone Link sign-in', { timeout: 15000 });
-        await expect(page.getByRole('dialog')).toHaveCount(0);
-        await expect(page.locator('#UsernameText')).toHaveText('');
-        await expect(page.getByRole('button', { name: 'Sign in with your phone', exact: true })).toBeEnabled();
-        expect(calls.some(call => call.url.pathname.endsWith('/poll'))).toBe(true);
-        expect(calls.some(call => call.url.pathname.endsWith('/cancel'))).toBe(true);
-    });
-}

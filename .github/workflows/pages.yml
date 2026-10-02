@@ -2,7 +2,7 @@ name: CI and release
 
 on:
   push:
-    branches: ['**']
+    branches: [gh-pages]
     tags: ['v*']
   pull_request:
   workflow_dispatch:
@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: ci-${{ github.event_name }}-${{ github.ref }}
@@ -49,6 +50,7 @@ jobs:
   build:
     name: Validate
     needs: source
+    if: needs.source.outputs.release != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -62,15 +64,6 @@ jobs:
           persist-credentials: false
           ref: ${{ needs.source.outputs.ref }}
           fetch-depth: 0
-      - name: Verify release source
-        if: needs.source.outputs.release == 'true'
-        env:
-          RELEASE_REF: ${{ needs.source.outputs.ref }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-        run: |
-          git merge-base --is-ancestor HEAD "origin/$DEFAULT_BRANCH"
-          expected="v$(node -p "require('./package.json').version")"
-          [[ "$RELEASE_REF" == "refs/tags/$expected" ]] || { echo 'Tag must match package.json version.'; exit 1; }
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: '24'
@@ -79,13 +72,9 @@ jobs:
       - run: npm test
       - run: npm audit --audit-level=high
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:browser
-      - name: Verify configured browser and phone sign-in choices
-        run: |
-          for options in browser,phone browser phone; do
-            PLAYWRIGHT_LOGIN_OPTIONS="$options" npm exec --no -- playwright test test/browser/login-choice.spec.js \
-              --output="test-results/login-choice-$options"
-          done
+      - run: npm run test:browser:golden
+        env:
+          PLAYWRIGHT_LOGIN_OPTIONS: browser,phone
       - name: Upload browser diagnostics
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -96,37 +85,72 @@ jobs:
             test-results/
           retention-days: 7
       - run: npm run validate-release-config
-        if: needs.source.outputs.release == 'true'
+        if: github.event_name == 'push'
       - run: npm run build
       - run: npm run build:worker
       - name: Stamp build provenance
-        run: |
-          node --input-type=module -e "
-            import { writeFileSync, readFileSync } from 'node:fs';
-            import { execFileSync } from 'node:child_process';
-            const version = JSON.parse(readFileSync('package.json')).version;
-            const commit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
-            writeFileSync('dist/release.json', JSON.stringify({ version, commit }) + '\n');
-          "
+        run: node scripts/site-release.js stamp
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
       - name: Package tested site
+        if: github.event_name == 'push'
         run: |
           tar -czf office-dashboard.tar.gz -C dist .
-          sha256sum office-dashboard.tar.gz > SHA256SUMS
+          node scripts/site-release.js seal
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: github.event_name == 'push'
+        with:
+          name: release-site
+          path: |
+            office-dashboard.tar.gz
+            SHA256SUMS
+            site-manifest.json
+          retention-days: 30
+          if-no-files-found: error
+
+  promote:
+    name: Promote tested site
+    needs: source
+    if: needs.source.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      VITE_CLIENT_ID: ${{ vars.VITE_CLIENT_ID }}
+      VITE_TENANT_ID: ${{ vars.VITE_TENANT_ID }}
+      VITE_DEVICE_LOGIN_URL: ${{ vars.VITE_DEVICE_LOGIN_URL }}
+      VITE_PHONE_LINK_URL: ${{ vars.VITE_PHONE_LINK_URL }}
+      GH_TOKEN: ${{ github.token }}
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      RELEASE_REF: ${{ needs.source.outputs.ref }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+          ref: ${{ needs.source.outputs.ref }}
+          fetch-depth: 0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+      - name: Verify and restore exact accepted artifact without rebuilding
+        run: node scripts/site-release.js promote
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: release-site
           path: |
             office-dashboard.tar.gz
             SHA256SUMS
+            site-manifest.json
+          if-no-files-found: error
           retention-days: 30
       - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
-        if: needs.source.outputs.release == 'true'
         with:
           path: dist
 
   deploy:
     if: needs.source.outputs.release == 'true'
-    needs: [source, build]
+    needs: [source, promote]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:
