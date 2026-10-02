@@ -1,10 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { exactOrigin, releaseConfig, safeSchema, verifyManifest, workerName, parseJSONC,
-    preflight, readiness, activeVersion, rollbackBindings } from '../scripts/worker-release.js';
+import { tmpdir } from 'node:os';
+import { execFileSync } from 'node:child_process';
+import { DatabaseSync } from 'node:sqlite';
+import { exactOrigin, releaseConfig, releaseOperation, verifyManifest, workerName,
+    preflight, readiness, activeVersion, rollbackBindings, verifySource, deployedVersion } from '../scripts/worker-release.js';
 
 const env = {
     PHONE_WORKER_NAME: workerName,
@@ -21,13 +24,16 @@ const template = {
     d1_databases: [{ binding: 'PAIRING_DB', database_name: workerName, database_id: '' }]
 };
 
-test('reviewed JSONC parsing preserves quoted URLs/escapes and handles comments/trailing commas', () => {
-    assert.deepEqual(parseJSONC('{"url":"https://phone.example.com", /* reviewed */ "text":"\\\\\\"//", "list":[1,],} // end'), {
-        url: 'https://phone.example.com', text: '\\"//', list: [1]
-    });
-    assert.doesNotThrow(() => parseJSONC(readFileSync(join('workers', 'pairing', 'wrangler.jsonc'), 'utf8')));
-    assert.throws(() => parseJSONC('{"x": 1 /* unfinished'));
-    assert.throws(() => parseJSONC('{"x": undefined}'));
+test('locked Wrangler parses the shared config and preserves scheduling and rate limiting', async () => {
+    const { experimental_readRawConfig } = await import('wrangler');
+    const { rawConfig } = experimental_readRawConfig({ config: join('workers', 'pairing', 'wrangler.jsonc') });
+    const config = releaseConfig(rawConfig, env);
+    assert.equal(config.compatibility_date, rawConfig.compatibility_date);
+    assert.deepEqual(config.triggers, { crons: ['* * * * *'] });
+    assert.deepEqual(config.ratelimits, rawConfig.ratelimits);
+    assert.equal(config.ratelimits[0].name, 'PAIRING_RATE_LIMITER');
+    assert.equal(config.preview_urls, false);
+    assert.equal(config.workers_dev, true);
 });
 
 test('release configuration requires every explicit public production setting', () => {
@@ -72,35 +78,60 @@ test('account audience is explicit and consistent with tenant authority', () => 
     }
 });
 
-test('unreviewed config hooks, extra bindings and secret variables are rejected', () => {
-    assert.throws(() => releaseConfig({ ...template, build: { command: 'malicious' } }, env));
-    assert.throws(() => releaseConfig({ ...template, vars: { PHONE_CLIENT_SECRET: 'no' } }, env));
+test('target isolation stays enforced without duplicating Wrangler configuration validation', () => {
+    assert.deepEqual(releaseConfig({ ...template, compatibility_flags: ['nodejs_compat'] }, env).compatibility_flags, ['nodejs_compat']);
+    assert.ok(!JSON.stringify(releaseConfig({ ...template, vars: { PHONE_CLIENT_SECRET: 'no' } }, env)).includes('SECRET'));
     assert.throws(() => releaseConfig({ ...template, main: '../../other.js' }, env));
     assert.throws(() => releaseConfig({ ...template, d1_databases: [...template.d1_databases, template.d1_databases[0]] }, env));
     assert.throws(() => releaseConfig({ ...template, d1_databases: [{ ...template.d1_databases[0], database_name: 'office-dashboard-pairing' }] }, env));
 });
 
-test('only the existing additive initialization schema is permitted', () => {
+test('reviewed initialization is additive and idempotent without changing legacy relay data', () => {
     const schema = readFileSync(join('workers', 'pairing', 'schema.sql'), 'utf8');
-    assert.doesNotThrow(() => safeSchema(schema));
-    for (const addition of ['DROP TABLE phone_slots;', 'DELETE FROM phone_slots;', 'ALTER TABLE phone_slots ADD x TEXT;', 'PRAGMA foreign_keys=OFF;']) {
-        assert.throws(() => safeSchema(schema + addition));
+    const db = new DatabaseSync(':memory:');
+    try {
+        db.exec("CREATE TABLE relay_slots (value TEXT); INSERT INTO relay_slots VALUES ('synthetic-legacy-row');");
+        db.exec(schema);
+        db.exec("INSERT INTO phone_slots (slot, session_id, tesla_hash, label, status, expires_at) VALUES (0, 'synthetic-session', 'synthetic-hash', 'synthetic-label', 'pending', 1)");
+        db.exec(schema);
+        assert.deepEqual(db.prepare('SELECT value FROM relay_slots').all().map(row => row.value), ['synthetic-legacy-row']);
+        assert.deepEqual(db.prepare('SELECT session_id FROM phone_slots').all().map(row => row.session_id), ['synthetic-session']);
+        assert.deepEqual(db.prepare("SELECT name FROM sqlite_master WHERE name LIKE 'phone_%' ORDER BY name").all().map(row => row.name),
+            ['phone_expiry', 'phone_slots']);
+        assert.doesNotThrow(() => db.prepare('SELECT slot FROM phone_slots LIMIT 0').all());
+    } finally {
+        db.close();
     }
-    assert.throws(() => safeSchema(schema.replace('phone_slots', 'relay_slots')));
 });
 
-test('artifact verification binds exact bundle/config/schema bytes to full source commit', () => {
+test('schema initialization is separate from deploy and rollback requires explicit compatible version', () => {
+    assert.equal(releaseOperation({ OPERATION: 'deploy' }), 'deploy');
+    assert.throws(() => releaseOperation({ OPERATION: 'initialize' }));
+    assert.equal(releaseOperation({ OPERATION: 'initialize', SCHEMA_CONFIRMATION: 'apply-reviewed-phone-link-schema' }), 'initialize');
+    assert.throws(() => releaseOperation({ OPERATION: 'rollback', ROLLBACK_VERSION_ID: '--help', ROLLBACK_CONFIRMATION: 'compatible-schema-and-secrets' }));
+    assert.throws(() => releaseOperation({ OPERATION: 'rollback', ROLLBACK_VERSION_ID: env.D1_DATABASE_ID }));
+    assert.equal(releaseOperation({ OPERATION: 'rollback', ROLLBACK_VERSION_ID: env.D1_DATABASE_ID, ROLLBACK_CONFIRMATION: 'compatible-schema-and-secrets' }), 'rollback');
+    assert.throws(() => releaseOperation({ OPERATION: 'automatic' }));
+});
+
+test('artifact verification binds exact bundle/config bytes to full source commit and operation', () => {
     const commit = 'a'.repeat(40);
-    const files = { 'worker.js': Buffer.from('export default {};'), 'wrangler.json': Buffer.from('{}'), 'schema.sql': Buffer.from('schema') };
+    const files = { 'worker.js': Buffer.from('export default {};'), 'wrangler.json': Buffer.from('{}') };
     const manifest = {
-        worker: workerName, commit,
+        worker: workerName, commit, operation: 'deploy',
         files: Object.fromEntries(Object.entries(files).map(([file, bytes]) => [file, createHash('sha256').update(bytes).digest('hex')]))
     };
-    assert.doesNotThrow(() => verifyManifest(manifest, files, commit));
-    assert.throws(() => verifyManifest(manifest, { ...files, 'worker.js': Buffer.from('changed') }, commit));
-    assert.throws(() => verifyManifest(manifest, files, 'b'.repeat(40)));
-    assert.throws(() => verifyManifest({ ...manifest, files: { ...manifest.files, '../evil': 'a' } }, files, commit));
-    assert.throws(() => verifyManifest({ ...manifest, worker: 'office-dashboard-pairing' }, files, commit));
+    assert.doesNotThrow(() => verifyManifest(manifest, files, commit, 'deploy'));
+    assert.throws(() => verifyManifest(manifest, { ...files, 'worker.js': Buffer.from('changed') }, commit, 'deploy'));
+    assert.throws(() => verifyManifest(manifest, files, 'b'.repeat(40), 'deploy'));
+    assert.throws(() => verifyManifest({ ...manifest, files: { ...manifest.files, '../evil': 'a' } }, files, commit, 'deploy'));
+    assert.throws(() => verifyManifest({ ...manifest, worker: 'office-dashboard-pairing' }, files, commit, 'deploy'));
+    assert.throws(() => verifyManifest(manifest, files, commit, 'initialize'));
+    const sqlFiles = { 'schema.sql': Buffer.from('reviewed initialization'), 'wrangler.json': files['wrangler.json'] };
+    const sqlManifest = { ...manifest, operation: 'initialize',
+        files: Object.fromEntries(Object.entries(sqlFiles).map(([file, bytes]) => [file, createHash('sha256').update(bytes).digest('hex')])) };
+    assert.doesNotThrow(() => verifyManifest(sqlManifest, sqlFiles, commit, 'initialize'));
+    assert.throws(() => verifyManifest(sqlManifest, { ...sqlFiles, 'schema.sql': Buffer.from('changed') }, commit, 'initialize'));
 });
 
 const secrets = ['PHONE_CLIENT_SECRET', 'PHONE_ENCRYPTION_KEY'].map(name => ({ name, type: 'secret_text' }));
@@ -125,7 +156,7 @@ test('preflight checks existing secret names, dedicated D1 and schema without lo
     assert.ok(!calls[0].url.includes(apiEnv.CLOUDFLARE_API_TOKEN));
     calls.length = 0;
     await preflight(apiEnv, releaseConfig(template, env), true);
-    assert.equal(calls.length, 2, 'explicit schema approval permits only pre-migration schema absence');
+    assert.equal(calls.length, 2, 'separate initialization permits only pre-initialization schema absence');
 });
 
 test('preflight rejects missing secrets, wrong database and masked API failures', async t => {
@@ -137,6 +168,8 @@ test('preflight rejects missing secrets, wrong database and masked API failures'
     mock.mock.mockImplementation(async () => new Response('private provider error synthetic-test-token', { status: 403 }));
     await assert.rejects(preflight(apiEnv, config), error => !error.message.includes('synthetic-test-token') && /Cloudflare API operation failed/.test(error.message));
     await assert.rejects(preflight({ ...apiEnv, CLOUDFLARE_API_TOKEN: '' }, config), /Protected Cloudflare/);
+    mock.mock.mockImplementation(async url => response(url.endsWith('/settings') ? { bindings: secrets } : url.endsWith('/query') ? [] : { name: workerName }));
+    await assert.rejects(preflight(apiEnv, config), /schema is not ready/);
 });
 
 test('readiness requires real HTTPS health and active deployment is the explicit 100% version', async t => {
@@ -151,6 +184,25 @@ test('readiness requires real HTTPS health and active deployment is the explicit
     assert.equal(await activeVersion(apiEnv, versionId), versionId);
     mock.mock.mockImplementation(async () => response({ deployments: [{ id: versionId, versions: [{ version_id: versionId, percentage: 50 }] }] }));
     await assert.rejects(activeVersion(apiEnv, versionId), /intended 100% Worker version/);
+    mock.mock.mockImplementation(async () => response({ deployments: [{ id: versionId, versions: [{ version_id: env.D1_DATABASE_ID, percentage: 100 }] }] }));
+    await assert.rejects(activeVersion(apiEnv, versionId), /intended 100% Worker version/);
+    mock.mock.mockImplementation(async () => response({ deployments: [{ id: versionId, versions: [
+        { version_id: versionId, percentage: 100 }, { version_id: env.D1_DATABASE_ID, percentage: 0 }
+    ] }] }));
+    await assert.rejects(activeVersion(apiEnv, versionId), /intended 100% Worker version/);
+});
+
+test('readiness rejects healthy-shaped responses from the wrong service or failed storage', async t => {
+    const timeout = globalThis.setTimeout;
+    t.mock.method(globalThis, 'setTimeout', (callback, delay, ...args) => timeout(callback, delay === 5_000 ? 0 : delay, ...args));
+    const mock = t.mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({
+        service: 'office-dashboard-pairing', status: 'ok', storage: 'd1', capacity: 10
+    })));
+    await assert.rejects(readiness(env), /HTTPS readiness failed/);
+    mock.mock.mockImplementation(async () => new Response(JSON.stringify({
+        service: workerName, status: 'ok', storage: 'd1', capacity: 10
+    }), { status: 503 }));
+    await assert.rejects(readiness(env), /HTTPS readiness failed/);
 });
 
 test('rollback checks existing version public config, secrets and dedicated database compatibility', () => {
@@ -162,6 +214,52 @@ test('rollback checks existing version public config, secrets and dedicated data
         assert.throws(() => rollbackBindings(config, { resources: { bindings: bindings.filter(b => b.name !== name) } }), undefined, name);
     }
     assert.throws(() => rollbackBindings(config, { resources: { bindings: bindings.map(b => b.type === 'd1' ? { ...b, id: env.PHONE_CLIENT_ID } : b) } }));
+    assert.throws(() => rollbackBindings(config, { resources: { bindings: bindings.map(b => b.name === 'PHONE_TENANT_ID' ? { ...b, text: 'common' } : b) } }));
+});
+
+test('deployed version must be an explicit UUID from the Wrangler receipt', () => {
+    assert.equal(deployedVersion(`Current Version ID: ${env.D1_DATABASE_ID}\n`), env.D1_DATABASE_ID);
+    assert.throws(() => deployedVersion('Uploaded successfully, but version unknown'));
+    assert.throws(() => deployedVersion('Current Version ID: --help'));
+});
+
+test('accepted historical source need not share current tooling, but must belong to default branch with a matching stable tag', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'phone-link-source-'));
+    const previous = process.cwd();
+    const git = (...args) => execFileSync('git', args, { cwd: directory, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+    try {
+        git('init', '--initial-branch=gh-pages');
+        git('config', 'user.name', 'Synthetic Release Test');
+        git('config', 'user.email', 'release-test@example.invalid');
+        writeFileSync(join(directory, 'package.json'), '{"version":"0.4.0"}');
+        git('add', '.');
+        git('commit', '-m', 'Accepted source');
+        const accepted = git('rev-parse', 'HEAD');
+        git('tag', 'v0.4.0');
+        git('tag', 'v0.5.0');
+        writeFileSync(join(directory, 'tooling.js'), 'reviewed tooling change');
+        git('add', '.');
+        git('commit', '-m', 'New release tooling');
+        const tooling = git('rev-parse', 'HEAD');
+        git('update-ref', 'refs/remotes/origin/gh-pages', tooling);
+        const sourceEnv = { GITHUB_REF: 'refs/heads/gh-pages', DEFAULT_BRANCH: 'gh-pages',
+            WORKFLOW_COMMIT: tooling, SOURCE_REF: accepted, GITHUB_OUTPUT: join(directory, 'output.txt') };
+        process.chdir(directory);
+        assert.doesNotThrow(() => verifySource(sourceEnv));
+        assert.match(readFileSync(sourceEnv.GITHUB_OUTPUT, 'utf8'), new RegExp(`commit=${accepted}`));
+        assert.doesNotThrow(() => verifySource({ ...sourceEnv, SOURCE_REF: 'v0.4.0' }));
+        assert.throws(() => verifySource({ ...sourceEnv, SOURCE_REF: 'v0.5.0' }));
+        assert.throws(() => verifySource({ ...sourceEnv, SOURCE_REF: 'gh-pages' }));
+        assert.throws(() => verifySource({ ...sourceEnv, GITHUB_REF: 'refs/heads/feature' }));
+        git('checkout', '-b', 'unaccepted');
+        writeFileSync(join(directory, 'unaccepted.txt'), 'not on default branch');
+        git('add', 'unaccepted.txt');
+        git('commit', '-m', 'Unaccepted source');
+        assert.throws(() => verifySource({ ...sourceEnv, SOURCE_REF: git('rev-parse', 'HEAD') }));
+    } finally {
+        process.chdir(previous);
+        rmSync(directory, { recursive: true, force: true });
+    }
 });
 
 test('workflow keeps Worker/manual approvals, no OAuth secret injection, and immutable no-bundle deployment', () => {
@@ -177,7 +275,17 @@ test('workflow keeps Worker/manual approvals, no OAuth secret injection, and imm
     assert.match(workflow, /\(\.reviewers \| length\) > 0/);
     assert.doesNotMatch(workflow, /prevent_self_review == true/);
     assert.doesNotMatch(workflow, /secrets\.PHONE_(CLIENT_SECRET|ENCRYPTION_KEY)|wrangler login|npx/);
-    assert.match(helper, /'deploy', '--no-bundle'/);
-    assert.match(helper, /'rollback', env\.ROLLBACK_VERSION_ID, '--yes'/);
-    assert.match(helper, /'--remote'/);
+    assert.match(workflow, /deploy --no-bundle --config/);
+    assert.match(workflow, /rollback "\$ROLLBACK_VERSION_ID" --yes/);
+    assert.match(workflow, /d1 execute PAIRING_DB --remote/);
+    assert.match(workflow, /options: \[deploy, initialize, rollback\]/);
+    assert.doesNotMatch(workflow, /apply_schema|npm run build:worker|worker-release\.js bundle/);
+    assert.match(workflow, /git show "\$WORKFLOW_COMMIT:scripts\/worker-release\.js"/);
+    assert.match(workflow, /RELEASE_HELPER=\$RUNNER_TEMP\/worker-release\.mjs/);
+    assert.doesNotMatch(workflow, /RELEASE_HELPER:.*runner\.temp/);
+    assert.match(workflow, /if: inputs.operation == 'deploy'/);
+    assert.match(helper, /experimental_readRawConfig/);
+    assert.doesNotMatch(helper, /parseJSONC|safeSchema|function wrangler|Release workflow\/helpers differ/);
+    assert.equal((workflow.match(/run: npm ci/g) || []).length, 1);
+    assert.equal((workflow.match(/secrets\.CLOUDFLARE_API_TOKEN/g) || []).length, 1);
 });

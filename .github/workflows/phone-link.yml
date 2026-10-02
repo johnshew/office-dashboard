@@ -4,20 +4,16 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: Explicit independent Worker release or rollback
+        description: Independent Worker deploy, additive D1 initialization, or explicit-version rollback
         required: true
         type: choice
-        options: [deploy, rollback]
+        options: [deploy, initialize, rollback]
       source_ref:
         description: Full accepted default-branch commit SHA or existing immutable vMAJOR.MINOR.PATCH tag
         required: true
         type: string
-      apply_schema:
-        description: Separately approve additive phone_slots initialization from this exact source
-        type: boolean
-        default: false
       schema_confirmation:
-        description: If applying schema, enter apply-reviewed-phone-link-schema
+        description: For initialize only, enter apply-reviewed-phone-link-schema after reviewing SQL
         type: string
       rollback_version_id:
         description: For rollback, existing compatible Phone Link Worker version UUID
@@ -44,8 +40,6 @@ jobs:
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: '24'
-          cache: npm
-      - run: npm ci
       - id: source
         name: Verify exact source and release workflow provenance
         env:
@@ -73,25 +67,8 @@ jobs:
             --jq 'any(.protection_rules[]?; .type == "required_reviewers" and (.reviewers | length) > 0)')"
           [[ "$approved_environment" == true ]] || { echo 'Configure required reviewers on cloudflare-phone-link before release.'; exit 1; }
 
-  validate:
-    needs: source
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-        with:
-          ref: ${{ needs.source.outputs.commit }}
-          persist-credentials: false
-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
-        with:
-          node-version: '24'
-          cache: npm
-      - run: npm ci
-      - run: node --test test/pairing-worker.test.js test/phone-identity.test.js test/worker-release.test.js
-      - run: npm run build:worker
-
   production:
-    needs: [source, validate]
+    needs: source
     runs-on: ubuntu-latest
     timeout-minutes: 15
     concurrency:
@@ -102,6 +79,7 @@ jobs:
       url: ${{ vars.PHONE_SERVICE_ORIGIN }}
     env:
       SOURCE_COMMIT: ${{ needs.source.outputs.commit }}
+      WORKFLOW_COMMIT: ${{ github.workflow_sha }}
       PHONE_WORKER_NAME: ${{ vars.PHONE_WORKER_NAME }}
       APP_ORIGIN: ${{ vars.APP_ORIGIN }}
       PHONE_SERVICE_ORIGIN: ${{ vars.PHONE_SERVICE_ORIGIN }}
@@ -109,47 +87,74 @@ jobs:
       PHONE_TENANT_ID: ${{ vars.PHONE_TENANT_ID }}
       PHONE_ACCOUNT_AUDIENCE: ${{ vars.PHONE_ACCOUNT_AUDIENCE }}
       D1_DATABASE_ID: ${{ vars.D1_DATABASE_ID }}
+      OPERATION: ${{ inputs.operation }}
+      SCHEMA_CONFIRMATION: ${{ inputs.schema_confirmation }}
+      ROLLBACK_VERSION_ID: ${{ inputs.rollback_version_id }}
+      ROLLBACK_CONFIRMATION: ${{ inputs.rollback_confirmation }}
+      WRANGLER_SEND_METRICS: 'false'
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ needs.source.outputs.commit }}
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: '24'
           cache: npm
       - run: npm ci
+      - name: Use dispatch tooling with the exact accepted application source
+        run: |
+          git show "$WORKFLOW_COMMIT:scripts/worker-release.js" > "$RUNNER_TEMP/worker-release.mjs"
+          echo "RELEASE_HELPER=$RUNNER_TEMP/worker-release.mjs" >> "$GITHUB_ENV"
       - name: Generate fail-closed public deployment configuration
-        run: node scripts/worker-release.js prepare
+        run: node "$RELEASE_HELPER" prepare
       - name: Bundle exact reviewed Worker without cloud credentials
         if: inputs.operation == 'deploy'
         run: |
-          node scripts/worker-release.js bundle
-          node scripts/worker-release.js verify
-      - name: Preserve immutable bundle, config, schema and digests before deployment
-        if: inputs.operation == 'deploy'
+          node node_modules/wrangler/bin/wrangler.js deploy --dry-run \
+            --config dist-worker/phone-link-build.json --outdir "$PWD/dist-worker/phone-link-bundle"
+          cp dist-worker/phone-link-bundle/index.js dist-worker/phone-link-release/worker.js
+      - name: Seal reviewed bundle or initialization SQL and public configuration
+        if: inputs.operation != 'rollback'
+        run: node "$RELEASE_HELPER" seal
+      - name: Preserve exact bytes and source digests before cloud changes
+        if: inputs.operation != 'rollback'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: phone-link-${{ needs.source.outputs.commit }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: dist-worker/phone-link-release/
           if-no-files-found: error
           retention-days: 90
-      - name: Deploy preserved bundle or explicit existing version and verify readiness
+      - name: Run explicit cloud operation and verify readiness
         env:
-          OPERATION: ${{ inputs.operation }}
-          APPLY_SCHEMA: ${{ inputs.apply_schema }}
-          SCHEMA_CONFIRMATION: ${{ inputs.schema_confirmation }}
-          ROLLBACK_VERSION_ID: ${{ inputs.rollback_version_id }}
-          ROLLBACK_CONFIRMATION: ${{ inputs.rollback_confirmation }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          [[ "$OPERATION" == deploy || "$OPERATION" == rollback ]] || exit 1
-          if [[ "$OPERATION" == rollback && "$APPLY_SCHEMA" != false ]]; then
-            echo 'Rollback never applies or reverses schema.'
+          node "$RELEASE_HELPER" check
+          config=dist-worker/phone-link-release/wrangler.json
+          # Keep provider diagnostics private; preserve only the sanitized receipt.
+          if ! {
+            case "$OPERATION" in
+              deploy)
+                node node_modules/wrangler/bin/wrangler.js deploy --no-bundle --config "$config" \
+                  --tag "commit-$SOURCE_COMMIT" --message "Phone Link accepted commit $SOURCE_COMMIT"
+                ;;
+              initialize)
+                node node_modules/wrangler/bin/wrangler.js d1 execute PAIRING_DB --remote --config "$config" \
+                  --file dist-worker/phone-link-release/schema.sql --yes
+                ;;
+              rollback)
+                node node_modules/wrangler/bin/wrangler.js rollback "$ROLLBACK_VERSION_ID" --yes --config "$config" \
+                  --message "Reviewed Phone Link rollback from $SOURCE_COMMIT"
+                ;;
+              *) exit 1 ;;
+            esac
+          } > dist-worker/wrangler-output.txt 2>&1; then
+            echo 'Wrangler operation failed; inspect provider diagnostics privately. Cloud state may have changed.'
             exit 1
           fi
-          node scripts/worker-release.js "$OPERATION"
+          node "$RELEASE_HELPER" finish
       - name: Preserve sanitized deployment receipt
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

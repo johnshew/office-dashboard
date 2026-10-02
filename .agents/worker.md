@@ -103,27 +103,44 @@ After a separate backend rollout approval:
 
 ### Entra registration and credential handoff
 
-Use Entra **App registrations > Office Dashboard > Authentication > Add a
-platform > Web** on the existing registration, as directed by the owner on
-October 2, 2026. Keep its existing Single-page application platform and all SPA
-callbacks unchanged. Its organizational-and-personal-account audience already
-matches the dashboard's `common` authority; use that same accepted audience for
-Phone Link rather than widening it or changing the browser flow.
-Register the **Web** platform with the exact planned service callback. For the
+The owner selected **Azure CLI** for the actual registration work on October 2,
+2026; portal editing is an optional alternative, not a prerequisite. Follow
+[setup](setup.md) for discovery and the separately authorized tenant context.
+Identify the existing application by its exact Application (client) ID in the
+correct tenant, using Microsoft Graph's alternate-key
+`applications(appId='<client-id>')` lookup rather than a display-name match.
+Read its current Web/SPA callbacks, account audience, delegated permissions,
+API settings and public-client settings before applying a narrow Web-platform
+update. Preserve existing settings and all SPA callbacks. Its organizational-
+and-personal-account audience already matches the dashboard's `common`
+authority; do not widen it or change the browser flow.
+
+Add the exact **Web** callback, preserving any existing Web callbacks. For the
 currently inspected Cloudflare account, the proposed new callback is
 `https://office-dashboard-phone-link.vanamonde.workers.dev/oauth/callback`.
 This is a planned origin, not evidence that the new Worker has been deployed.
 Do not add this callback to the SPA platform or enable implicit/public-client
-flows as a shortcut.
+flows as a shortcut. Read back the callback and preserved settings, including
+disabled implicit grants. Graph may generate `web.redirectUriSettings` when
+adding a callback; verify that generated metadata and the intended fields
+explicitly rather than treating whole-Web-object equality as the only proof.
+The owner's CLI update preserved the three existing SPA callbacks, audience,
+delegated/API/public-client settings and disabled implicit grants.
 
 Reuse the existing Application (client) ID as `PHONE_CLIENT_ID`, not the Object ID.
 Add only the three delegated Microsoft Graph permissions in the configuration
-contract above and obtain any policy-required consent in Microsoft's UI.
-Create a server credential under **Certificates & secrets** with a bounded
-expiration and a documented owner/renewal date. Enter its **value**, not its
+contract above and obtain any policy-required consent. Create a bounded,
+Worker-only server credential on that exact application through the approved
+CLI/Graph operation, without replacing unrelated credentials. Record its
+expiration and owner/renewal date, not its value. Credential request/response
+handling must use protected input/output: no secret-bearing command arguments,
+console output or logs. Enter its **value**, not its
 secret ID, directly into the new Worker's protected `PHONE_CLIENT_SECRET`
 configuration or an interactive Wrangler secret prompt. Never paste it into
 chat, a GitHub variable, a shell command argument or this guide.
+If the operator separately chooses the portal alternative, the corresponding
+locations are **Authentication > Add a platform > Web** and
+**Certificates & secrets** on the same exact registration.
 
 Generate a separate cryptographically random 32-byte base64url encryption key
 and write it directly to `PHONE_ENCRYPTION_KEY` through protected secret input.
@@ -167,7 +184,7 @@ This draft is a bootstrap side effect, not a deployed/accepted Phone Link
 runtime. It does not create/bind D1 or apply the schema. Once both secrets and
 the dedicated database exist, the reviewed release workflow supplies the full
 configuration and accepted Worker artifact. If bootstrap initialized the schema
-already, leave the workflow's `apply_schema` false.
+already, do not dispatch the separate `initialize` operation again.
 
 | Environment configuration | Value or requirement |
 | --- | --- |
@@ -194,32 +211,55 @@ Dispatch **Phone Link release** from `gh-pages`:
 
 1. Choose `deploy` and supply a full accepted default-branch commit SHA or existing
    stable version tag. The selected source must have a successful default-branch
-   CI run, and its release workflow/helpers must match the executing workflow.
-2. Leave `apply_schema` false for normal updates. Only for separately reviewed
-   additive initialization, select it and enter
-   `apply-reviewed-phone-link-schema`. The helper rejects destructive changes;
-   future schema migrations need their own reviewed implementation.
+   CI run. The dispatch's default-branch helper runs against that exact source;
+   historical sources need not have byte-identical workflow/helper files.
+   Application dependencies come from the selected source's lockfile.
+2. Normal `deploy` never applies SQL. For separately reviewed additive
+   initialization, dispatch `initialize` with the accepted source and
+   `schema_confirmation=apply-reviewed-phone-link-schema`. Review the exact
+   `workers\pairing\schema.sql` first: this is only the idempotent creation of
+   `phone_slots` and `phone_expiry`, not a general migration mechanism. Existing
+   relay tables/data must remain untouched. Initialization does not build or
+   deploy Worker code; future migrations require a separate reviewed change.
 3. Review source/configuration and approve the protected environment. The workflow
-   builds without cloud credentials, preserves the exact bundle/config/schema
+   builds without cloud credentials, preserves the exact bundle/configuration
    with SHA-256 provenance, then deploys those bytes with `--no-bundle`.
+   The schema artifact exists only for `initialize`, not normal deployment.
 4. Verify the deployment receipt's Worker version, exact source and readiness.
    Health checks require valid Worker configuration and a functioning D1 schema;
    active-deployment readback must identify the intended 100% Worker version.
    These checks do not establish Microsoft consent or actual phone acceptance.
 
 Deploy and rollback share `production-cloudflare-phone-link` concurrency with
-no cancellation of an in-flight operation. Artifacts and sanitized receipts are
-retained for 90 days; retain accepted release evidence independently if needed
+initialization and no cancellation of an in-flight operation. Artifacts record
+application SHA, dispatch tooling SHA, package version and file digests.
+Artifacts and sanitized receipts are retained for 90 days; retain accepted
+release evidence independently if needed
 longer. Failed readiness is reported, not hidden by an automatic schema/secret
-rollback. A pending receipt means cloud code changed but acceptance did not pass.
+rollback. A preflight receipt does not confirm a cloud change. A pending
+post-operation receipt means cloud state changed but acceptance did not pass.
 
 For rollback, dispatch the same workflow with `operation=rollback`, an accepted
-source for the release tooling, the exact existing `rollback_version_id`, and
-`rollback_confirmation=compatible-schema-and-secrets`. Schema application must
-remain false. The workflow validates public bindings, secret binding names and
+source for the public configuration contract, the exact existing
+`rollback_version_id`, and
+`rollback_confirmation=compatible-schema-and-secrets`. No SQL is applied as part
+of rollback. The workflow validates public bindings, secret binding names and
 the dedicated database before switching to that existing version without a
 rebuild. Confirm actual secret/key and data compatibility operationally: matching
 names alone cannot prove old encrypted sessions remain readable.
+
+The release workflow installs dependencies once and relies on the selected
+commit's successful full CI instead of rerunning a parallel validation job.
+It builds the accepted source once, using locked Wrangler to parse the existing
+JSONC configuration and emit a public JSON deployment configuration. Wrangler
+owns its configuration syntax/validation; there is no custom JSONC parser,
+configuration-key allowlist or SQL parser. Changing the pinned Wrangler version
+must include checking its `experimental_readRawConfig` API and the dry-run
+bundle path. Cloud operations are direct Wrangler deploy/D1/rollback commands;
+the small helper retains source, artifact, target and readiness checks.
+Neither build nor dependency installation receives Cloudflare credentials.
+Provider diagnostic output stays private; failure is explicit and may require
+operator investigation, since cloud state can change before a check fails.
 
 ## Rollback boundary
 
