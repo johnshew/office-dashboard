@@ -26,8 +26,9 @@ archive SHA-256, the run/attempt, and a deterministic digest of all four public
 Missing/expired artifacts, mismatched configuration or failed validation stop
 the release; there is no rebuild fallback. If public configuration changes,
 create a new version/source commit and validate it on the default branch before
-tagging. Old releases without a sealed manifest remain available through the
-original-archive rollback workflow, not this promotion path.
+tagging. Existing published releases, including those without a sealed manifest,
+use their original archive through the restore path or rollback workflow,
+not this new-release promotion path.
 
 The site publishes through the protected `github-pages` environment with the
 existing serialized deployment group and HTTPS provenance verification before
@@ -35,6 +36,42 @@ creating release assets.
 Version tags are immutable; update the package and lockfile together for a new
 version. Build/public configuration changes are not deployed merely by editing
 repository files or merging a PR.
+
+Default-branch validation browser-smokes the final stamped site without
+rebuilding it, then packages those bytes for later promotion. Provenance includes a digest
+of public identity configuration and sign-in-mode flags, not configuration values.
+The interaction suite's synthetic build is not this final artifact.
+
+Dispatching an existing published tag downloads and checksum-verifies its original
+release archive; it does not rebuild with today's repository variables. Missing
+assets or failed release inventory requests are errors, not permission to rebuild.
+Change public build configuration through a new accepted version. Redeployment
+still requires authorization and does not establish new live acceptance.
+
+## Release review and state
+
+Before an authorized release, review open issues updated since the last published
+release and older issues relevant to the changed surfaces. Use GitHub UTC dates,
+for example `gh issue list --state open --search "updated:>=YYYY-MM-DD" --limit 100`,
+with the real release date and no local-calendar upper bound. Paginate if the
+result reaches the limit. Each relevant issue needs a fix with affected checks,
+or an explicit developer-approved deferral naming impact, workaround and rationale.
+An enhancement label does not make an observed release failure irrelevant.
+Do not create new issues without authorization.
+
+`npm run release:status` prints a read-only, timestamped candidate/GitHub-release
+summary. Add `-- --site <public-HTTPS-site-URL>` to observe live `release.json`
+without following redirects. Remote errors fail explicitly. It does not fetch Git
+refs, infer acceptance, probe optional backends, grant publication approval or
+replace the historical evidence in `RELEASE.md`. Refresh refs separately through
+[workflow](workflow.md). Missing/unqueried evidence remains explicit.
+
+Before authorized GitHub writes, verify the intended repository, authenticated
+identity and permissions without printing credentials or changing another
+session's shared login. Approval and guarded merge operations name the full
+tested head SHA; a moved head requires renewed review, not silent substitution.
+
+## Hosting and rollback boundaries
 
 Cloudflare proxies the custom domain to GitHub Pages. Verify public HTTPS,
 origin TLS, GitHub certificate status and live `release.json` independently.

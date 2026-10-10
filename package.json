@@ -25,7 +25,11 @@
     "test": "node --test test/*.test.js",
     "validate-release-config": "node scripts/validate-release-config.js",
     "test:browser": "playwright test",
-    "test:browser:golden": "playwright test test/browser/golden-thread.spec.js test/browser/phone-page.spec.js --grep \"mainstream|explicit personal|for approve\""
+    "test:browser:golden": "playwright test test/browser/golden-thread.spec.js test/browser/phone-page.spec.js --grep \"mainstream|explicit personal|for approve\"",
+    "stamp:site": "node scripts/site-provenance.js",
+    "test:artifact": "playwright test --config playwright.artifact.config.js",
+    "test:worker:runtime": "node --test test/runtime/pairing-worker.test.js",
+    "release:status": "node scripts/release-status.js"
   },
   "author": "JohnShew",
   "license": "MIT",
@@ -44,6 +48,7 @@
     "@types/qrcode": "1.5.6",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",
+    "miniflare": "5.20261001.0-alpha",
     "typescript": "7.0.2",
     "vite": "8.2.2",
     "wrangler": "4.147.0"

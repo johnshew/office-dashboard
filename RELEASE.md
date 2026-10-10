@@ -214,6 +214,16 @@ browsers. Authentication requires current Web Crypto and browser APIs.
 
 ## Release gates
 
+Process update, October 2, 2026: the final production-configured site now has a
+separate no-sign-in browser smoke after provenance stamping and before packaging.
+The workflow also executes a local workerd/D1 lifecycle check. Existing published
+tags are redeployed from their original checksum-verified archive, never rebuilt
+with current Actions variables. Public configuration changes require a new version.
+These are development/CI gates, not evidence of deployment or live acceptance.
+See [.agents/release.md](.agents/release.md) for issue review and the read-only
+`npm run release:status` command, and [.agents/testing.md](.agents/testing.md) for
+artifact evidence and local-runtime limits.
+
 Every branch push and PR runs the `CI and release` workflow. The `Validate` job uses
 Node 24, `npm ci`, unit/security tests, a high-severity dependency audit, Chromium
 desktop/mobile smoke tests, and a production typecheck/build. Browser tests use

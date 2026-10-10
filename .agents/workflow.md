@@ -113,6 +113,27 @@ intentionally accepted. Source tests, installed tools, deployed artifacts and
 live acceptance need their own evidence. Knowledge consolidation cannot grant
 new operational permissions.
 
+### CDL and GLP evidence trail
+
+Keep session progress and queued developer steering in the
+[session ledger](session-work.md), not in the canonical instruction files.
+Promote only a durable, evidence-backed learning into the owning guide.
+For a meaningful correction or supersession, record its ID/date, topic, source
+revision or issue, change, previous understanding, evidence, verification limits
+and follow-up. A concise issue/PR or session record can carry the detailed
+evidence; the guide should carry the resulting rule, not repeated transcripts.
+
+Distinguish application from consolidation: `applied` means the edit exists;
+`integrated` means the owning guide, task routing, commands, tests and affected
+collateral agree after readback. Proposals remain pending until implemented.
+Use `no_change` when the existing rule already covers the discovery. Never
+rewrite historical failures into successful evidence or backdate summarized
+events. Closure is scoped to the named learning, not the whole project.
+
+The reviewed agents-live CDL log and GLP entries demonstrate this structure.
+Their untracked command contracts are unavailable; no `cdl`/`glp` alias,
+automatic logging hook or cross-session queue is established by these guides.
+
 If a receipt or documentation checkpoint is the only remaining change, perform
 the required readback once; do not create an endless sequence of commits/receipts
 because each receipt changes the repository.

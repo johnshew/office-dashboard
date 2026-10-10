@@ -23,9 +23,11 @@ concurrency:
 jobs:
   source:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       ref: ${{ steps.source.outputs.ref }}
       release: ${{ steps.source.outputs.release }}
+      restore: ${{ steps.existing.outputs.restore }}
     steps:
       - id: source
         env:
@@ -46,6 +48,21 @@ jobs:
           fi
           echo "ref=$ref" >> "$GITHUB_OUTPUT"
           echo "release=$release" >> "$GITHUB_OUTPUT"
+      - name: Select immutable existing release
+        id: existing
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE: ${{ steps.source.outputs.release }}
+          RELEASE_REF: ${{ steps.source.outputs.ref }}
+        run: |
+          restore=false
+          if [[ "$RELEASE" == true ]]; then
+            # A failed inventory request must not be treated as a new release.
+            gh api --paginate "repos/$GH_REPO/releases?per_page=100" --jq '.[].tag_name' > releases.txt
+            if grep -Fxq "${RELEASE_REF#refs/tags/}" releases.txt; then restore=true; fi
+          fi
+          echo "restore=$restore" >> "$GITHUB_OUTPUT"
 
   build:
     name: Validate
@@ -75,6 +92,16 @@ jobs:
       - run: npm run test:browser:golden
         env:
           PLAYWRIGHT_LOGIN_OPTIONS: browser,phone
+      - run: npm run validate-release-config
+        if: github.event_name == 'push'
+      - run: npm run build
+      - run: npm run build:worker
+      - run: npm run test:worker:runtime
+      - name: Stamp build provenance
+        run: node scripts/site-release.js stamp
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      - run: npm run test:artifact
       - name: Upload browser diagnostics
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -84,14 +111,12 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 7
-      - run: npm run validate-release-config
-        if: github.event_name == 'push'
-      - run: npm run build
-      - run: npm run build:worker
-      - name: Stamp build provenance
-        run: node scripts/site-release.js stamp
-        env:
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      - name: Retain final-artifact evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: artifact-evidence
+          path: test-results/artifact-results.json
+          retention-days: 30
       - name: Package tested site
         if: github.event_name == 'push'
         run: |
@@ -113,7 +138,7 @@ jobs:
   promote:
     name: Promote tested site
     needs: source
-    if: needs.source.outputs.release == 'true'
+    if: needs.source.outputs.release == 'true' && needs.source.outputs.restore != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -148,9 +173,38 @@ jobs:
         with:
           path: dist
 
+  restore:
+    needs: source
+    if: needs.source.outputs.restore == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Download original accepted site
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_REF: ${{ needs.source.outputs.ref }}
+        run: |
+          gh release download "${RELEASE_REF#refs/tags/}" --pattern office-dashboard.tar.gz --pattern SHA256SUMS
+          sha256sum --check SHA256SUMS
+          mkdir dist
+          tar -xzf office-dashboard.tar.gz -C dist
+          test -f dist/index.html
+          test -f dist/release.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-site
+          path: |
+            office-dashboard.tar.gz
+            SHA256SUMS
+          retention-days: 30
+      - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        with:
+          path: dist
+
   deploy:
-    if: needs.source.outputs.release == 'true'
-    needs: [source, promote]
+    if: always() && needs.source.outputs.release == 'true' && (needs.promote.result == 'success' || needs.restore.result == 'success')
+    needs: [source, promote, restore]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:
@@ -171,7 +225,7 @@ jobs:
 
   release:
     needs: [source, deploy]
-    if: needs.source.outputs.release == 'true'
+    if: always() && needs.source.outputs.release == 'true' && needs.deploy.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -186,6 +240,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
           RELEASE_REF: ${{ needs.source.outputs.ref }}
           PAGE_URL: ${{ needs.deploy.outputs.page_url }}
+          RESTORE: ${{ needs.source.outputs.restore }}
         run: |
           sha256sum --check SHA256SUMS
           mkdir site
@@ -194,7 +249,7 @@ jobs:
           curl --proto '=https' --proto-redir '=https' --location --fail --silent --show-error --retry 5 --retry-all-errors "${page_url%/}/release.json?run=$GITHUB_RUN_ID" -o deployed.json
           cmp site/release.json deployed.json
           tag="${RELEASE_REF#refs/tags/}"
-          if gh release view "$tag" >/dev/null 2>&1; then
+          if [[ "$RESTORE" == true ]]; then
             echo 'Existing release redeployed; original release assets retained.'
           else
             gh release create "$tag" office-dashboard.tar.gz SHA256SUMS --verify-tag --generate-notes --title "Office Dashboard $tag"

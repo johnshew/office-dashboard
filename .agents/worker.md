@@ -15,6 +15,7 @@ These existing npm scripts select `workers\pairing\wrangler.jsonc`:
 | Command | Effect |
 | --- | --- |
 | `npm.cmd run build:worker` | Bundle with `wrangler deploy --dry-run`; no live deployment |
+| `npm.cmd run test:worker:runtime` | Exercise local workerd/D1 with isolated synthetic state; no cloud deployment |
 | `npm.cmd run schema:worker:local` | Apply the schema to local D1 only |
 | `npm.cmd run dev:worker` | Start local HTTPS Worker development |
 | `npm.cmd run deploy:worker` | Deploy remotely; requires separate rollout authorization |
@@ -33,6 +34,12 @@ origin, database or secret settings fail closed; a build is not a configured
 authentication service. Never disable TLS checks to accept a local certificate.
 Keep any `.dev.vars` file beside the Worker configuration untracked and out of
 logs. Use synthetic fixtures for automated tests, not real account credentials.
+
+The runtime test uses the directly declared Miniflare version already selected
+by the pinned Wrangler dependency. It creates temporary local D1 storage,
+denies external access and removes its own state after disposal. Its synthetic
+configuration does not configure the development server or production Worker.
+Follow [testing](testing.md#artifact-and-runtime-boundaries) for evidence limits.
 
 ## Configuration contract
 

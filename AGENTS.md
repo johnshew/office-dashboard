@@ -7,6 +7,7 @@ task-specific guides before changing the corresponding behavior.
 | --- | --- |
 | Discovering or installing development tools | [.agents/setup.md](.agents/setup.md) |
 | Refreshing upstream state or consolidating instructions | [.agents/workflow.md](.agents/workflow.md) |
+| Recording session work, queued steering or coordinating sessions | [.agents/session-work.md](.agents/session-work.md) |
 | TypeScript, React, dependencies or browser compatibility | [.agents/development.md](.agents/development.md) |
 | Sign-in, pairing, Microsoft Graph or untrusted content | [.agents/authentication-security.md](.agents/authentication-security.md) |
 | Cloudflare Worker development and service setup | [.agents/worker.md](.agents/worker.md) |

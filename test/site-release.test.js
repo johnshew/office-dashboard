@@ -115,7 +115,8 @@ test('Pages validates PR/default only and promotes tags without dependency insta
     const promotion = workflow.split('  promote:')[1].split('  deploy:')[0];
     assert.match(promotion, /site-release\.js promote/);
     assert.doesNotMatch(promotion, /npm ci|npm test|npm run build|playwright/);
-    assert.match(workflow, /needs: \[source, promote\]/);
+    assert.match(workflow, /needs: \[source, promote, restore\]/);
+    assert.match(workflow, /needs\.promote\.result == 'success' \|\| needs\.restore\.result == 'success'/);
     assert.match(workflow, /group: production-pages/);
     assert.match(workflow, /cancel-in-progress: false/);
     assert.match(workflow, /name: github-pages/);

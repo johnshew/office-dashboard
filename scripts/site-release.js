@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { validateReleaseConfig } from './validate-release-config.js';
+import { siteProvenance } from './site-provenance.js';
 
 const configurationKeys = ['VITE_CLIENT_ID', 'VITE_TENANT_ID', 'VITE_DEVICE_LOGIN_URL', 'VITE_PHONE_LINK_URL'];
 const shaPattern = /^[a-f0-9]{40}$/;
@@ -61,7 +62,7 @@ function provenance(env) {
 
 export function stamp(env) {
     const source = provenance(env);
-    writeFileSync('dist/release.json', JSON.stringify({ version: source.version, commit: source.commit }) + '\n');
+    writeFileSync('dist/release.json', JSON.stringify(siteProvenance(env, source.version, source.commit)) + '\n');
 }
 
 export function seal(env) {
