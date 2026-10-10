@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { configurationDigest, digest, verifyManifest, selectArtifact, verifyArchiveEntries, stamp, seal, verifySource } from '../scripts/site-release.js';
+import { siteProvenance } from '../scripts/site-provenance.js';
 
 const configuration = { VITE_CLIENT_ID: '11111111-2222-3333-4444-555555555555', VITE_TENANT_ID: 'common',
     VITE_DEVICE_LOGIN_URL: '', VITE_PHONE_LINK_URL: 'https://phone.example.test' };
@@ -87,7 +88,7 @@ test('source stamping and sealing bind real Git source and reject tag or build s
             GITHUB_EVENT_NAME: 'push', GITHUB_REF_NAME: 'gh-pages', GITHUB_SHA: commit,
             GITHUB_RUN_ID: '123', GITHUB_RUN_ATTEMPT: '1', RELEASE_REF: 'refs/tags/v0.4.0' };
         stamp(env);
-        assert.deepEqual(JSON.parse(readFileSync('dist/release.json', 'utf8')), { commit, version: expected.version });
+        assert.deepEqual(JSON.parse(readFileSync('dist/release.json', 'utf8')), siteProvenance(env, expected.version, commit));
         seal(env);
         verifyManifest(JSON.parse(readFileSync('site-manifest.json', 'utf8')), { ...expected, commit }, archive);
         assert.equal(verifySource(env).commit, commit);
